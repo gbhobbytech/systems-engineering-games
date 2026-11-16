@@ -103,6 +103,7 @@
     <span>Finished <b id="stDone">0</b></span>
     <span>Vaults cracked <b id="stVaults">0</b></span>
     <span>Session time <b id="stTime">0:00</b></span>
+    <span>Level rating <b id="stRate">–</b></span>
   </div>
   <div class="grid">
     <div class="card"><h2>🏆 LEADERBOARD</h2><table class="lb"><tbody id="lb"></tbody></table></div>
@@ -131,7 +132,7 @@
   <div class="net">Average target band per criterion (from students who finished):</div>
   <div class="tavg" id="tavg"></div>
   <table>
-    <thead><tr><th>Name</th><th>Class</th><th>Points</th><th>Vault</th><th>Time</th><th>Wrong first try</th><th>Hints</th><th>Targets C1–C8</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Class</th><th>Points</th><th>Vault</th><th>Time</th><th>Wrong first try</th><th>Hints</th><th>Targets C1–C8</th><th>Rating</th><th></th></tr></thead>
     <tbody id="tbody"></tbody>
   </table>
   <p class="net">"Hide" removes someone from this dashboard only (e.g. a test or joke entry). Rows stay in Supabase until you delete them there.</p>
@@ -211,7 +212,7 @@
   }
 
   function P(r) {
-    if (!players[r.player_id]) players[r.player_id] = { id: r.player_id, name: r.name, cls: r.class, score: 0, vault: 0, done: false, time: 0, wrong: [], hints: 0, targets: null };
+    if (!players[r.player_id]) players[r.player_id] = { id: r.player_id, name: r.name, cls: r.class, score: 0, vault: 0, done: false, time: 0, wrong: [], hints: 0, targets: null, rating: 0 };
     return players[r.player_id];
   }
   let liveFeed = [];
@@ -222,6 +223,8 @@
     if (r.event === 'answer') {
       if (r.question_id && r.question_id.startsWith('TARGETS:')) {
         p.targets = r.question_id.slice(8).split(',').map(Number);
+      } else if (r.question_id && r.question_id.startsWith('RATING:')) {
+        p.rating = Number(r.question_id.slice(7)); // latest answer wins
       } else {
         p.score += r.score || 0;
         if (r.question_id && r.question_id.endsWith('+hint')) p.hints++;
@@ -253,6 +256,8 @@
     $('stDone').textContent = ps.filter(p => p.done).length;
     $('stVaults').textContent = ps.reduce((t, p) => t + Math.min(p.vault, 8), 0);
     renderClock();
+    const rc3 = [1, 2, 3].map(n => ps.filter(p => p.rating === n).length);
+    $('stRate').innerHTML = rc3.some(Boolean) ? `😴 ${rc3[0]} &nbsp;🙂 ${rc3[1]} &nbsp;🔥 ${rc3[2]}` : '–';
 
     // leaderboard: points, then time
     const lb = ps.slice().sort((a, b) => b.score - a.score || (b.done - a.done) || a.time - b.time).slice(0, 10);
@@ -272,7 +277,7 @@
     // heatmap
     const stats = {};
     events.forEach(r => {
-      if (r.event !== 'answer' || hidden.has(r.player_id) || !r.vault || (r.question_id || '').startsWith('TARGETS:')) return;
+      if (r.event !== 'answer' || hidden.has(r.player_id) || !r.vault || /^(TARGETS|RATING):/.test(r.question_id || '')) return;
       stats[r.vault] = stats[r.vault] || { n: 0, c: 0 };
       stats[r.vault].n++; if (r.correct) stats[r.vault].c++;
     });
@@ -296,6 +301,7 @@
       <td>${esc(p.name)}</td><td>${esc(p.cls)}</td><td>${p.score}</td><td>${p.done ? 'done' : p.vault + '/9'}</td><td>${fmt(p.time)}</td>
       <td>${esc(p.wrong.join(', ')) || '–'}</td><td>${p.hints}</td>
       <td>${p.targets ? p.targets.map(t => t + '–' + (t + 1)).join(' · ') : '–'}</td>
+      <td>${['–', '😴', '🙂', '🔥'][p.rating || 0]}</td>
       <td><button class="btn" data-hide="${esc(p.id)}">${hidden.has(p.id) ? 'Unhide' : 'Hide'}</button></td></tr>`).join('');
     $('tbody').querySelectorAll('[data-hide]').forEach(b => b.addEventListener('click', () => {
       const id = b.dataset.hide;
@@ -328,8 +334,8 @@
     if (e.key === 'f' || e.key === 'F') fullscreen();
   });
   $('csvBtn').addEventListener('click', () => {
-    const rows = [['name', 'class', 'points', 'vault', 'finished', 'time_s', 'wrong_first_try', 'hints', ...Array.from({ length: 8 }, (_, i) => 'target_C' + (i + 1))]];
-    Object.values(players).forEach(p => rows.push([p.name, p.cls, p.score, p.vault, p.done, p.time, p.wrong.join(' '), p.hints, ...(p.targets ? p.targets.map(t => t + '-' + (t + 1)) : Array(8).fill(''))]));
+    const rows = [['name', 'class', 'points', 'vault', 'finished', 'time_s', 'rating_1to3', 'wrong_first_try', 'hints', ...Array.from({ length: 8 }, (_, i) => 'target_C' + (i + 1))]];
+    Object.values(players).forEach(p => rows.push([p.name, p.cls, p.score, p.vault, p.done, p.time, p.rating || '', p.wrong.join(' '), p.hints, ...(p.targets ? p.targets.map(t => t + '-' + (t + 1)) : Array(8).fill(''))]));
     const csv = rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));

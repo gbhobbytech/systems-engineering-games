@@ -174,6 +174,15 @@
   .band { padding: 7px 8px; border-radius: 5px; border: 1px solid #555; background: #111; color: #eee; font: bold 13px monospace; cursor: pointer; }
   .band.on { background: var(--cyan); color: #000; border-color: var(--cyan); }
 
+  .rate { margin: 18px auto 0; padding: 12px; max-width: 420px; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.6); }
+  .rate-row { display: flex; gap: 10px; justify-content: center; }
+  .rate-btn {
+    flex: 1; padding: 10px 6px; border-radius: 8px; border: 1px solid #555; background: #111; color: #eee;
+    font: bold 13px monospace; cursor: pointer; transition: transform 0.15s;
+  }
+  .rate-btn span { display: block; font-size: 34px; margin-bottom: 4px; }
+  .rate-btn:hover { transform: scale(1.06); border-color: var(--cyan); }
+  .rate-btn.on { border-color: var(--gold); background: #2a2205; box-shadow: 0 0 12px rgba(250,204,21,0.5); }
   .next-level {
     margin: 16px auto 0; padding: 12px 16px; border: 2px dashed var(--pink); border-radius: 8px; color: var(--pink);
     font-weight: bold; text-align: center; max-width: 560px;
@@ -310,6 +319,15 @@
       <a class="btn ghost" href="index.html" style="text-decoration:none">◀ LEVEL SELECT</a>
     </div>
     <div class="note" id="dlMsg" style="font-size:13px; margin-top:8px">Post your card in our Systems Engineering Teams channel.</div>
+    <div class="rate">
+      <div style="font-weight:bold; margin-bottom:8px">How was this level?</div>
+      <div class="rate-row">
+        <button class="rate-btn" data-r="1"><span>😴</span>Boring</button>
+        <button class="rate-btn" data-r="2"><span>🙂</span>Okay</button>
+        <button class="rate-btn" data-r="3"><span>🔥</span>Loved it</button>
+      </div>
+      <div class="note" id="rateMsg" style="font-size:13px; margin-top:6px">Tap one. It's anonymous on the big screen.</div>
+    </div>
     <div class="next-level">NEXT: LEVEL 3 – THE 9–10 EVIDENCE LAB<br><span style="font-weight:normal; color:#ccc; font-size:13px">Coming in a later lesson. Keep your card: your targets are your starting point.</span></div>
   </div>
 </section>
@@ -528,7 +546,7 @@
       vault: 0, q: 0, score: 0,
       results: {},           // qid -> { points, firstTry, hint, attempts }
       vaultClean: {},        // vault num -> true if no wrong answers
-      targets: {}, evidence: '', done: false
+      targets: {}, evidence: '', done: false, rating: 0
     };
   }
   function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
@@ -987,6 +1005,7 @@
     const stars = Object.values(S.vaultClean).filter(Boolean).length;
     $('endStats').innerHTML = `<b style="color:var(--gold); font-size:24px">${rankFor(S.score).toUpperCase()}</b><br>
       ${S.score}/${MAX_POINTS} points · ${fmtTime(elapsed())} · ${firstTries}/28 first try · <span class="gold-star">★</span> ${stars} perfect vaults`;
+    renderRating();
     show('end');
     sfx.win();
   }
@@ -1069,6 +1088,21 @@
     else finish(c.toDataURL('image/png'));
   }
   $('dlBtn').addEventListener('click', downloadCard);
+
+  // ---- level rating ----
+  function renderRating() {
+    document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('on', S && Number(b.dataset.r) === S.rating));
+  }
+  document.querySelectorAll('.rate-btn').forEach(b => b.addEventListener('click', () => {
+    if (!S) return;
+    const r = Number(b.dataset.r);
+    if (S.rating === r) return;
+    S.rating = r; save();
+    post('answer', { vault: 9, question_id: 'RATING:' + r, score: 0 });
+    sfx.good();
+    $('rateMsg').textContent = 'Thanks! You can change your answer.';
+    renderRating();
+  }));
 
   // ===================== KEYBOARD =====================
   document.addEventListener('keydown', e => {
