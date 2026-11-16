@@ -1,0 +1,3193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Level 1 – Systems Engineering Orientation</title>
+<style>
+  .neon-pink {
+    color: #ff4ecf;
+    text-shadow:
+      0 0 4px #ff4ecf,
+      0 0 8px #ff4ecf,
+      0 0 12px #ff4ecf,
+      0 0 18px #ff4ecf,
+      0 0 24px #ff2ecb,
+      0 0 30px #ff2ecb;
+    font-weight: bold;
+  }
+
+  * { box-sizing: border-box; }
+
+  :root {
+    --tile: 32px;
+    --gap: 2px;
+  }
+
+  body {
+    background: #111;
+    color: #eee;
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 20px 12px;
+  }
+  #gameWrapper {
+    border: 3px solid #555;
+    padding: 16px;
+    background: #000;
+    position: relative;
+    width: min(900px, calc(100vw - 24px));
+    max-width: 100%;
+    overflow: hidden;
+  }
+  #hud {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  #hudTitle {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  #hudItems div {
+    line-height: 1.3;
+  }
+  .hud-status { color: #facc15; margin-top: 4px; }
+  .hud-dim { color: #888; }
+
+  #mapViewport {
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  #map {
+    display: grid;
+    grid-template-columns: repeat(20, var(--tile));
+    grid-template-rows: repeat(20, var(--tile));
+    gap: var(--gap);
+    width: max-content;
+    margin: 0 auto;
+  }
+  .tile {
+    width: var(--tile);
+    height: var(--tile);
+    background: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+  }
+
+  .tile.player { background: #0f0 !important; color: #000 !important; text-shadow: none !important; font-weight: bold; }
+
+  .building { background: #444; }
+  .b-assessment { background: #1d4ed8; } /* blue */
+  .b-integrity  { background: #a855f7; } /* purple */
+  .b-command    { background: #f97316; } /* orange */
+  .b-logbook    { background: #22c55e; } /* green */
+  .b-start      { background: #eab308; color: #000; } /* yellow */
+  .b-exit       { background: #dc2626; } /* red */
+  .b-spin       { background: #06b6d4; color: #000; } /* cyan */
+  .b-easter     { background: #ec4899; } /* pink */
+  .b-safety     { /* hazard stripes */
+    background: repeating-linear-gradient(45deg, #facc15 0 5px, #111 5px 10px);
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 0 0 3px #000, 0 0 3px #000;
+  }
+  .b-systems    { background: #cbd5e1; color: #000; } /* light slate */
+  .b-workshop   { background: #7c4a1e; } /* brown */
+
+  .wall {
+    background: #333;
+    box-shadow: inset 0 0 4px #000;
+  }
+
+  /* Fog of war */
+  .fog {
+    background: rgb(25, 28, 32);
+    color: rgb(1, 17, 50);
+  }
+
+  #instructions {
+    margin-top: 8px;
+    color: #ccc;
+    font-size: 14px;
+    text-align: center;
+    min-height: 1.4em;
+  }
+  #instructions.warn { color: #facc15; }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* Dialog overlay (quizzes, feedback, spin mini-game) */
+  #dialog {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 16px;
+    width: min(860px, calc(100vw - 24px));
+    max-height: 72vh;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.95);
+    border: 1px solid #888;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 16px;
+    z-index: 4;
+  }
+  #dialogTitle {
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+  #dialogText {
+    white-space: pre-wrap;
+    line-height: 1.35;
+  }
+  .opt-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin: 6px 0 0;
+    padding: 7px 9px;
+    background: #111;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+  }
+  .opt-btn:hover { border-color: #0f0; }
+  #dialogHint {
+    margin-top: 8px;
+    color: #999;
+    font-size: 13px;
+  }
+
+  /* Room / interior screen */
+  #roomScreen {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    border: 1px solid #666;
+    padding: 8px;
+    flex-direction: row;
+    gap: 8px;
+    z-index: 3;
+  }
+  #roomScreen:not(.hidden) {
+    display: flex;
+  }
+  #roomArt {
+    white-space: pre;
+    font-family: monospace;
+    font-size: 20px;
+    min-width: 30%;
+    max-width: 30%;
+    line-height: 1.1;
+  }
+  #roomContent {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #roomText {
+    white-space: pre-wrap;
+    font-size: 20px;
+    line-height: 1.3;
+  }
+  .gold-star { font-size: 1.2em; line-height: 1; color: #facc15; text-shadow: 0 0 4px #facc15, 0 0 8px #b45309; }
+  .line-tick { color: #4ade80; }
+
+  /* Spin Lab wheel */
+  .wheel-wrap {
+    position: relative;
+    width: 230px;
+    height: 230px;
+    margin: 18px auto 8px;
+  }
+  .wheel {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 4px solid #e5e7eb;
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
+    transition: transform 4.2s cubic-bezier(0.12, 0.8, 0.18, 1);
+  }
+  .wheel.gold-win { box-shadow: 0 0 28px #facc15, 0 0 60px #b45309; }
+  .wheel-label {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 84px;
+    margin-left: -42px;
+    margin-top: -7px;
+    text-align: center;
+    font: bold 11px monospace;
+    color: #fff;
+    text-shadow: 0 0 3px #000, 0 0 3px #000;
+    white-space: nowrap;
+  }
+  .wheel-label.gold { color: #fff7d6; font-size: 15px; }
+  .wheel-hub {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border-radius: 50%;
+    background: #111;
+    border: 3px solid #e5e7eb;
+  }
+  .wheel-pointer {
+    position: absolute;
+    left: 50%;
+    top: -16px;
+    margin-left: -11px;
+    width: 0;
+    height: 0;
+    border-left: 11px solid transparent;
+    border-right: 11px solid transparent;
+    border-top: 22px solid #f87171;
+    filter: drop-shadow(0 0 3px #000);
+    z-index: 2;
+  }
+  .spin-result { white-space: pre-wrap; margin-top: 8px; min-height: 1.4em; }
+  .spin-result .reflect { color: #93c5fd; }
+  .smoke {
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .smoke span {
+    position: absolute;
+    font-size: 56px;
+    text-shadow: 0 0 10px #3b82f6;
+    color: #60a5fa;
+    opacity: 0;
+    animation: puff 2.4s ease-out forwards;
+  }
+  .smoke span:nth-child(2) { animation-delay: 0.25s; }
+  .smoke span:nth-child(3) { animation-delay: 0.5s; }
+  .smoke span:nth-child(4) { animation-delay: 0.75s; }
+  @keyframes puff {
+    0%   { transform: translate(-50%, 0) scale(0.4); opacity: 0.9; }
+    100% { transform: translate(calc(-50% + var(--dx, 0px)), -130px) scale(1.8); opacity: 0; }
+  }
+  .smoke.grey span { color: #9ca3af; font-size: 40px; text-shadow: 0 0 8px #6b7280; }
+  .star-burst {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    font-size: 70px;
+    color: #facc15;
+    text-shadow: 0 0 12px #facc15, 0 0 30px #f59e0b;
+    transform: translate(-50%, -50%) scale(0);
+    animation: burst 1.4s ease-out forwards;
+    pointer-events: none;
+    z-index: 3;
+  }
+  @keyframes burst {
+    0%   { transform: translate(-50%, -50%) scale(0) rotate(-90deg); opacity: 1; }
+    60%  { transform: translate(-50%, -50%) scale(1.5) rotate(10deg); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.1) rotate(0deg); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wheel { transition-duration: 0.8s; }
+    .smoke span, .star-burst { animation-duration: 0.01s; }
+  }
+  @media (max-width: 600px) {
+    .wheel-wrap { width: 190px; height: 190px; }
+  }
+  .line-cross { color: #f87171; }
+  #roomTitle {
+    font-weight: bold;
+    margin-bottom: 1px;
+    font-size: 22px;
+  }
+  #roomHint {
+    margin-top: 18px;
+    padding-top: 8px;
+    border-top: 1px solid #333;
+    font-size: 14px;
+    color: #aaa;
+  }
+
+  /* End screen */
+  #endScreen {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top, #222 0, #000 60%);
+    border: 1px solid #666;
+    padding: 16px;
+    text-align: center;
+    z-index: 5;
+    overflow-y: auto;
+  }
+  #endScreen:not(.hidden) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #endAscii {
+    white-space: pre;
+    margin: 0 0 4px;
+    font-size: 16px;
+  }
+  .win-text { font-size: 18px; margin-bottom: 6px; }
+  #endText {
+    margin-bottom: 8px;
+    font-size: 15px;
+    white-space: pre-wrap;
+  }
+  #endCards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 10px;
+    max-width: 760px;
+  }
+  .card-chip {
+    border: 1px solid #0f0;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+    max-width: 240px;
+    text-align: left;
+  }
+  .card-chip.locked { border-color: #444; color: #666; }
+  .card-chip b { display: block; }
+
+  #ticketForm {
+    width: 100%;
+    max-width: 560px;
+    text-align: left;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: #0a0a0a;
+  }
+  #ticketForm h3 { margin: 0 0 6px; font-size: 15px; color: #facc15; }
+  #ticketForm label { display: block; font-size: 13px; margin: 6px 0 2px; color: #ccc; }
+  #ticketForm input, #ticketForm textarea {
+    width: 100%;
+    background: #111;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 5px 7px;
+    font: 14px monospace;
+  }
+  #ticketForm textarea { height: 48px; resize: vertical; }
+  .row2 { display: flex; gap: 8px; }
+  .row2 > div { flex: 1; }
+  #downloadBtn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 9px;
+    background: #0f0;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font: bold 15px monospace;
+    cursor: pointer;
+  }
+  #ticketMsg { margin-top: 6px; font-size: 13px; min-height: 1.2em; }
+  #ticketMsg.err { color: #f87171; }
+  #ticketMsg.ok { color: #4ade80; }
+
+  #credits {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 8px;
+    white-space: pre-wrap;
+    text-align: left;
+  }
+  #endHint {
+    font-size: 13px;
+    color: #aaa;
+  }
+  #endHint.warn { color: #facc15; }
+
+  /* ---------- Splash screen ---------- */
+  #splash, #onboard {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    overflow: hidden;
+  }
+  #splash {
+    background: radial-gradient(ellipse at 50% 35%, #2a0a3d 0%, #0b0218 55%, #000 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .sun {
+    position: absolute;
+    left: 50%;
+    top: 47%;
+    width: 300px;
+    height: 300px;
+    margin: -260px 0 0 -150px;
+    border-radius: 50%;
+    background:
+      repeating-linear-gradient(to bottom, transparent 0 62%, #0b0218 62% 66%, transparent 66% 72%, #0b0218 72% 77%, transparent 77% 84%, #0b0218 84% 90%, transparent 90%),
+      linear-gradient(to bottom, #fde047 0%, #fb923c 45%, #ec4899 100%);
+    box-shadow: 0 0 60px #ec4899, 0 0 120px #f97316;
+    opacity: 0.85;
+    animation: sunrise 2.2s ease-out both;
+  }
+  @keyframes sunrise {
+    from { transform: translateY(120px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 0.85; }
+  }
+  .grid-floor {
+    position: absolute;
+    left: -50%;
+    right: -50%;
+    top: 47%;
+    bottom: -20%;
+    background-image:
+      linear-gradient(#ff4ecf 2px, transparent 2px),
+      linear-gradient(90deg, #ff4ecf 2px, transparent 2px);
+    background-size: 60px 60px;
+    transform: perspective(260px) rotateX(62deg);
+    transform-origin: center top;
+    animation: gridmove 0.9s linear infinite;
+    opacity: 0.55;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 35%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 35%);
+  }
+  @keyframes gridmove { to { background-position: 0 60px; } }
+  .scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 3px);
+    animation: crt 0.15s infinite;
+  }
+  @keyframes crt { 50% { opacity: 0.85; } }
+  .floaty {
+    position: absolute;
+    font-size: 42px;
+    opacity: 0.75;
+    pointer-events: none;
+  }
+  .floaty.gear { color: #22d3ee; text-shadow: 0 0 12px #22d3ee; animation: spin 7s linear infinite; }
+  .floaty.gear.rev { color: #a855f7; text-shadow: 0 0 12px #a855f7; animation-direction: reverse; animation-duration: 5s; }
+  .floaty.zap { color: #facc15; text-shadow: 0 0 14px #facc15; animation: zap 2.6s ease-in-out infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes zap {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.4; }
+    10% { opacity: 1; transform: translateY(-6px) scale(1.25); }
+    20% { opacity: 0.5; }
+    50% { transform: translateY(-14px) scale(1); }
+  }
+  .splash-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 0 12px;
+  }
+  .splash-kicker {
+    color: #22d3ee;
+    letter-spacing: 6px;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 3px #000, 0 0 6px #000, 0 0 10px #22d3ee;
+    font-weight: bold;
+    animation: fadeUp 0.8s 0.3s ease-out both;
+  }
+  .glitch {
+    position: relative;
+    margin: 0;
+    font: bold clamp(30px, 7.5vw, 66px) monospace;
+    color: #fff;
+    letter-spacing: 2px;
+    text-shadow: 0 0 2px #000, 0 0 4px #000, 0 0 10px #22d3ee, 0 0 26px #ff4ecf, 0 0 50px #ff4ecf;
+    animation: slam 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) both, flicker 5s 1.2s infinite;
+  }
+  .glitch::before, .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    text-shadow: none;
+  }
+  .glitch::before { color: #22d3ee; clip-path: inset(0 0 58% 0); animation: glitchA 2.8s infinite steps(1); }
+  .glitch::after  { color: #ff4ecf; clip-path: inset(55% 0 0 0); animation: glitchB 3.4s infinite steps(1); }
+  @keyframes slam {
+    0%   { transform: scale(3); opacity: 0; filter: blur(12px); }
+    100% { transform: scale(1); opacity: 1; filter: blur(0); }
+  }
+  @keyframes flicker {
+    0%, 19%, 21%, 62%, 64%, 100% { opacity: 1; }
+    20%, 63% { opacity: 0.35; }
+  }
+  @keyframes glitchA {
+    0%, 86%, 100% { transform: translate(0); opacity: 0; }
+    87% { transform: translate(-5px, -2px); opacity: 0.9; }
+    90% { transform: translate(4px, 1px); opacity: 0.9; }
+    93% { transform: translate(-2px, 0); opacity: 0.9; }
+  }
+  @keyframes glitchB {
+    0%, 78%, 100% { transform: translate(0); opacity: 0; }
+    79% { transform: translate(5px, 2px); opacity: 0.9; }
+    83% { transform: translate(-4px, -1px); opacity: 0.9; }
+  }
+  .splash-sub {
+    margin-top: 6px;
+    font: bold clamp(18px, 4vw, 30px) monospace;
+    letter-spacing: clamp(6px, 2vw, 16px);
+    color: #4ade80;
+    text-shadow: 0 0 10px #22c55e;
+    animation: fadeUp 0.8s 0.7s ease-out both;
+  }
+  .splash-tag {
+    margin-top: 22px;
+    height: 1.4em;
+    font: bold clamp(16px, 3.4vw, 24px) monospace;
+    color: #facc15;
+    text-shadow: 0 0 10px #f59e0b;
+  }
+  .splash-tag.pop { animation: pop 0.35s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(1.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .splash-press {
+    margin-top: 34px;
+    font: bold 16px monospace;
+    color: #fff;
+    letter-spacing: 3px;
+    animation: fadeUp 0.6s 1.3s ease-out both, blink 1.1s 1.9s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes fadeUp {
+    from { transform: translateY(14px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  #splash.leaving { animation: warpOut 0.55s ease-in forwards; }
+  @keyframes warpOut {
+    0%   { filter: brightness(1); transform: scale(1); opacity: 1; }
+    40%  { filter: brightness(2.5); }
+    100% { filter: brightness(4); transform: scale(1.4); opacity: 0; }
+  }
+
+  /* ---------- Sign-in / onboarding ---------- */
+  #onboard {
+    overflow-y: auto;
+    background: radial-gradient(circle at top, #1a1030 0, #000 70%);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 24px 12px;
+  }
+  .ob-card {
+    width: 100%;
+    max-width: 620px;
+    border: 2px solid #22d3ee;
+    border-radius: 8px;
+    padding: 16px 18px;
+    background: rgba(0, 0, 0, 0.85);
+    box-shadow: 0 0 22px rgba(34, 211, 238, 0.35);
+    animation: fadeUp 0.5s ease-out both;
+  }
+  .ob-card h2 {
+    margin: 0 0 4px;
+    color: #22d3ee;
+    text-shadow: 0 0 8px #22d3ee;
+    font-size: 22px;
+  }
+  .ob-intro { color: #bbb; font-size: 13px; margin: 0 0 10px; }
+  .ob-card label, .ob-label { display: block; font-size: 14px; margin: 12px 0 4px; color: #eee; }
+  .ob-card input, .ob-card textarea {
+    width: 100%;
+    background: #111;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font: 15px monospace;
+  }
+  .ob-card textarea { height: 52px; resize: vertical; }
+  .ob-note { font-size: 12px; color: #888; margin-top: 4px; }
+  .choice-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .choice-btn {
+    flex: 1;
+    min-width: 54px;
+    padding: 9px 6px;
+    background: #111;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 6px;
+    font: bold 15px monospace;
+    cursor: pointer;
+  }
+  .choice-btn:hover { border-color: #22d3ee; }
+  .choice-btn.on { background: #22d3ee; color: #000; border-color: #22d3ee; box-shadow: 0 0 10px #22d3ee; }
+  .scale-ends { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-top: 3px; }
+  #startBtn {
+    margin-top: 16px;
+    width: 100%;
+    padding: 11px;
+    background: linear-gradient(90deg, #22d3ee, #ff4ecf);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font: bold 17px monospace;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+  #obMsg { min-height: 1.3em; margin-top: 6px; font-size: 13px; color: #f87171; }
+  #cardFor { font-size: 14px; color: #ccc; margin-bottom: 4px; }
+  #cardFor b { color: #fff; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grid-floor, .scanlines, .floaty, .glitch, .glitch::before, .glitch::after, .splash-press { animation: none !important; }
+  }
+
+  /* Touch controls (shown on touch screens / narrow screens) */
+  #touchControls {
+    display: none;
+    width: min(900px, calc(100vw - 24px));
+    margin-top: 10px;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 48px);
+    gap: 4px;
+  }
+  .tbtn {
+    background: #222;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 8px;
+    font: bold 15px monospace;
+    touch-action: manipulation;
+    cursor: pointer;
+  }
+  .tbtn:active { background: #0f0; color: #000; }
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 6px;
+  }
+  .actions .tbtn { padding: 10px 8px; font-size: 14px; }
+  @media (hover: none), (max-width: 700px) {
+    #touchControls { display: flex; }
+  }
+
+  @media (max-width: 600px) {
+    :root { --tile: 15px; --gap: 1px; }
+    .tile { font-size: 7px; }
+    body { padding: 10px 8px; }
+    #gameWrapper { width: calc(100vw - 16px); padding: 10px; }
+    #roomScreen { overflow-y: auto; flex-direction: column; gap: 4px; }
+    #roomArt { min-width: 0; max-width: none; font-size: 16px; }
+    #roomText { font-size: 16px; }
+    #dialog { top: 10px; bottom: auto; width: calc(100vw - 16px); max-height: 80vh; font-size: 14px; }
+    #endAscii { font-size: 13px; }
+    #endText { font-size: 14px; }
+    .row2 { flex-direction: column; gap: 0; }
+    #touchControls { width: calc(100vw - 16px); gap: 6px; }
+    .dpad { grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); }
+  }
+</style>
+</head>
+<body>
+<div id="gameWrapper">
+  <div id="hud">
+    <div id="hudTitle">Orientation Progress</div>
+    <div id="hudItems"></div>
+  </div>
+
+  <div id="mapViewport"><div id="map"></div></div>
+
+  <p id="instructions"></p>
+
+  <!-- Interior / room screen -->
+  <div id="roomScreen" class="hidden">
+    <div id="roomArt"></div>
+    <div id="roomContent">
+      <div id="roomTitle"></div>
+      <div id="roomText"></div>
+      <div id="roomHint"></div>
+    </div>
+  </div>
+
+  <!-- Quiz / feedback / mini-game dialog -->
+  <div id="dialog" class="hidden">
+    <div id="dialogTitle"></div>
+    <div id="dialogText"></div>
+    <div id="dialogHint">Press Enter to close</div>
+  </div>
+
+  <!-- End screen -->
+  <div id="endScreen" class="hidden">
+    <pre id="endAscii">
+   \o/
+    |
+   / \
+VICTORY!</pre>
+    <div class="win-text">👊 YOU WIN 👊</div>
+    <div id="endText"></div>
+    <div id="endCards"></div>
+
+    <div id="ticketForm">
+      <h3>Exit ticket – fill this in, then download your card</h3>
+      <div id="cardFor"></div>
+      <label>How confident are you NOW that you know how this subject works and how you'll be assessed?</label>
+      <div class="choice-row" id="confAfter">
+        <button type="button" class="choice-btn" data-val="1">1</button>
+        <button type="button" class="choice-btn" data-val="2">2</button>
+        <button type="button" class="choice-btn" data-val="3">3</button>
+        <button type="button" class="choice-btn" data-val="4">4</button>
+        <button type="button" class="choice-btn" data-val="5">5</button>
+      </div>
+      <div class="scale-ends"><span>1 = no idea</span><span>5 = totally sure</span></div>
+      <label for="tDo">One thing I'll do in my first SAT lesson is…</label>
+      <textarea id="tDo" maxlength="160"></textarea>
+      <label for="tUnsure">One thing I'm still unsure about is… (optional)</label>
+      <textarea id="tUnsure" maxlength="160"></textarea>
+      <button id="downloadBtn" type="button">Download my card</button>
+      <div id="ticketMsg"></div>
+    </div>
+
+    <div style="margin:0 0 12px; padding:10px 14px; border:2px dashed #ff4ecf; border-radius:8px; color:#ff4ecf; font-weight:bold; max-width:560px">
+      NEXT: LEVEL 2 – RUBRIC HEIST<br>
+      <a href="rubric-heist.html" style="color:#22d3ee">Play Level 2 ▶</a> &nbsp;·&nbsp; <a href="index.html" style="color:#aaa">Level select</a>
+    </div>
+    <div id="credits"></div>
+    <div id="endHint">Esc: back to the map &nbsp;·&nbsp; R twice: restart</div>
+  </div>
+
+  <!-- Splash screen -->
+  <div id="splash">
+    <div class="sun"></div>
+    <div class="grid-floor"></div>
+    <div class="floaty gear" style="left:7%; top:12%;">⚙</div>
+    <div class="floaty gear rev" style="right:8%; top:20%; font-size:56px;">⚙</div>
+    <div class="floaty zap" style="left:16%; top:58%;">⚡</div>
+    <div class="floaty zap" style="right:15%; top:62%; animation-delay:1.1s;">⚡</div>
+    <div class="floaty gear rev" style="left:44%; top:6%; font-size:28px;">⚙</div>
+    <div class="splash-content">
+      <div class="splash-kicker">VCE · UNITS 3 &amp; 4</div>
+      <h1 class="glitch" data-text="SYSTEMS ENGINEERING">SYSTEMS ENGINEERING</h1>
+      <div class="splash-sub">ORIENTATION</div>
+      <div class="splash-tag" id="splashTag">&nbsp;</div>
+      <div class="splash-press">▶ PRESS ENTER OR TAP TO START ◀</div>
+    </div>
+    <div class="scanlines"></div>
+  </div>
+
+  <!-- Sign-in + onboarding questions -->
+  <div id="onboard" class="hidden">
+    <div class="ob-card">
+      <h2>Sign in, engineer</h2>
+      <p class="ob-intro">Your name and class go on the card you'll earn at the end. Three quick questions, then you're in.</p>
+      <div class="row2">
+        <div>
+          <label for="obName">First name</label>
+          <input id="obName" maxlength="24" autocomplete="off" />
+        </div>
+        <div>
+          <label for="obClass">Class</label>
+          <input id="obClass" maxlength="12" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="ob-label">1. Quick guess: how much of your study score comes from your major project (SAT)?</div>
+      <div class="choice-row" id="obPredict">
+        <button type="button" class="choice-btn" data-val="20%">20%</button>
+        <button type="button" class="choice-btn" data-val="50%">50%</button>
+        <button type="button" class="choice-btn" data-val="70%">70%</button>
+      </div>
+      <div class="ob-note">No peeking – you'll find out in Assessment Hall.</div>
+
+      <div class="ob-label">2. How confident are you that you know how this subject works and how you'll be assessed?</div>
+      <div class="choice-row" id="obConf">
+        <button type="button" class="choice-btn" data-val="1">1</button>
+        <button type="button" class="choice-btn" data-val="2">2</button>
+        <button type="button" class="choice-btn" data-val="3">3</button>
+        <button type="button" class="choice-btn" data-val="4">4</button>
+        <button type="button" class="choice-btn" data-val="5">5</button>
+      </div>
+      <div class="scale-ends"><span>1 = no idea</span><span>5 = totally sure</span></div>
+
+      <label for="obInterest">3. What are you most keen to build or learn this year? (optional)</label>
+      <textarea id="obInterest" maxlength="120"></textarea>
+
+      <button id="startBtn" type="button">ENTER THE CAMPUS ▶</button>
+      <div id="obMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- On-screen controls for touch devices -->
+<div id="touchControls">
+  <div class="dpad">
+    <span></span><button class="tbtn" data-key="ArrowUp">▲</button><span></span>
+    <button class="tbtn" data-key="ArrowLeft">◀</button><span></span><button class="tbtn" data-key="ArrowRight">▶</button>
+    <span></span><button class="tbtn" data-key="ArrowDown">▼</button><span></span>
+  </div>
+  <div class="actions">
+    <button class="tbtn" data-key="Enter">Enter</button>
+    <button class="tbtn" data-key="b">Back</button>
+    <button class="tbtn" data-key="Escape">Leave</button>
+    <button class="tbtn" data-key="q">Quiz</button>
+    <button class="tbtn" data-key="s">Spin</button>
+    <button class="tbtn" data-key="r">Restart</button>
+  </div>
+</div>
+
+<script>
+  // --- Basic setup ---
+  const width = 20;
+  const height = 20;
+  const mapEl = document.getElementById('map');
+  const hudEl = document.getElementById('hud');
+  const hudItemsEl = document.getElementById('hudItems');
+  const dialogEl = document.getElementById('dialog');
+  const dialogTitleEl = document.getElementById('dialogTitle');
+  const dialogTextEl = document.getElementById('dialogText');
+  const dialogHintEl = document.getElementById('dialogHint');
+
+  const roomScreenEl = document.getElementById('roomScreen');
+  const roomArtEl = document.getElementById('roomArt');
+  const roomTitleEl = document.getElementById('roomTitle');
+  const roomTextEl = document.getElementById('roomText');
+  const roomHintEl = document.getElementById('roomHint');
+
+  const instructionsEl = document.getElementById('instructions');
+
+  const endScreenEl = document.getElementById('endScreen');
+  const endTextEl = document.getElementById('endText');
+  const endCardsEl = document.getElementById('endCards');
+  const endHintEl = document.getElementById('endHint');
+  const creditsEl = document.getElementById('credits');
+  const ticketMsgEl = document.getElementById('ticketMsg');
+
+  // Where students should share their card
+  const SHARE_INSTRUCTION = 'Post your card in our Systems Engineering Teams channel.';
+
+  // Buildings (including optional rooms)
+  const buildings = [
+    { id: 'start',      name: 'Start Area',       className: 'b-start',      label: 'ST' },
+    { id: 'assessment', name: 'Assessment Hall',  className: 'b-assessment', label: 'AS' },
+    { id: 'integrity',  name: 'Integrity Office', className: 'b-integrity',  label: 'IN' },
+    { id: 'command',    name: 'Command Tower',    className: 'b-command',    label: 'CT' },
+    { id: 'logbook',    name: 'Logbook Hut',      className: 'b-logbook',    label: 'LB' },
+    { id: 'exit',       name: 'Exit Gate',        className: 'b-exit',       label: 'EX' },
+    { id: 'spin',       name: 'Spin Lab',         className: 'b-spin',       label: 'SP' },
+    { id: 'easter',     name: 'Mystery Shrine',   className: 'b-easter',     label: '??' },
+    { id: 'safety',     name: 'Safety Bay',       className: 'b-safety',     label: 'SA' },
+    { id: 'systems',    name: 'Systems Lab',      className: 'b-systems',    label: 'SY' },
+    { id: 'workshop',   name: 'Workshop',         className: 'b-workshop',   label: 'WS' }
+  ];
+
+  // Main buildings that count for completion
+  const mainBuildingOrder = ['assessment', 'integrity', 'command', 'logbook'];
+  const optionalBuildingOrder = ['safety', 'systems', 'workshop', 'spin', 'easter'];
+  const bonusBuildingOrder = ['safety', 'systems', 'workshop']; // optional rooms with a bonus question
+
+  // Takeaway cards
+  const cardData = {
+    assessment: { name: 'The Numbers', text: '50 / 20 / 30. Project / SACs / Exam. Half your score is the project.' },
+    integrity:  { name: 'The Shield',  text: 'If you made it, prove it. If AI helped, say how.' },
+    command:    { name: 'The Spell',   text: 'Circle the verb. Plan for the verb. Answer the verb.' },
+    logbook:    { name: 'The Habit',   text: 'Little and often: photo, note, clip – most lessons.' },
+    safety:     { name: 'The Rule',    text: 'Check before power. Stop if it smells, smokes or gets hot.' },
+    systems:    { name: 'The Loop',    text: 'Input → process → output. Feedback closes the loop.' },
+    workshop:   { name: 'The Cycle',   text: 'Test, learn, change, re-test. Keep the failures.' }
+  };
+  const cardOrder = ['assessment', 'integrity', 'command', 'logbook', 'safety', 'systems', 'workshop'];
+
+  // Ranks for the end card
+  const ranks = [
+    { min: 11, name: 'Systems Wizard' },
+    { min: 9,  name: 'Evidence Engineer' },
+    { min: 7,  name: 'Verb Wrangler' },
+    { min: 0,  name: 'Rubric Rookie' }
+  ];
+
+  // Impassable terrain: rock clusters
+  const blockedTiles = new Set();
+  function addBlockedCluster(x0, y0, w, h) {
+    for (let y = y0; y < y0 + h; y++) {
+      for (let x = x0; x < x0 + w; x++) {
+        blockedTiles.add(`${x},${y}`);
+      }
+    }
+  }
+  addBlockedCluster(3, 3, 3, 3);
+  addBlockedCluster(12, 4, 3, 3);
+  addBlockedCluster(7, 14, 3, 3);
+
+  function isBlocked(x, y) {
+    return blockedTiles.has(`${x},${y}`);
+  }
+
+  // Room data
+  const roomData = {
+    start: {
+      asciiFrames: [
+` .---.
+ |o o|
+ | ^ |
+ |'-'|
+ '---'
+Guide Bot`,
+` .---.
+ |o o|
+ | - |
+ |'-'|
+ '---'
+Guide Bot`
+      ],
+      frameDelay: 1000,
+      lines: [
+`Hey there! I'm your Systems Engineering guide.
+
+Walk around the campus, visit each building,
+and learn how this subject actually works this year.`,
+`You'll meet:
+- The Assessment mentor
+- The Integrity officer
+- The Command-terms wizard
+- The Logbook engineer
+
+Pass each of their quizzes to collect a card.
+When you've got all four, the Exit Gate opens
+for the final challenge.`,
+`Bonus: three hidden rooms (Safety Bay, Systems Lab
+and the Workshop) each hold a bonus star and an
+extra card.
+
+Get the quizzes right first try, collect stars,
+and you'll earn a better rank on your end card.`
+      ],
+      rareLines: [
+`Fun fact: the bald old guy at the front
+has seen every possible excuse.
+
+"My 3D printer ate my folio" is still top 3, though.`
+      ]
+    },
+    assessment: {
+      asciiFrames: [
+` _______
+ |  A  |
+ | SS  |
+ |_____|
+Prof. Marks`,
+` _______
+ |  A  |
+ | SS  |
+ |_____|
+Prof. M*rks`
+      ],
+      frameDelay: 1000,
+      lines: [
+`Welcome to Assessment Hall!
+I'm Prof. Marks — yes, the rumours are true.
+I *do* dream in rubrics.
+
+This place is where we talk about what REALLY matters:
+how you're judged, scored, marked, weighed, measured,
+and occasionally roasted.`,
+`Your Systems Engineering score is built from:
+- 50% Major Project (SAT)
+- 10% Clean Energy SAC — analyse + evaluate
+- 10% Emerging Tech SAC — analyse + evaluate
+- 30% End-of-year exam
+
+Half your score? The project.
+That’s right — HALF.
+If that doesn’t wake you up, the bald old bloke at the
+front of the room definitely will.`,
+`Now let me put it simply:
+You’re doing FIVE big things:
+1. Design your major system
+2. Build & refine it
+3. Clean Energy task
+4. Emerging Tech task
+5. Exam
+
+If you can keep these straight, you’re already smarter
+than your teacher’s hairline.
+
+Catchphrase: "Rubrics never lie."`
+      ],
+      rareLines: [
+`Secret tip from Prof. Marks:
+If you can explain your project to a Year 7
+without them falling asleep, you probably
+understand it well enough for the exam.`
+      ]
+    },
+    integrity: {
+      asciiFrames: [
+`.----.
+| || |
+| || |
+| || |
+'----'
+Officer Auth`,
+`.----.
+| || |
+| || |
+| ||o|
+'----'
+Officer Auth`
+      ],
+      frameDelay: 1000,
+      lines: [
+`Welcome, student.
+I am Officer Auth — guardian of originality,
+defender of honest engineering,
+and sworn enemy of the phrase
+"my friend sent it to me as an example..."
+
+My purpose is simple:
+I help you protect your work — and your marks.
+
+Integrity isn’t scary.
+It just means:
+be able to show that you actually did the work.`,
+`Let’s clear up the biggest myth in the subject:
+Working together is allowed.
+Copy-pasting each other’s stuff is not.
+
+✔ Asking for help
+✔ Getting feedback
+✔ Comparing ideas
+✔ Using AI to think, not to dump answers
+
+✘ Copying code, diagrams, folios
+✘ Submitting someone else’s test results
+✘ Letting AI generate your entire folio
+
+If you can SHOW your process,
+you can explain how the work developed.`,
+`Integrity isn’t just a rule —
+it helps you explain how your work developed.
+
+If you do big chunks of work at home,
+keep a record of what you did, following your teacher’s guidance.
+
+Sometimes a student walks in with a project
+so polished it looks like a parent, auntie,
+neighbour or entire robotics lab built it.
+
+If someone strolls in on Monday with a
+perfect, Boston-Dynamics-level robot dog
+after struggling with a servo bracket on Friday...
+yeah, questions get asked.
+
+But if you have photos, videos, notes, tests,
+you can explain what you did and how the design changed.
+
+Catchphrase:
+"If you made it, prove it — and you’re safe."`,
+`Using AI with integrity:
+Follow your teacher’s current guidance on AI use.
+Where it is allowed, use AI to learn, debug, explore ideas, and think.
+Don’t let it do your folio for you.
+
+✔ Ask AI to explain concepts
+✔ Ask for examples or debugging help
+✔ Adapt answers into your own words
+✔ Add screenshots or photos of YOU testing
+✘ Don’t paste AI answers unchanged
+✘ Don’t let AI generate full designs
+✘ Don’t hand in AI code you never tested
+
+Golden rule:
+If AI helped, write one sentence saying how.`
+      ],
+      rareLines: [
+`Rare integrity warning unlocked:
+If your project looks like it was built by a
+precision-engineering wizard with 30 years of experience...
+but you can’t explain how it works...
+I start sharpening my incident report pencil.
+Show your work, and I’m on your side.`,
+`Rare integrity wisdom unlocked:
+If you pretend you never used AI...
+while your folio reads like it was written by
+a highly caffeinated robot philosopher...
+trust me — I can tell.
+
+This entire game was built with AI behind the scenes.
+The difference?
+We understand it — and we can explain it.
+Use AI as a tool, not a cover-up.`
+      ]
+    },
+    command: {
+      asciiFrames: [
+` /^^^/
+ | C |
+ | M |
+ | D |
+ '---'
+Cmd Wiz`,
+` /^^^/
+ | C |
+ | M |
+ | D*|
+ '---'
+Cmd Wiz`
+      ],
+      frameDelay: 1000,
+      lines: [
+`BEHOLD!
+You have stepped into the Command Tower —
+where tiny words control huge amounts of marks.
+
+I am the Command Wizard:
+Master of verbs, destroyer of vague answers,
+and sworn protector of students who actually
+read the question.
+
+In this place, we study the sacred words that
+decide whether your answer earns 1 mark…
+or a polite teacher sigh.`,
+`These are the five verbs that rule your SACs
+and your exam:
+
+describe → tell me what it is like
+explain  → tell me how or why something works
+compare  → similarities AND differences
+analyse  → break it apart; show relationships
+evaluate → judgement of good/bad AND reasons
+
+Answer the wrong verb and your response collapses
+like a badly soldered joint.`,
+`Here is the spell most students never learn:
+
+Circle the verb.
+Plan for the verb.
+Answer the verb.
+
+Explanations need cause & effect.
+Analyses need patterns & relationships.
+Evaluations need judgements + reasons.
+
+Ignore the verb and your answer becomes
+"Year-7-book-report-energy".
+
+Master the verb and you can make the examiner
+weep with joy.
+
+Catchphrase:
+"By the power of command terms — ANSWER WHAT I ASK!"`
+      ],
+      rareLines: [
+`Rare wizard wisdom unlocked:
+If you ever answer an EXPLAIN question with
+one sentence, somewhere in the world a wizard’s
+hat falls off.
+Don’t make me lose hats.`
+      ]
+    },
+    logbook: {
+      asciiFrames: [
+` ______
+ |LOG |
+ |    |
+ |____|
+Engr. Log`,
+` ______
+ |LOG*|
+ |    |
+ |____|
+Engr. Log`
+      ],
+      frameDelay: 1000,
+      lines: [
+`Welcome, traveller, to the Logbook Hut.
+I am Engineer Log — collector of messy sketches,
+shaky videos, dodgy prototypes and proud moments
+of “it finally worked!”.`,
+`Let’s get something straight:
+Your record of evidence is NOT a diary.
+
+It’s multimodal.
+It should look like the inside of an engineer’s brain —
+photos, videos, voice recordings, screen captures,
+sketches, notes, test clips… everything.`,
+`Some students think a folio is just “journal entries”.
+
+But journal entries on their own are limited —
+they’re hard to verify, easy to misinterpret,
+and they don’t actually show what happened.
+
+If you're using CAD?
+→ Do a quick screen recording. Talk through what you’re changing and why.
+
+Coding?
+→ Record your screen while you explain the bug you’re fixing.
+
+Testing your build?
+→ Film it. Show the setup, the problem, and what you changed.
+
+Written notes are fine —
+add photos, videos, voice notes, and screen recordings
+to help show how your work developed.`,
+`Here's the secret:
+A clear video can be useful evidence of your process.
+
+If you’ve got:
+- a photo of your setup
+- a quick recording explaining a problem
+- a clip of your test failing
+- a screenshot of your code
+- a sketch you photographed
+
+…then you have more context to explain what happened.
+
+Your logbook helps you remember and explain your process.
+It can also provide evidence for relevant assessment criteria.
+
+Catchphrase:
+"If you can show it, you own it."`
+      ],
+      rareLines: [
+`Rare logbook wisdom:
+If a student hands in only journal entries,
+somewhere an engineer sobs into a soldering iron.
+Record EVERYTHING.`,
+`Rare logbook wisdom:
+Future-you is marking you right now.
+Are they happy with what you wrote today?`
+      ]
+    },
+    exit: {
+      asciiFrames: [
+` _____
+ |   |
+ | E |
+ | X |
+ | I |
+ | T |
+ '---'
+Exit Bot`,
+` _____
+ |   |
+ | E |
+ | X |
+ | I |
+ | T*|
+ '---'
+Exit Bot`
+      ],
+      frameDelay: 1000,
+      lines: [
+`You made it to the Exit Gate!
+
+When all four main locations are completed
+AND you beat the final challenge,
+you'll finish this orientation level.`,
+`Remember the big picture:
+- 50% Major Project (design + build)
+- 20% SACs (Clean Energy + Emerging Tech)
+- 30% Exam
+
+The final challenge: 5 questions, get 4 right.
+Questions you missed earlier may come back...
+
+Catchphrase: "No shortcuts — just finish the level."`
+      ],
+      rareLines: [
+`Rare exit message:
+If you reached here without learning anything...
+that’s impressive in the wrong way.
+Let’s not do that on the real exam.`
+      ]
+    },
+    // Optional: Spin Lab minigame
+    spin: {
+      asciiFrames: [
+`   .-----.
+  /   |   \\
+ | ---o--- |
+  \\   |   /
+   '-----'
+Blue Smoke Wheel`,
+`   .-----.
+  / \\   / \\
+ |    o    |
+  \\ /   \\ /
+   '-----'
+Blue Smoke Wheel`
+      ],
+      frameDelay: 350,
+      lines: [
+`Welcome to the Spin Lab.
+
+Here we simulate the ancient engineering ritual of
+"Will my project release the magic blue smoke?"`,
+`Press S to spin the wheel.
+
+Results are purely comedic and may or may not
+be based on real student experiences.
+
+Legend speaks of a tiny sliver of gold on the wheel...`
+      ],
+      rareLines: [
+`Secret Spin Lab tip:
+The real way to avoid blue smoke is testing,
+checking polarities, and not wiring at 2am.`
+      ]
+    },
+    // Optional: Easter egg / flamingo
+    easter: {
+      asciiFrames: [
+`<span class="neon-pink">   _
+  / o)
+ ( (
+  \\_\\__
+   (___)
+   /   \\
+  /_/\\_\\</span>
+Pink Flamingo`,
+`<span class="neon-pink">   _
+  / -)
+ ( (
+  \\_\\__
+   (___)
+   /   \\
+  /_/\\_\\</span>
+Mysterious Bird`
+      ],
+      frameDelay: 800,
+      lines: [
+`You have discovered the Mystery Shrine.
+
+A lone pink flamingo stares into the middle distance,
+judging your cable management choices.`,
+`The air shimmers with secret wisdom:
+
+"🎶 Never gonna give you up,
+Never gonna let you down,
+Never gonna run around and desert you...
+And I'm never gonna submit work without
+GOOD DOCUMENTATION."
+
+You feel strangely motivated
+to label your wires.`
+      ],
+      rareLines: [
+`Flamingo fact:
+Every time a student uses hot glue
+to "fix" a mechanical problem,
+a pink flamingo sighs softly.`
+      ]
+    },
+    safety: {
+      asciiFrames: [
+`  ______
+ | SAFE |
+ |  !   |
+ |______|
+Safety Bot`,
+`  ______
+ | SAFE |
+ |  !!  |
+ |______|
+Safety Bot`
+      ],
+      frameDelay: 900,
+      lines: [
+`Welcome to Safety Bay.
+Good engineering starts by noticing hazards before work begins.`,
+`Before you build or test:
+- Identify hazards and who could be affected.
+- Choose controls that reduce the risk.
+- Check the setup before power is applied.
+- Stop if something behaves unexpectedly.
+
+If a component gets hot, smells burnt or smokes,
+switch off safely and tell your teacher.`,
+`A safe test is a useful test.
+Plan the procedure, use suitable tools,
+and record what happened.
+
+Answer my bonus question for a star!`
+      ]
+    },
+    systems: {
+      asciiFrames: [
+` .-------.
+ | INPUT |
+ |PROCESS|
+ |OUTPUT |
+ '-------'
+Systems Bot`,
+` .-------.
+ |*INPUT |
+ |PROCESS|
+ |OUTPUT*|
+ '-------'
+Systems Bot`
+      ],
+      frameDelay: 950,
+      lines: [
+`This is the Systems Lab.
+A system takes an input, processes it,
+and produces an output.`,
+`A controlled system uses feedback.
+
+A thermostat senses room temperature, compares it
+with the set point, and switches a heater on or off.
+The heater changes the temperature, the sensor
+reads it again – that loop is the feedback.`,
+`When you explain a design, connect the parts:
+what goes in, what the system does,
+and what comes out.
+
+Answer my bonus question for a star!`
+      ]
+    },
+    workshop: {
+      asciiFrames: [
+`  _______
+ | TOOLS |
+ |  ___  |
+ |_______|
+Workshop Bot`,
+`  _______
+ | TOOLS*|
+ |  ___  |
+ |_______|
+Workshop Bot`
+      ],
+      frameDelay: 1000,
+      lines: [
+`Welcome to the Workshop.
+Engineering is a process, not a one-shot build.`,
+`A useful cycle is:
+Define the need → design → plan → build → test → improve.
+
+Testing gives you evidence about how well a system works.
+Use that evidence to decide what to change.`,
+`Keep the early sketches and failed tests too.
+They show how your decisions and design developed.
+
+Answer my bonus question for a star!`
+      ]
+    }
+  };
+
+  // --- Question data ---
+  // Each question: id, q (question), correct, explain (why it's right),
+  // wrong: [[option, why it's wrong], [option, why it's wrong]],
+  // joke: [option, cheeky reply]. Options are shuffled at runtime.
+  const buildingQuiz = {
+    assessment: [
+      { id: 'A1', q: 'How much of your study score comes from the major project (SAT)?',
+        correct: '50%',
+        explain: 'The SAT is the largest graded component: half your study score.',
+        wrong: [['30%', "That's the exam. The SAT is worth more."],
+                ['20%', "That's the two SACs added together."]],
+        joke: ['100%, if you count the stress', 'Emotionally accurate. Officially, it\'s 50%.'] },
+      { id: 'A2', q: 'Which BEST describes the two Unit 3 and 4 SACs?',
+        correct: 'Both ask you to analyse and evaluate a technology: clean energy, then emerging tech',
+        explain: 'Each SAC asks you to analyse and evaluate a technology: clean energy in Unit 3, emerging technologies in Unit 4.',
+        wrong: [['Both are tests on your major project', 'The SACs are separate from the SAT and cover clean energy and emerging technologies.'],
+                ['Both ask you to describe how a technology works', 'Describing is part of it, but the SACs are judged on analysis and evaluation.']],
+        joke: ['Both are marked on vibes', "Rubrics never lie, and rubrics don't mark vibes."] },
+      { id: 'A3', q: 'Why does the SAT carry such a large weighting?',
+        correct: 'It assesses your design, testing and decisions across most of the year',
+        explain: 'The SAT assesses the engineering process across the project, including design, testing and decisions.',
+        wrong: [["It's the hardest task to mark", "Marking effort doesn't set weightings. What the task assesses does."],
+                ['The finished product has to work perfectly', 'A working product helps, but the SAT assesses the whole process, including failures.']],
+        joke: ['Because teachers enjoy suffering', 'Only a little. Really, it assesses your whole process.'] },
+      { id: 'A4', q: 'Which BEST describes the balance of your final study score?',
+        correct: 'Half from the project; the other half split between two SACs and the exam',
+        explain: '50% project, 20% SACs (10% each), 30% exam.',
+        wrong: [['Half from the exam; the rest from the project and SACs', 'The exam is 30%, not 50%.'],
+                ['Equal thirds: project, SACs and exam', "It's 50 / 20 / 30, not equal parts."]],
+        joke: ['Whatever the bald bloke at the front feels like that day', "He wishes. It's 50 / 20 / 30."] },
+      { id: 'A5', q: 'What is the SAT mainly designed to assess?',
+        correct: 'How you design, test and refine a system over time',
+        explain: 'The SAT looks at how you develop and refine a system, not just its finished look or your recall.',
+        wrong: [['How polished the final product looks', 'Appearance says little about your design thinking or testing.'],
+                ['How well you remember theory from class', "That's mainly the exam. The SAT applies theory to your own system."]],
+        joke: ['Whether your robot can do a backflip', 'Backflips earn applause, not marks.'] }
+    ],
+    integrity: [
+      { id: 'I1', q: 'Which option BEST supports authenticating your work?',
+        correct: 'Photos, videos, screen recordings and notes made as you work',
+        explain: 'Evidence made at the time shows your process and helps authenticate your work.',
+        wrong: [['A detailed typed journal written at the end', "Written afterwards, it's hard to verify and misses what really happened."],
+                ['A finished product that works well', 'It shows the result, not who made the decisions.']],
+        joke: ["A note from your nan saying you're a good kid", "Lovely, but nan isn't evidence."] },
+      { id: 'I2', q: 'Where your teacher allows AI, which use is MOST appropriate?',
+        correct: 'Asking AI to explain or help debug, then testing it and noting how you used it',
+        explain: 'AI can support learning, but you check its output, do the work yourself and record how you used it.',
+        wrong: [['Letting AI write your folio, then reading it so you can explain it', "Understanding it isn't doing it. The work still isn't yours."],
+                ["Not mentioning AI so it doesn't look like cheating", 'Hiding AI use is the integrity problem. Say how it helped.']],
+        joke: ['Getting AI to write everything while you eat Shapes', "The Shapes are fine. The rest isn't."] },
+      { id: 'I3', q: 'Which situation is MOST likely to raise an integrity concern?',
+        correct: 'A near-perfect machine appears with no sketches, tests or build photos',
+        explain: 'A finished machine with no process evidence gives no information about who made the decisions.',
+        wrong: [['Your prototype looks rough and failed several tests', "Failures with evidence show real iteration. That's a good sign."],
+                ['You asked your teacher for help with a wiring fault', 'Getting help is allowed. Just note what help you got.']],
+        joke: ['Your robot becomes sentient and asks for a lawyer', 'Officer Auth would have questions. So would everyone.'] },
+      { id: 'I4', q: 'Which is the BEST example of acceptable collaboration?',
+        correct: 'Discussing ideas with a friend, then each writing your own code and notes',
+        explain: 'Discussing ideas is collaboration; each student still produces and understands their own work.',
+        wrong: [["Using a friend's code but renaming the variables and comments", "Renaming doesn't change who wrote the logic. It's still copying."],
+                ['Splitting the work: they code, you build, and you both submit it', 'The SAT is individual. Each of you must do and document your own work.']],
+        joke: ['Sharing one brain cell between you for the whole year', 'Efficient, but still not your own work.'] },
+      { id: 'I5', q: 'You did a big chunk of building at home. What protects you best?',
+        correct: 'Take photos or short videos as you work, with notes on what you did',
+        explain: 'Recording as you go supports authentication of work done outside class.',
+        wrong: [['Bring it in and explain it to your teacher afterwards', "Explaining helps, but without records from home there's nothing to back it up."],
+                ['Only work at school so there are no questions', "Home work is fine if it's recorded. Avoiding it just costs you time."]],
+        joke: ['Hide it in a cupboard until marking day', "The cupboard can't vouch for you."] }
+    ],
+    command: [
+      { id: 'C1', q: 'What does "evaluate" require you to do?',
+        correct: 'Make a judgement and support it with reasons',
+        explain: 'To evaluate, make a judgement and back it with reasons or criteria.',
+        wrong: [['Explain how it works in detail', "That's explain. Evaluate needs a judgement."],
+                ['List its strengths and weaknesses', "A good start, but without a judgement it isn't an evaluation."]],
+        joke: ['Say "it\'s mid" and walk away', "That's a judgement, but where are the reasons?"] },
+      { id: 'C2', q: 'Which response BEST answers "compare the two drive systems"?',
+        correct: 'Both use the same motor, but A uses gears and is louder, while B uses a belt',
+        explain: 'A comparison covers both systems, with at least one similarity and one difference.',
+        wrong: [['A uses a gear drive, which is louder because the teeth mesh', 'That covers one version only. Compare needs both.'],
+                ['A uses a gear drive and B uses a belt drive', 'Only a difference. Compare needs similarities too.']],
+        joke: ['Both systems exist', 'True. Also zero marks.'] },
+      { id: 'C3', q: '"Explain why the bracket failed." Which answer is the BEST match?',
+        correct: "The load exceeded the bracket's strength, so it bent and then cracked",
+        explain: 'It explains the causal link: too much load → bending → fracture.',
+        wrong: [['The bracket bent and cracked near the bolt hole', 'That describes what happened, not why.'],
+                ['The bracket was a poor design and should be replaced', "That's a judgement (evaluate), with no cause given."]],
+        joke: ['¯\\_(ツ)_/¯', 'Relatable, but not cause and effect.'] },
+      { id: 'C4', q: '"_____ the advantages and disadvantages of a hydraulic system in this design, and recommend whether to use it." Which term fits BEST?',
+        correct: 'Evaluate',
+        explain: 'Weighing advantages against disadvantages to reach a recommendation is evaluating.',
+        wrong: [['Describe', 'Describe gives features only, with no weighing or recommendation.'],
+                ['Explain', "Explain gives how or why. It doesn't ask for a recommendation."]],
+        joke: ['Vibe-check', 'Not a command term. Yet.'] },
+      { id: 'C5', q: 'Which answer BEST describes a lever system?',
+        correct: 'A rigid bar pivots on a fulcrum; effort on one side lifts the load on the other',
+        explain: 'Describing says what the system is and what its parts do; explaining would add why.',
+        wrong: [['Because the effort arm is longer, it gives a mechanical advantage', '"Because" means explaining why. Describe says what it is.'],
+                ["It's a great system because it makes lifting easier", "That's a judgement, not a description."]],
+        joke: ["It's a stick. It does stick things.", 'Technically a description. Not a good one.'] },
+      // Upgrade-the-answer questions
+      { id: 'U1', q: '"Explain why the motor overheated."\nStudent wrote: "It got too hot."\nWhat would make this an explanation?',
+        correct: 'Add cause and effect: the load drew more current, which heated the windings',
+        explain: 'Explain needs a cause-and-effect link, not just the symptom.',
+        wrong: [["Describe the motor's size and type in more detail", "More description still doesn't say why."],
+                ['Add a judgement that the motor was a poor choice', "That's evaluating. Explain needs cause and effect."]],
+        joke: ['Add "trust me, it was REALLY hot"', 'Very convincing. Still not an explanation.'] },
+      { id: 'U2', q: '"Evaluate the use of a lithium battery in your design."\nStudent wrote: "They\'re light and hold lots of charge, but can be a fire risk."\nWhat\'s missing?',
+        correct: 'A judgement with reasons, e.g. "Overall it suits this design because…"',
+        explain: 'The answer lists pros and cons; evaluate also needs a judgement with reasons.',
+        wrong: [['More advantages and disadvantages', "More pros and cons still don't reach a judgement."],
+                ['A labelled diagram of the battery', 'A diagram can support it, but evaluate needs a judgement.']],
+        joke: ['A fire emoji', 'Accurate about the risk. Not a judgement.'] },
+      { id: 'U3', q: '"Compare a gear drive and a belt drive for your system."\nStudent wrote: "Gears are louder and belts can slip."\nWhat\'s missing?',
+        correct: 'At least one similarity, e.g. both transfer motion from the motor shaft',
+        explain: 'The answer gives differences only; compare needs similarities too.',
+        wrong: [['An explanation of why gears are louder', 'Useful, but the missing piece is similarities.'],
+                ['A recommendation of which one to use', "That's evaluate. The question didn't ask for it."]],
+        joke: ['"Gears go brrr"', 'Correct, but not a similarity.'] },
+      { id: 'U4', q: '"Describe the input, process and output of your system."\nStudent wrote: "It\'s a good system that works well."\nWhat would fix it?',
+        correct: 'Name what goes in, what the system does with it, and what comes out',
+        explain: 'Describe needs the actual parts: input, process and output.',
+        wrong: [['Explain why it works so well', 'Why is explain. Describe needs the parts and what they do.'],
+                ['Give it a rating out of 10', "That's a judgement. It doesn't describe anything."]],
+        joke: ['More exclamation marks!!!', 'Enthusiastic. Still not a description.'] }
+    ],
+    logbook: [
+      { id: 'L1', q: 'Which BEST represents a strong record of evidence?',
+        correct: 'Photos, screen recordings with voice-over, sketches, notes and test results',
+        explain: 'A strong record combines evidence types to show development, decisions and testing.',
+        wrong: [['Detailed written journal entries after every lesson', 'A good habit, but text alone is hard to verify.'],
+                ['A short video of the finished system working', 'It shows the result, not the process.']],
+        joke: ['An interpretive dance about your gearbox', 'Multimodal, sure. Not quite what we meant.'] },
+      { id: 'L2', q: 'Why is multimodal evidence so powerful for authentication?',
+        correct: 'It shows you doing and explaining the work at the time',
+        explain: 'Different evidence types show you doing and explaining the work over time.',
+        wrong: [['It makes the folio look more professional', "Looks don't authenticate anything. The content does."],
+                ["It means you don't need written notes", "Notes still matter. Multimodal adds to them, it doesn't replace them."]],
+        joke: ['Teachers love watching shaky phone videos', 'Some of us do. The real reason is it shows you doing the work.'] },
+      { id: 'L3', q: 'Which BEST shows you genuinely did the work at home?',
+        correct: 'Dated videos of your testing, mistakes and fixes',
+        explain: 'A dated sequence of tests, mistakes and fixes is evidence of your own process.',
+        wrong: [['A detailed write-up explaining how you built it', "Written afterwards, it can't show who did the work."],
+                ["A parent's note confirming you built it yourself", "A note isn't evidence of the process. Recordings are."]],
+        joke: ['A written claim that says "trust me bro"', "The bro is trusted. The claim isn't evidence."] },
+      { id: 'L4', q: 'Which record of evidence is the WEAKEST?',
+        correct: 'One final photo of the finished build and nothing else',
+        explain: 'A final photo shows the outcome but nothing about how you got there.',
+        wrong: [['Three short videos of the prototype failing, then improving', "That's strong. It shows iteration."],
+                ['Photos, sketches and a table of test data', "That's solid evidence of design and testing."]],
+        joke: ["A 47-part video series with director's commentary", 'Possibly too much, but definitely not weak.'] },
+      { id: 'L5', q: "What's the BEST habit for building your record across the year?",
+        correct: 'Add a few photos, notes or a quick recording most lessons',
+        explain: 'Short, frequent records capture the process more accurately than a late summary.',
+        wrong: [['Write a long, careful reflection at the end of each term', "Useful, but by then you've forgotten the details."],
+                ['Record everything in one big session before the due date', 'Evidence rebuilt at the end is unreliable, and it shows.']],
+        joke: ['Hope future-you remembers everything', 'Future-you will not. Future-you is already confused.'] },
+      // Rate-this-entry questions
+      { id: 'R1', q: 'Logbook entry: "12 Mar. Worked on robot. Went well."\nHow strong is this entry?',
+        correct: 'Weak: no detail of what was done, no evidence, no next step',
+        explain: 'It has a date, but shows nothing about what you did or what comes next.',
+        wrong: [["Strong: it's dated and positive", 'A date helps, but nothing shows what you actually did.'],
+                ['Fine, as long as there are lots of entries like it', 'Many empty entries still add up to no evidence.']],
+        joke: ['Perfect: short entries save trees', "It's digital, and it says nothing."] },
+      { id: 'R2', q: 'Logbook entry: "14 Mar. Ultrasonic sensor gave random readings (video attached). Moved it away from the motor; readings now steady. Next: re-test under load."\nHow strong is it?',
+        correct: 'Strong: problem, evidence, change, result and next step',
+        explain: 'It records the problem, the evidence, the change, the result and what comes next.',
+        wrong: [["Weak: it's too short", 'Short is fine when it holds the key facts.'],
+                ["Weak: it admits the sensor didn't work", 'Recording failures is good. It shows testing and iteration.']],
+        joke: ['Weak: the video has no dramatic soundtrack', 'Optional. The evidence is what counts.'] },
+      { id: 'R3', q: 'Logbook entry: "18 Mar. Changed gear ratio from 1:3 to 1:5. Photo attached."\nWhat\'s MOST missing?',
+        correct: 'Why you changed it, and what happened after',
+        explain: 'The decision is recorded, but not the reasoning or its effect.',
+        wrong: [['A second photo from another angle', "More photos don't explain the decision."],
+                ['The time of day you did it', 'Nice to have, but the reasoning matters most.']],
+        joke: ['Glitter on the photo', "Sparkly. Still doesn't say why."] },
+      { id: 'R4', q: 'Logbook entry: "20 Mar. Asked ChatGPT to fix my code. Works now."\nWhat\'s the MOST important fix?',
+        correct: 'Say what you asked, what you changed yourself, and how you tested it',
+        explain: 'Integrity means showing what AI did and what you did, with evidence of testing.',
+        wrong: [["Delete the AI mention so it doesn't look bad", 'Hiding AI use is the integrity problem.'],
+                ['Add "AI was used responsibly" to the end', "A claim isn't evidence. Show what you did."]],
+        joke: ['Add "thx ChatGPT xoxo"', "Polite, but it doesn't show what you did."] }
+    ],
+    // Bonus questions in optional rooms
+    safety: [
+      { id: 'SB1', q: "Before powering a new circuit for the first time, what's the best first step?",
+        correct: 'Check the wiring and polarity against your diagram',
+        explain: 'Checking wiring and polarity before power is the cheapest way to avoid damage.',
+        wrong: [['Power it on briefly to see what happens', 'Testing before checking is how blue smoke happens.'],
+                ['Ask a friend if it looks okay', 'A second opinion helps, but check against the diagram first.']],
+        joke: ['Whisper encouraging words to the circuit', 'Kind, but check the wiring.'] },
+      { id: 'SB2', q: 'Which of these is a risk control, not just a hazard?',
+        correct: 'Adding a fuse to the battery line',
+        explain: 'A control reduces the risk: a fuse cuts the current if a short happens.',
+        wrong: [['A battery that could short-circuit', "That's the hazard. A control reduces it."],
+                ['Noting "battery could short" in your logbook', 'Identifying the risk is a start. A control actually reduces it.']],
+        joke: ['A lucky rubber duck on the bench', 'Great for debugging. Not a risk control.'] }
+    ],
+    systems: [
+      { id: 'SY1', q: 'Which is a closed-loop (feedback) system?',
+        correct: 'A thermostat that switches a heater off once the room reaches 21 °C',
+        explain: "The thermostat senses the result (room temperature) and adjusts the heater: that's feedback.",
+        wrong: [['A toaster that runs for a set time', "It never senses the toast, so it's open-loop."],
+                ['A doorbell that rings when pressed', "Nothing senses the output, so it's open-loop."]],
+        joke: ['A rock', 'No inputs, no outputs, no ambition.'] },
+      { id: 'SY2', q: 'In a line-following robot, what is the input?',
+        correct: 'The readings from its light sensors',
+        explain: 'Sensor readings go in, the code processes them, and the motors are the output.',
+        wrong: [['The changes in motor speed', "That's the output."],
+                ['The code on the microcontroller', "That's the process."]],
+        joke: ['Snacks for whoever is running it', 'An input for the engineer, not the robot.'] }
+    ],
+    workshop: [
+      { id: 'WS1', q: 'Your prototype fails its first test. What should you do next?',
+        correct: 'Use the test results to decide what to change, then test again',
+        explain: 'Test, learn, change, re-test: the evidence tells you what to change.',
+        wrong: [['Start again with a completely new idea', 'Sometimes needed, but use the evidence to improve first.'],
+                ['Fix it quickly and move on without re-testing', "Without a re-test you can't show the change worked."]],
+        joke: ['Blame the 3D printer', 'The printer has heard it before. Use the test data.'] },
+      { id: 'WS2', q: "Why keep early sketches you didn't use?",
+        correct: 'They show the options you considered and why you chose one',
+        explain: 'Unused options show your design thinking and the reasons behind your choice.',
+        wrong: [['They help fill pages in the folio', "Volume isn't the point. They show your decisions."],
+                ['In case your final design fails', 'Possibly useful, but their main value is showing your design thinking.']],
+        joke: ['So future archaeologists can study you', 'A fine legacy. The real reason is your design thinking.'] }
+    ]
+  };
+
+  // Final challenge: wildcards + scenarios (one is picked as question 5)
+  const bossWildcardQuestions = [
+    { id: 'W1', q: 'Your teacher asks "what happened in this test?" Which command term fits BEST?',
+      correct: 'Describe',
+      explain: 'Describe reports what was observed; explain would add why it happened.',
+      wrong: [['Explain', 'Explain gives reasons why. "What happened" asks for the events.'],
+              ['Evaluate', 'Evaluate makes a judgement. The teacher asked what happened.']],
+      joke: ['Panic', 'Understandable. Not a command term.'] },
+    { id: 'W2', q: 'Which logbook entry BEST shows you used AI with integrity?',
+      correct: '"Asked AI why the sensor read 0. Tested its fix, changed the pin setup myself. Screenshots attached."',
+      explain: 'It names the AI help, your own testing and changes, and the evidence.',
+      wrong: [['"Used ChatGPT to fix the sensor code."', 'It names AI but not what you did or how you checked.'],
+              ['"AI wrote the sensor code; I tested it and it worked."', "Testing is good, but the code isn't yours and no changes are shown."]],
+      joke: ['"AI and I are best friends now."', 'Heartwarming. Not evidence.'] },
+    { id: 'W3', q: 'How does a strong record of evidence help your SAT marks?',
+      correct: 'It shows your design process, testing and improvements, which the SAT assesses',
+      explain: 'The record of evidence documents the design, testing and improvement the SAT assesses.',
+      wrong: [['It proves you attended class', "Attendance isn't assessed. Your process is."],
+              ['It only matters if your product fails', "It matters either way. It's where your process is shown."]],
+      joke: ['It makes your bag heavier, so you get stronger', 'Gains, but not marks.'] },
+    { id: 'W4', q: "You've done high-quality SAT work at home. What's the BEST approach?",
+      correct: 'Keep photos, videos and notes from home sessions, and be ready to talk through them',
+      explain: 'Records from the time, plus being able to talk through them, support authentication.',
+      wrong: [['Bring it in and mention a parent helped a bit', 'Help must be declared clearly. "A bit" with no record can\'t be checked.'],
+              ['Write a summary of it when you bring it in', "Written afterwards, it isn't evidence from the time."]],
+      joke: ['Tell everyone your robot built itself overnight', 'Self-assembling robots raise more questions, not fewer.'] },
+    // Scenario questions
+    { id: 'S1', q: "Week 6: your servo jitters under load. At home you swap the power supply and it's fixed. What goes in your logbook?",
+      correct: 'A clip of the jitter and the fix, plus a note on the new supply and why',
+      explain: 'Record the problem, the change, the result and why, with evidence from the time.',
+      wrong: [["Nothing – it's fixed, so it doesn't matter", 'Fixes are some of your best evidence of testing and decisions.'],
+              ['A note saying "fixed servo at home"', 'No evidence of the problem, the change or the result.']],
+      joke: ['A sad poem about the servo', 'Moving, but you need the clip and the fix.'] },
+    { id: 'S2', q: "You're stuck, and a friend's working code solves the same problem. What's the integrity-safe move?",
+      correct: 'Ask them to explain their approach, then write and test your own version',
+      explain: "Learning from someone's explanation is fine; the code you submit must be yours.",
+      wrong: [['Copy it now and rewrite it later when you have time', "Anything copied into your submitted work isn't yours, whatever you planned."],
+              ["Use it, since you're both solving the same problem", 'The SAT is individual. Each solution must be your own.']],
+      joke: ['Swap brains with your friend', 'Tempting. Still not your own work.'] },
+    { id: 'S3', q: "You're asked to evaluate your final system. You've written three pages on how it works. What should you do?",
+      correct: 'Add judgements against your evaluation criteria, backed by test evidence',
+      explain: 'Evaluating means judging against criteria, backed by evidence.',
+      wrong: [['Add more detail about how it works', "More describing still isn't evaluating."],
+              ['Add photos of the finished system', "Photos support it but don't make a judgement."]],
+      joke: ['Add "it\'s pretty good, I reckon"', 'A judgement, but where are the reasons and evidence?'] },
+    { id: 'S4', q: 'During a test your motor driver gets hot and smells burnt. What do you do first?',
+      correct: 'Switch off safely and tell your teacher, then record what happened',
+      explain: 'Safety first: switch off, get your teacher, then document it.',
+      wrong: [['Film it first so you have evidence', 'Safety first. Evidence comes once it\'s safe.'],
+              ['Keep testing to see if it settles', 'A burning smell means stop now.']],
+      joke: ['Blow on it like a birthday candle', "That's not how motor drivers work. Switch off."] }
+  ];
+
+  // --- Game state ---
+  let playerPos = { x: 0, y: 0 };
+  let completedBuildings = new Set();   // main buildings passed
+  let discoveredBuildings = new Set();  // optional rooms visited
+  let bonusStars = new Set();           // optional rooms whose bonus question was answered correctly
+  let earnedCards = new Set();          // takeaway cards collected
+  let attemptedMain = new Set();        // main buildings where a quiz has been answered
+  let firstTry = new Set();             // main buildings passed on the very first attempt
+  let missedIds = new Set();            // question ids answered wrongly (fed back into the final challenge)
+  let lastAskedId = {};                 // building id → last question id (avoid instant repeats)
+
+  let dialogOpen = false;
+  let dialogMode = 'info';   // 'info' | 'quiz' | 'feedback' | 'spin'
+  let currentBuilding = null;
+  let currentQuiz = null;
+
+  // Boss fight state
+  let bossActive = false;
+  let bossQuestions = [];
+  let bossIndex = 0;
+  let bossCorrectCount = 0;
+  let gameComplete = false;
+  let finalScore = 0;
+  let finalTotal = 5;
+  let finishedAt = null;
+
+  let viewMode = 'splash';   // 'splash' | 'onboard' | 'map' | 'room' | 'end'
+  let roomLineIndex = 0;
+  let currentRoomLines = [];
+  let roomAnimInterval = null;
+  let roomAnimFrameIndex = 0;
+
+  // Restart confirmation
+  let resetArmedUntil = 0;
+  let resetTimer = null;
+
+  // Spin Lab state
+  let spinInterval = null;
+  let spinningActive = false;
+  let spinRaf = null;
+  let wheelRotation = 0;   // cumulative wheel rotation in degrees
+  let luckyStar = false;   // rare gold-star spin result (shown on the end card, not counted in rank)
+  // Wheel segments, clockwise from the top. Slice size = chance (the gold slice is 18° = 5%).
+  const spinOutcomes = [
+    { label: 'Smoke!', color: '#1d4ed8', effect: 'smoke', text: 'Your prototype emits a tiny puff of blue smoke.\nEveryone nearby nods in sad understanding.',
+      reflect: 'What one check before power-on would have caught this?' },
+    { label: 'Too quiet', color: '#334155', text: 'Nothing explodes.\nNothing smokes.\nYou are suspicious. Something must be wrong.',
+      reflect: 'What test would prove it actually works, not just that nothing broke?' },
+    { label: 'Backwards', color: '#1e40af', effect: 'smoke', text: 'You wired the battery backwards.\nThe magic smoke escapes instantly.\nR.I.P. motor driver.',
+      reflect: 'How could you make reverse polarity impossible? Think keyed connectors, a protection diode, labels.' },
+    { label: 'First try?!', color: '#475569', text: 'Your circuit works first try.\nYou immediately fear you have made a terrible unseen mistake.',
+      reflect: "Record it anyway. What's your evidence it worked?" },
+    { label: 'Burning?', color: '#2563eb', effect: 'wisp', text: 'A faint burning smell appears.\nYou locate it before disaster.\nYou earn +1 wisdom.',
+      reflect: 'The safe sequence is: switch off, tell your teacher, then record what happened.' },
+    { label: 'Loose GND', color: '#1e293b', text: 'You realise the issue was a loose ground wire.\nYou fix it and pretend it was all part of the plan.',
+      reflect: 'What goes in your logbook? The symptom, the cause and the fix.' },
+    { label: '★', color: '#facc15', gold: true, effect: 'gold', size: 18,
+      text: 'The wheel lands on the tiny GOLD sliver!\nYour circuit works, your logbook is up to date\nand every wire is labelled.\nA golden star floats down from the ceiling.',
+      reflect: "Rare, but not luck: tested, documented, labelled. That's how you get there for real." }
+  ];
+  // Work out each segment's start/end angle
+  (function layoutWheel() {
+    const goldSize = spinOutcomes.filter(o => o.size).reduce((t, o) => t + o.size, 0);
+    const normal = spinOutcomes.filter(o => !o.size);
+    const each = (360 - goldSize) / normal.length;
+    let a = 0;
+    spinOutcomes.forEach(o => {
+      o.start = a;
+      o.end = a + (o.size || each);
+      a = o.end;
+    });
+  })();
+
+  // Player profile from sign-in / onboarding (kept across restarts)
+  const player = { name: '', cls: '', prediction: '', confBefore: 0, interest: '', confAfter: 0 };
+
+  // Track whether last quiz was correct (for auto-exit)
+  let lastQuizCorrect = false;
+
+  // Fog of war: visited tiles
+  let visitedTiles = new Set();
+
+  function allMainBuildingsVisited() {
+    return mainBuildingOrder.every(id => completedBuildings.has(id));
+  }
+  function buildingById(id) {
+    return buildings.find(b => b.id === id);
+  }
+  function hasQuiz(id) {
+    return !!(buildingQuiz[id] && buildingQuiz[id].length);
+  }
+
+  // --- Simple sound system (Web Audio) ---
+  let audioCtx = null;
+  function initAudio() {
+    if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (err) { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function playBeep(freq, duration, type = 'square', volume = 0.06) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.value = volume;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration / 1000);
+  }
+  const sfx = {
+    move: () => playBeep(220, 40, 'square', 0.03),
+    enterRoom: () => playBeep(660, 120, 'square', 0.06),
+    quizCorrect: () => { playBeep(660, 80); setTimeout(() => playBeep(880, 80), 80); },
+    quizWrong: () => playBeep(160, 200, 'sawtooth', 0.08),
+    card: () => { playBeep(880, 70); setTimeout(() => playBeep(1175, 90), 80); setTimeout(() => playBeep(1568, 120), 170); },
+    spinStart: () => playBeep(520, 120, 'triangle', 0.05),
+    spinEnd: () => playBeep(300, 180, 'square', 0.07),
+    endWin: () => { playBeep(660, 120); setTimeout(() => playBeep(990, 160), 130); setTimeout(() => playBeep(1320, 200), 320); }
+  };
+
+  // --- Map placement & rendering ---
+  function revealAround(x, y) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+          visitedTiles.add(`${nx},${ny}`);
+        }
+      }
+    }
+  }
+
+  function randomiseBuildings() {
+    // Retry the whole layout if a building can't be placed (prevents an endless loop)
+    for (let attempt = 0; attempt < 50; attempt++) {
+      if (tryPlaceBuildings(16)) break;
+      if (attempt === 49) tryPlaceBuildings(4);
+    }
+    visitedTiles = new Set();
+    const start = buildingById('start');
+    playerPos.x = start.x;
+    playerPos.y = start.y;
+    revealAround(playerPos.x, playerPos.y);
+  }
+
+  function tryPlaceBuildings(minDistSq) {
+    const placed = [];
+    for (const b of buildings) {
+      let ok = false;
+      for (let tries = 0; tries < 2000 && !ok; tries++) {
+        const x = Math.floor(Math.random() * width);
+        const y = Math.floor(Math.random() * height);
+        if (isBlocked(x, y)) continue;
+        if (placed.every(p => (x - p.x) ** 2 + (y - p.y) ** 2 >= minDistSq)) {
+          b.x = x;
+          b.y = y;
+          placed.push({ x, y });
+          ok = true;
+        }
+      }
+      if (!ok) return false;
+    }
+    return true;
+  }
+
+  function draw() {
+    if (viewMode !== 'map' && viewMode !== 'splash' && viewMode !== 'onboard') return;
+    mapEl.innerHTML = '';
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const div = document.createElement('div');
+        div.classList.add('tile');
+
+        const key = `${x},${y}`;
+        const visited = visitedTiles.has(key);
+        const building = buildings.find(b => b.x === x && b.y === y);
+
+        if (!visited) {
+          div.classList.add('fog');
+        } else if (building) {
+          div.classList.add('building', building.className);
+          div.title = building.name;
+          div.textContent = building.label;
+          const done = completedBuildings.has(building.id) || bonusStars.has(building.id);
+          if (done) div.style.boxShadow = '0 0 6px #fff';
+          if (building.id === 'exit' && allMainBuildingsVisited()) div.style.boxShadow = '0 0 8px #facc15';
+        } else if (isBlocked(x, y)) {
+          div.classList.add('wall');
+          div.textContent = '#';
+        }
+
+        if (x === playerPos.x && y === playerPos.y) {
+          div.classList.add('player');
+          div.textContent = building ? building.label : '';
+        }
+
+        mapEl.appendChild(div);
+      }
+    }
+    updateInstructions();
+  }
+
+  function updateInstructions() {
+    if (Date.now() < resetArmedUntil && viewMode === 'map') {
+      instructionsEl.textContent = 'Press R again within 3 seconds to restart. You will lose your progress!';
+      instructionsEl.classList.add('warn');
+      return;
+    }
+    instructionsEl.classList.remove('warn');
+    const b = getBuildingAtPlayer();
+    if (b) {
+      instructionsEl.textContent = `You're at: ${b.name}. Press Enter/Space to go in.`;
+    } else {
+      instructionsEl.textContent = 'Use the arrow keys to move the green square. Stand on a building and press Enter/Space to go in.';
+    }
+  }
+
+  function move(dx, dy) {
+    if (dialogOpen || viewMode !== 'map') return;
+    const nx = Math.max(0, Math.min(width - 1, playerPos.x + dx));
+    const ny = Math.max(0, Math.min(height - 1, playerPos.y + dy));
+    if (isBlocked(nx, ny)) return;
+    playerPos.x = nx;
+    playerPos.y = ny;
+    revealAround(playerPos.x, playerPos.y);
+    draw();
+    sfx.move();
+  }
+
+  function getBuildingAtPlayer() {
+    return buildings.find(b => b.x === playerPos.x && b.y === playerPos.y);
+  }
+
+  // --- HUD ---
+  // Put text into an element, showing every ★ as a gold star
+  function setStarText(el, text) {
+    el.textContent = '';
+    String(text).split('★').forEach((part, i) => {
+      if (i > 0) {
+        const star = document.createElement('span');
+        star.className = 'gold-star';
+        star.textContent = '★';
+        el.appendChild(star);
+      }
+      if (part) el.appendChild(document.createTextNode(part));
+    });
+  }
+
+  function addHudRow(text, cls) {
+    const row = document.createElement('div');
+    setStarText(row, text);
+    if (cls) row.className = cls;
+    hudItemsEl.appendChild(row);
+  }
+
+  function updateHud() {
+    document.getElementById('hudTitle').textContent =
+      'Orientation Progress' + (player.name ? ` – ${player.name} (${player.cls})` : '');
+    hudItemsEl.innerHTML = '';
+    mainBuildingOrder.forEach(id => {
+      const b = buildingById(id);
+      const completed = completedBuildings.has(id);
+      let text = `[${completed ? 'x' : ' '}] ${b.name}`;
+      if (earnedCards.has(id)) text += `   ★ ${cardData[id].name}`;
+      addHudRow(text);
+    });
+
+    const n = mainBuildingOrder.filter(id => completedBuildings.has(id)).length;
+    if (gameComplete) {
+      addHudRow('★ Orientation complete! Head to the Exit Gate to see your card again.', 'hud-status');
+    } else if (allMainBuildingsVisited()) {
+      addHudRow('★ Exit Gate unlocked – find the red EX tile!', 'hud-status');
+    } else {
+      addHudRow(`Complete ${4 - n} more location${4 - n === 1 ? '' : 's'} to unlock the Exit Gate.`, 'hud-dim');
+    }
+
+    const discoveredList = optionalBuildingOrder.filter(id => discoveredBuildings.has(id));
+    if (discoveredList.length) {
+      addHudRow('');
+      addHudRow('Optional discoveries:');
+      discoveredList.forEach(id => {
+        const b = buildingById(id);
+        let text = `[*] ${b.name}`;
+        if (bonusBuildingOrder.includes(id)) {
+          text += bonusStars.has(id) ? `   ★ ${cardData[id].name}` : '   (bonus question inside)';
+        }
+        addHudRow(text);
+      });
+    }
+    if (luckyStar) addHudRow('★ Lucky star found in the Spin Lab!');
+    addHudRow(`Bonus stars: ${'★'.repeat(bonusStars.size)}${'☆'.repeat(3 - bonusStars.size)} ${bonusStars.size}/3   Cards: ${earnedCards.size}/7`, 'hud-dim');
+  }
+
+  // --- Room / interior view ---
+  function enterRoom(building) {
+    currentBuilding = building;
+    viewMode = 'room';
+    roomLineIndex = 0;
+
+    const data = roomData[building.id] || {
+      asciiFrames: ['(no art yet)'],
+      lines: ['No room data defined.']
+    };
+
+    if (roomAnimInterval) {
+      clearInterval(roomAnimInterval);
+      roomAnimInterval = null;
+    }
+
+    const frames = data.asciiFrames || ['(no art yet)'];
+    roomTitleEl.textContent = building.name;
+    roomAnimFrameIndex = 0;
+    roomArtEl.innerHTML = frames[0];
+
+    if (frames.length > 1) {
+      const delay = data.frameDelay || 1000;
+      roomAnimInterval = setInterval(() => {
+        roomAnimFrameIndex = (roomAnimFrameIndex + 1) % frames.length;
+        roomArtEl.innerHTML = frames[roomAnimFrameIndex];
+      }, delay);
+    }
+
+    let linesToUse = data.lines ? [...data.lines] : ['No room data defined.'];
+    if (data.rareLines && data.rareLines.length && Math.random() < 0.15) {
+      const rare = data.rareLines[Math.floor(Math.random() * data.rareLines.length)];
+      linesToUse.push('\n[RARE MESSAGE]\n\n' + rare);
+    }
+
+    if (building.id === 'assessment' && player.prediction && linesToUse[1]) {
+      linesToUse[1] += player.prediction === '50%'
+        ? `\n\n(You predicted ${player.prediction}. Nailed it!)`
+        : `\n\n(You predicted ${player.prediction}. Now you know: it's 50%.)`;
+    }
+    currentRoomLines = linesToUse;
+    renderRoomText(currentRoomLines[0] || '');
+    updateRoomHint();
+
+    roomScreenEl.classList.remove('hidden');
+    dialogEl.classList.add('hidden');
+    dialogOpen = false;
+    dialogMode = 'info';
+
+    if (optionalBuildingOrder.includes(building.id)) {
+      discoveredBuildings.add(building.id);
+      updateHud();
+    }
+
+    sfx.enterRoom();
+  }
+
+  function leaveRoom() {
+    if (roomAnimInterval) {
+      clearInterval(roomAnimInterval);
+      roomAnimInterval = null;
+    }
+    viewMode = 'map';
+    roomScreenEl.classList.add('hidden');
+    mapEl.classList.remove('hidden');
+    instructionsEl.classList.remove('hidden');
+    dialogEl.classList.add('hidden');
+    dialogOpen = false;
+    currentBuilding = null;
+    draw();
+  }
+
+  // Colour ✔ lines green and ✘ lines red
+  function renderRoomText(text) {
+    roomTextEl.innerHTML = '';
+    String(text).split('\n').forEach((line, i) => {
+      if (i > 0) roomTextEl.appendChild(document.createTextNode('\n'));
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith('✔') || trimmed.startsWith('✘')) {
+        const span = document.createElement('span');
+        span.className = trimmed.startsWith('✔') ? 'line-tick' : 'line-cross';
+        span.textContent = line;
+        roomTextEl.appendChild(span);
+      } else {
+        roomTextEl.appendChild(document.createTextNode(line));
+      }
+    });
+  }
+
+  function atEndOfRoom() {
+    return roomLineIndex >= currentRoomLines.length - 1;
+  }
+
+  function updateRoomHint() {
+    if (!currentBuilding) return;
+    const id = currentBuilding.id;
+    const atEnd = atEndOfRoom();
+    const parts = [];
+    if (!atEnd) parts.push('Enter/N: next');
+    if (roomLineIndex > 0) parts.push('B: back');
+    if (id === 'exit') {
+      parts.push(atEnd ? 'Enter: final challenge' : 'Read to the end for the final challenge');
+    } else if (hasQuiz(id)) {
+      const label = bonusBuildingOrder.includes(id) ? 'bonus question' : 'quiz';
+      parts.push(atEnd ? `Enter or Q: ${label}` : `Read to the end to unlock the ${label}`);
+    }
+    if (id === 'spin') parts.push('S: spin');
+    parts.push('Esc: leave room');
+    roomHintEl.textContent = (atEnd ? 'End of chat  ·  ' : '') + parts.join('  ·  ');
+  }
+
+  function advanceRoomLine(delta) {
+    if (!currentBuilding) return;
+    roomLineIndex += delta;
+    if (roomLineIndex < 0) roomLineIndex = 0;
+    if (roomLineIndex >= currentRoomLines.length) roomLineIndex = currentRoomLines.length - 1;
+    renderRoomText(currentRoomLines[roomLineIndex]);
+    updateRoomHint();
+  }
+
+  // --- Dialog helpers ---
+  function showDialog(title, text, hint) {
+    dialogOpen = true;
+    dialogTitleEl.textContent = title;
+    dialogTextEl.textContent = text;
+    dialogHintEl.textContent = hint;
+    dialogEl.classList.remove('hidden');
+    dialogEl.scrollTop = 0;
+  }
+
+  function openExitDialog() {
+    dialogMode = 'info';
+    if (allMainBuildingsVisited()) {
+      showDialog('Exit Gate', 'Ready for the final challenge?\n5 questions. Get 4 right to clear the level.',
+        'Press Enter to begin, or Esc to wait');
+    } else {
+      const left = mainBuildingOrder.filter(id => !completedBuildings.has(id)).map(id => buildingById(id).name);
+      showDialog('Exit Gate – locked',
+        'The gate is locked.\n\nPass the quiz in each learning location first.\nStill to go: ' + left.join(', ') + '.',
+        'Press Enter or Esc to close');
+    }
+  }
+
+  function closeDialog() {
+    dialogOpen = false;
+    dialogMode = 'info';
+    dialogEl.classList.add('hidden');
+    bossActive = false;
+    bossQuestions = [];
+    bossIndex = 0;
+    bossCorrectCount = 0;
+    currentQuiz = null;
+    if (spinInterval) {
+      clearTimeout(spinInterval);
+      spinInterval = null;
+    }
+    if (spinRaf) {
+      cancelAnimationFrame(spinRaf);
+      spinRaf = null;
+    }
+    spinningActive = false;
+  }
+
+  // --- Quiz logic ---
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function createQuizInstance(base) {
+    const opts = [
+      { text: base.correct, correct: true, why: base.explain },
+      { text: base.wrong[0][0], correct: false, why: base.wrong[0][1] },
+      { text: base.wrong[1][0], correct: false, why: base.wrong[1][1] },
+      { text: base.joke[0], correct: false, why: base.joke[1], joke: true }
+    ];
+    const options = shuffle(opts);
+    return {
+      id: base.id,
+      question: base.q,
+      options,
+      correctIndex: options.findIndex(o => o.correct),
+      correctText: base.correct,
+      explanation: base.explain
+    };
+  }
+
+  function pickQuestion(pool, buildingId) {
+    let choices = pool;
+    if (pool.length > 1 && lastAskedId[buildingId]) {
+      choices = pool.filter(q => q.id !== lastAskedId[buildingId]);
+    }
+    const base = choices[Math.floor(Math.random() * choices.length)];
+    lastAskedId[buildingId] = base.id;
+    return base;
+  }
+
+  function renderQuiz(title, prefix, hint) {
+    dialogOpen = true;
+    dialogMode = 'quiz';
+    dialogTitleEl.textContent = title;
+    dialogTextEl.innerHTML = '';
+    const qDiv = document.createElement('div');
+    qDiv.textContent = prefix + currentQuiz.question;
+    qDiv.style.marginBottom = '4px';
+    dialogTextEl.appendChild(qDiv);
+    currentQuiz.options.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'opt-btn';
+      btn.tabIndex = -1;
+      btn.textContent = (idx + 1) + '. ' + opt.text;
+      btn.addEventListener('click', () => { btn.blur(); handleKey(String(idx + 1)); });
+      dialogTextEl.appendChild(btn);
+    });
+    dialogHintEl.textContent = hint;
+    dialogEl.classList.remove('hidden');
+    dialogEl.scrollTop = 0;
+  }
+
+  function showQuiz() {
+    if (!currentBuilding || !hasQuiz(currentBuilding.id)) return;
+    const base = pickQuestion(buildingQuiz[currentBuilding.id], currentBuilding.id);
+    currentQuiz = createQuizInstance(base);
+    const label = bonusBuildingOrder.includes(currentBuilding.id) ? ' – Bonus Question' : ' – Quiz';
+    renderQuiz(currentBuilding.name + label, '', 'Press 1–4 or tap an answer (Esc to cancel)');
+  }
+
+  function feedbackText(opt, correct) {
+    if (correct) {
+      return 'Correct!\n\n' + currentQuiz.correctText + '\n\n' + currentQuiz.explanation;
+    }
+    return (opt.joke ? 'Ha. Nice try.' : 'Not quite.') +
+      '\n\nYou picked: ' + opt.text + '\n→ ' + opt.why +
+      '\n\nBest answer: ' + currentQuiz.correctText + '\n' + currentQuiz.explanation;
+  }
+
+  function earnCard(id) {
+    if (!cardData[id] || earnedCards.has(id)) return '';
+    earnedCards.add(id);
+    setTimeout(sfx.card, 200);
+    return `\n\n★ Card earned: ${cardData[id].name}\n"${cardData[id].text}"`;
+  }
+
+  // Spin Lab mini-game: a real wheel that eases to a stop, ticking past each segment
+  function segmentAt(angle) {
+    const a = ((angle % 360) + 360) % 360;
+    return spinOutcomes.findIndex(o => a >= o.start && a < o.end);
+  }
+
+  function buildWheel() {
+    const wrap = document.createElement('div');
+    wrap.className = 'wheel-wrap';
+    const pointer = document.createElement('div');
+    pointer.className = 'wheel-pointer';
+    const wheel = document.createElement('div');
+    wheel.className = 'wheel';
+    wheel.style.background = 'conic-gradient(' +
+      spinOutcomes.map(o => `${o.color} ${o.start}deg ${o.end}deg`).join(', ') + ')';
+    wheel.style.transition = 'none';
+    wheel.style.transform = `rotate(${wheelRotation}deg)`;
+    spinOutcomes.forEach(o => {
+      const mid = (o.start + o.end) / 2;
+      const label = document.createElement('div');
+      label.className = 'wheel-label' + (o.gold ? ' gold' : '');
+      label.textContent = o.label;
+      const flip = mid > 180 ? 90 : -90; // keep left-side labels the right way up
+      label.style.transform = `rotate(${mid}deg) translateY(-${o.gold ? 92 : 70}px) rotate(${o.gold ? 0 : flip}deg)`;
+      if (o.gold) label.style.color = '#7c2d12';
+      wheel.appendChild(label);
+    });
+    const hub = document.createElement('div');
+    hub.className = 'wheel-hub';
+    wrap.appendChild(pointer);
+    wrap.appendChild(wheel);
+    wrap.appendChild(hub);
+    return { wrap, wheel };
+  }
+
+  function currentWheelAngle(wheel) {
+    const t = getComputedStyle(wheel).transform;
+    if (!t || t === 'none') return 0;
+    const m = t.match(/matrix\(([^)]+)\)/);
+    if (!m) return 0;
+    const [a, b] = m[1].split(',').map(Number);
+    return Math.atan2(b, a) * 180 / Math.PI;
+  }
+
+  function startSpinGame(forceAngle) {
+    if (!currentBuilding || currentBuilding.id !== 'spin') return;
+    lastQuizCorrect = false; // a spin result should never kick you out of the room
+    if (spinRaf) cancelAnimationFrame(spinRaf);
+    if (spinInterval) clearTimeout(spinInterval);
+
+    dialogMode = 'spin';
+    spinningActive = true;
+    showDialog('Spin Lab – Blue Smoke Roulette', '', 'Spinning...');
+    const { wrap, wheel } = buildWheel();
+    const result = document.createElement('div');
+    result.className = 'spin-result';
+    result.textContent = 'Round and round it goes...';
+    dialogTextEl.appendChild(wrap);
+    dialogTextEl.appendChild(result);
+    sfx.spinStart();
+
+    // Pick where the wheel stops. A random angle means each slice's chance matches its size.
+    let target = typeof forceAngle === 'number' ? forceAngle : Math.random() * 360;
+    const seg = spinOutcomes[segmentAt(target)];
+    const margin = Math.min(3, (seg.end - seg.start) / 4);
+    target = Math.min(Math.max(target, seg.start + margin), seg.end - margin);
+
+    // The segment under the top pointer is at wheel angle (-rotation). Land `target` there.
+    const base = wheelRotation + 360 * (5 + Math.floor(Math.random() * 2));
+    const needed = (((-target - base) % 360) + 360) % 360;
+    wheelRotation = base + needed;
+
+    // Force a reflow so the wheel starts from its old position, then animate
+    void wheel.offsetWidth;
+    wheel.style.transition = '';
+    wheel.style.transform = `rotate(${wheelRotation}deg)`;
+
+    // Tick each time a segment boundary passes the pointer
+    let lastSeg = segmentAt(-currentWheelAngle(wheel));
+    const tick = () => {
+      const segNow = segmentAt(-currentWheelAngle(wheel));
+      if (segNow !== lastSeg) {
+        playBeep(spinOutcomes[segNow].gold ? 1400 : 950, 18, 'square', 0.03);
+        lastSeg = segNow;
+      }
+      if (spinningActive) spinRaf = requestAnimationFrame(tick);
+    };
+    spinRaf = requestAnimationFrame(tick);
+
+    let done = false;
+    const finish = () => {
+      if (done || dialogMode !== 'spin') return;
+      done = true;
+      spinningActive = false;
+      if (spinRaf) cancelAnimationFrame(spinRaf);
+      spinRaf = null;
+      showSpinResult(seg, wrap, wheel, result);
+    };
+    wheel.addEventListener('transitionend', finish, { once: true });
+    spinInterval = setTimeout(finish, 4600); // fallback if transitionend doesn't fire
+  }
+
+  function showSpinResult(outcome, wrap, wheel, resultEl) {
+    dialogMode = 'feedback';
+    let text = outcome.text;
+    if (outcome.gold) {
+      wheel.classList.add('gold-win');
+      const burst = document.createElement('div');
+      burst.className = 'star-burst';
+      burst.textContent = '★';
+      wrap.appendChild(burst);
+      if (!luckyStar) {
+        luckyStar = true;
+        text += '\n\n★ LUCKY STAR FOUND! It will appear on your end card.';
+        updateHud();
+      } else {
+        text += "\n\nYou already have the lucky star... but what a spin.";
+      }
+      sfx.endWin();
+    } else if (outcome.effect === 'smoke' || outcome.effect === 'wisp') {
+      const smoke = document.createElement('div');
+      smoke.className = 'smoke' + (outcome.effect === 'wisp' ? ' grey' : '');
+      const drift = [-30, 10, -10, 25];
+      drift.forEach(dx => {
+        const puff = document.createElement('span');
+        puff.textContent = '☁';
+        puff.style.setProperty('--dx', dx + 'px');
+        smoke.appendChild(puff);
+      });
+      wrap.appendChild(smoke);
+      sfx.spinEnd();
+    } else {
+      sfx.spinEnd();
+    }
+    resultEl.textContent = '';
+    setStarText(resultEl, text + '\n\n');
+    const reflect = document.createElement('span');
+    reflect.className = 'reflect';
+    reflect.textContent = 'Reflect: ' + outcome.reflect;
+    resultEl.appendChild(reflect);
+    dialogHintEl.textContent = 'S: spin again  ·  Enter or Esc: close';
+  }
+
+  function startBossFight() {
+    bossActive = true;
+    bossQuestions = [];
+    bossIndex = 0;
+    bossCorrectCount = 0;
+
+    // One per main building, preferring questions the student got wrong earlier
+    mainBuildingOrder.forEach(id => {
+      const pool = buildingQuiz[id];
+      const missed = pool.filter(q => missedIds.has(q.id));
+      const from = missed.length ? missed : pool;
+      const base = from[Math.floor(Math.random() * from.length)];
+      bossQuestions.push({ ...createQuizInstance(base), from: id });
+    });
+
+    // Question 5: wildcard or scenario (missed ones first)
+    const missedW = bossWildcardQuestions.filter(q => missedIds.has(q.id));
+    const fromW = missedW.length ? missedW : bossWildcardQuestions;
+    const baseW = fromW[Math.floor(Math.random() * fromW.length)];
+    bossQuestions.push({ ...createQuizInstance(baseW), from: 'wildcard' });
+
+    finalTotal = bossQuestions.length;
+    showBossQuestion();
+  }
+
+  function showBossQuestion() {
+    currentQuiz = bossQuestions[bossIndex];
+    renderQuiz('Exit Gate – Final Challenge',
+      'Question ' + (bossIndex + 1) + ' of ' + bossQuestions.length + '\n\n',
+      'Press 1–4 or tap an answer (Esc to give up)');
+  }
+
+  function handleQuizAnswer(index) {
+    if (!currentQuiz) return;
+    const opt = currentQuiz.options[index];
+    if (!opt) return;
+
+    const correct = opt.correct;
+    lastQuizCorrect = correct;
+    if (correct) sfx.quizCorrect(); else sfx.quizWrong();
+    if (!correct) missedIds.add(currentQuiz.id);
+
+    dialogMode = 'feedback';
+
+    // Final challenge flow
+    if (bossActive) {
+      if (correct) bossCorrectCount++;
+      bossIndex++;
+      dialogTextEl.textContent = feedbackText(opt, correct);
+      dialogHintEl.textContent = bossIndex < bossQuestions.length
+        ? 'Press Enter to continue to the next question'
+        : 'Press Enter to see your final score';
+      dialogEl.scrollTop = 0;
+      return;
+    }
+
+    // Building quiz
+    const id = currentBuilding ? currentBuilding.id : null;
+    let extra = '';
+    if (id && mainBuildingOrder.includes(id)) {
+      if (!attemptedMain.has(id)) {
+        attemptedMain.add(id);
+        if (correct) firstTry.add(id);
+      }
+      if (correct) {
+        completedBuildings.add(id);
+        extra = earnCard(id);
+        if (allMainBuildingsVisited() && extra) extra += '\n\nAll four done – the Exit Gate is now unlocked!';
+      }
+    } else if (id && bonusBuildingOrder.includes(id) && correct) {
+      const isNewStar = !bonusStars.has(id);
+      bonusStars.add(id);
+      extra = earnCard(id);
+      if (isNewStar) extra = '\n\n★ Bonus star earned!' + extra;
+    }
+    updateHud();
+
+    setStarText(dialogTextEl, feedbackText(opt, correct) + extra);
+    dialogHintEl.textContent = correct
+      ? 'Press Enter (or tap here) to close'
+      : 'Press Enter (or tap here) to close, then Q for another question';
+    dialogEl.scrollTop = 0;
+  }
+
+  function finishBossChallenge() {
+    const passed = bossCorrectCount >= 4;
+    const score = bossCorrectCount;
+    const total = bossQuestions.length;
+    bossActive = false;
+
+    if (passed) {
+      gameComplete = true;
+      finalScore = Math.max(finalScore, score);
+      finalTotal = total;
+      finishedAt = new Date();
+      closeDialog();
+      updateHud();
+      showEndScreen();
+      return;
+    }
+
+    dialogMode = 'feedback';
+    dialogTextEl.textContent =
+      'Final result: ' + score + ' out of ' + total + ' correct.\n\n' +
+      'You need 4 to clear the level. Questions you missed will come back next time,\n' +
+      'so revisit those rooms, then try the final challenge again.';
+    dialogHintEl.textContent = 'Press Enter or Esc to close';
+  }
+
+  // --- End screen & card ---
+  function computePoints() {
+    return finalScore + bonusStars.size + firstTry.size;
+  }
+  function rankFor(points) {
+    return ranks.find(r => points >= r.min).name;
+  }
+
+  function showEndScreen() {
+    viewMode = 'end';
+    if (roomAnimInterval) {
+      clearInterval(roomAnimInterval);
+      roomAnimInterval = null;
+    }
+    roomScreenEl.classList.add('hidden');
+    dialogEl.classList.add('hidden');
+
+    const points = computePoints();
+    setStarText(endTextEl,
+      `You cleared the Systems Engineering orientation level!\n\n` +
+      `Final challenge: ${finalScore}/${finalTotal}   Bonus stars: ${'★'.repeat(bonusStars.size)}${'☆'.repeat(3 - bonusStars.size)}   First-try buildings: ${firstTry.size}/4\n` +
+      `Rank: ${rankFor(points)} (${points}/12 points)` +
+      (luckyStar ? `\n★ Lucky star found in the Spin Lab!` : '') +
+      (player.prediction ? `\nYour guess for the SAT: ${player.prediction} (actually 50%)` : ''));
+
+    endCardsEl.innerHTML = '';
+    cardOrder.forEach(id => {
+      const chip = document.createElement('div');
+      const has = earnedCards.has(id);
+      chip.className = 'card-chip' + (has ? '' : ' locked');
+      const b = document.createElement('b');
+      setStarText(b, has ? '★ ' + cardData[id].name : '☆ ' + cardData[id].name + ' – not found');
+      chip.appendChild(b);
+      if (has) chip.appendChild(document.createTextNode(cardData[id].text));
+      endCardsEl.appendChild(chip);
+    });
+
+    document.getElementById('cardFor').innerHTML = '';
+    const who = document.createElement('span');
+    who.append('Card for: ');
+    const nm = document.createElement('b');
+    nm.textContent = `${player.name}  |  ${player.cls}`;
+    who.appendChild(nm);
+    document.getElementById('cardFor').appendChild(who);
+    ticketMsgEl.textContent = SHARE_INSTRUCTION;
+    ticketMsgEl.className = '';
+
+    creditsEl.textContent =
+`Credits:
+- Game concept, dialogue, and curriculum intent:
+  Anthony Gasson
+- Code scaffolding and AI assistance:
+  ChatGPT (GPT-5.1 Thinking)
+- V6 review, fixes and learning features:
+  Claude (Anthropic)
+- Special guests:
+  Prof. Marks, Officer Auth, Cmd Wiz, Engr. Log, Exit Bot,
+  Safety Bot, Systems Bot, Workshop Bot
+  & one extremely judgemental pink flamingo`;
+
+    endHintEl.textContent = 'Esc: back to the map  ·  R twice: restart';
+    endHintEl.classList.remove('warn');
+    endScreenEl.classList.remove('hidden');
+    endScreenEl.scrollTop = 0;
+    sfx.endWin();
+  }
+
+  function hideEndScreen() {
+    endScreenEl.classList.add('hidden');
+    hudEl.classList.remove('hidden');
+    instructionsEl.classList.remove('hidden');
+    mapEl.classList.remove('hidden');
+    viewMode = 'map';
+    draw();
+  }
+
+  function checkCode(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+    return h.toString(36).toUpperCase().slice(-5).padStart(5, '0');
+  }
+
+  function wrapText(g, text, x, y, maxW, lineH, maxLines) {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    let line = '';
+    let lines = 0;
+    for (let i = 0; i < words.length; i++) {
+      const test = line ? line + ' ' + words[i] : words[i];
+      if (g.measureText(test).width > maxW && line) {
+        lines++;
+        if (lines === maxLines) { g.fillText(line + ' …', x, y); return y + lineH; }
+        g.fillText(line, x, y);
+        y += lineH;
+        line = words[i];
+      } else {
+        line = test;
+      }
+    }
+    if (line) { g.fillText(line, x, y); y += lineH; }
+    return y;
+  }
+
+  function downloadCard() {
+    const name = player.name;
+    const cls = player.cls;
+    const doText = document.getElementById('tDo').value.trim();
+    const unsure = document.getElementById('tUnsure').value.trim();
+
+    if (!player.confAfter || !doText) {
+      ticketMsgEl.textContent = 'Please pick your confidence now (1–5) and fill in "One thing I\'ll do" before downloading.';
+      ticketMsgEl.className = 'err';
+      return;
+    }
+
+    const when = finishedAt || new Date();
+    const whenText = when.toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const points = computePoints();
+    const rank = rankFor(points);
+    const code = checkCode([name, cls, finalScore, bonusStars.size, firstTry.size, when.getTime()].join('|'));
+
+    const W = 1000, H = 1600;
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const g = c.getContext('2d');
+
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#0f0';
+    g.lineWidth = 6;
+    g.strokeRect(20, 20, W - 40, H - 40);
+    g.strokeStyle = '#ff4ecf';
+    g.lineWidth = 2;
+    g.strokeRect(36, 36, W - 72, H - 72);
+
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#0f0';
+    g.font = 'bold 38px monospace';
+    g.fillText('SYSTEMS ENGINEERING ORIENTATION', W / 2, 105);
+    g.fillStyle = '#ff4ecf';
+    g.font = 'bold 32px monospace';
+    g.fillText('LEVEL CLEARED', W / 2, 150);
+
+    g.fillStyle = '#fff';
+    g.font = 'bold 34px monospace';
+    g.fillText(`${name}  |  ${cls}`, W / 2, 225);
+    g.fillStyle = '#aaa';
+    g.font = '24px monospace';
+    g.fillText(whenText, W / 2, 262);
+    if (luckyStar) {
+      g.fillStyle = '#facc15';
+      g.font = 'bold 22px monospace';
+      g.fillText('★ LUCKY STAR – found in the Spin Lab ★', W / 2, 298);
+    }
+
+    g.fillStyle = '#aaa';
+    g.font = '24px monospace';
+    g.fillText('RANK', W / 2, 330);
+    g.fillStyle = '#facc15';
+    g.font = 'bold 56px monospace';
+    g.fillText(rank.toUpperCase(), W / 2, 392);
+
+    g.fillStyle = '#eee';
+    g.font = '26px monospace';
+    const earnedStars = '★'.repeat(bonusStars.size);
+    const emptyStars = '☆'.repeat(3 - bonusStars.size);
+    const statPrefix = `Final challenge ${finalScore}/${finalTotal}   ·   Bonus stars `;
+    let sx = W / 2 - (g.measureText(statPrefix + earnedStars + emptyStars).width) / 2;
+    g.textAlign = 'left';
+    g.fillText(statPrefix, sx, 450);
+    sx += g.measureText(statPrefix).width;
+    g.fillStyle = '#facc15';
+    g.fillText(earnedStars, sx, 450);
+    sx += g.measureText(earnedStars).width;
+    g.fillStyle = '#666';
+    g.fillText(emptyStars, sx, 450);
+    g.fillStyle = '#eee';
+    g.textAlign = 'center';
+    g.fillText(`First-try buildings ${firstTry.size}/4   ·   Points ${points}/12`, W / 2, 488);
+
+    // Takeaway cards grid (2 columns)
+    g.textAlign = 'left';
+    const boxW = 425, boxH = 104, startX = 60, startY = 530, gapX = 30, gapY = 14;
+    cardOrder.forEach((id, i) => {
+      const col = i % 2, row = Math.floor(i / 2);
+      const x = startX + col * (boxW + gapX);
+      const y = startY + row * (boxH + gapY);
+      const has = earnedCards.has(id);
+      g.strokeStyle = has ? '#0f0' : '#333';
+      g.lineWidth = 2;
+      g.strokeRect(x, y, boxW, boxH);
+      g.fillStyle = has ? '#0f0' : '#555';
+      g.font = 'bold 22px monospace';
+      if (has) {
+        g.fillStyle = '#facc15';
+        g.fillText('★', x + 14, y + 32);
+        g.fillStyle = '#0f0';
+        g.fillText(cardData[id].name, x + 14 + g.measureText('★ ').width, y + 32);
+      } else {
+        g.fillText('☆ ' + cardData[id].name, x + 14, y + 32);
+      }
+      g.fillStyle = has ? '#ddd' : '#555';
+      g.font = '17px monospace';
+      wrapText(g, has ? cardData[id].text : 'Not found yet', x + 14, y + 60, boxW - 28, 22, 2);
+    });
+
+    // Before → after (from onboarding)
+    let ty = startY + 4 * (boxH + gapY) + 30;
+    g.fillStyle = '#22d3ee';
+    g.font = 'bold 24px monospace';
+    g.fillText('Before → after', 60, ty);
+    g.font = '22px monospace';
+    g.fillStyle = '#fff';
+    ty += 36;
+    const called = player.prediction === '50%';
+    g.fillText(`SAT weight guess: ${player.prediction || '–'} → actually 50%` + (called ? '   ✓ Called it!' : ''), 60, ty);
+    ty += 32;
+    const diff = player.confAfter - player.confBefore;
+    g.fillText(`Confidence: ${player.confBefore}/5 → ${player.confAfter}/5` + (diff > 0 ? `   (+${diff})` : diff < 0 ? `   (${diff})` : ''), 60, ty);
+    ty += 32;
+    if (player.interest) {
+      ty = wrapText(g, `Keen to build: "${player.interest}"`, 60, ty, W - 120, 30, 2);
+    }
+    ty += 26;
+
+    // Exit ticket
+    g.fillStyle = '#facc15';
+    g.font = 'bold 24px monospace';
+    g.fillText('My first SAT lesson:', 60, ty);
+    g.fillStyle = '#fff';
+    g.font = '22px monospace';
+    ty = wrapText(g, '"' + doText + '"', 60, ty + 34, W - 120, 30, 3);
+    if (unsure) {
+      ty += 12;
+      g.fillStyle = '#facc15';
+      g.font = 'bold 24px monospace';
+      g.fillText('Still unsure about:', 60, ty);
+      g.fillStyle = '#fff';
+      g.font = '22px monospace';
+      ty = wrapText(g, '"' + unsure + '"', 60, ty + 34, W - 120, 30, 3);
+    }
+
+    // Footer
+    g.fillStyle = '#888';
+    g.font = '18px monospace';
+    g.fillStyle = '#ff4ecf';
+    g.font = 'bold 24px monospace';
+    g.fillText('NEXT: LEVEL 2 – RUBRIC HEIST', 60, H - 110);
+    g.fillStyle = '#888';
+    g.font = '18px monospace';
+    g.fillText(SHARE_INSTRUCTION, 60, H - 62);
+    g.textAlign = 'right';
+    g.fillStyle = '#0f0';
+    g.font = 'bold 22px monospace';
+    g.fillText('Code: ' + code, W - 60, H - 62);
+
+    const safe = s => s.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+    const filename = `SE-Orientation-${safe(name)}-${safe(cls)}.png`;
+
+    const finish = url => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      ticketMsgEl.textContent = `Card downloaded (${filename}). ${SHARE_INSTRUCTION}`;
+      ticketMsgEl.className = 'ok';
+    };
+    if (c.toBlob) {
+      c.toBlob(blob => {
+        if (!blob) { finish(c.toDataURL('image/png')); return; }
+        const url = URL.createObjectURL(blob);
+        finish(url);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }, 'image/png');
+    } else {
+      finish(c.toDataURL('image/png'));
+    }
+  }
+
+  document.getElementById('downloadBtn').addEventListener('click', downloadCard);
+
+  // Tap/click the dialog to continue when it's showing feedback or an info message
+  dialogEl.addEventListener('click', (e) => {
+    if (e.target.closest('.opt-btn')) return;
+    if (dialogMode === 'feedback' || dialogMode === 'info') handleKey('Enter');
+  });
+
+  // --- Splash + onboarding ---
+  const splashEl = document.getElementById('splash');
+  const onboardEl = document.getElementById('onboard');
+  const splashTags = ['Build it.', 'Test it.', 'Break it.', 'Fix it.', 'Prove it.', 'Own it.'];
+  let splashTagIndex = 0;
+  const splashTagTimer = setInterval(() => {
+    const el = document.getElementById('splashTag');
+    el.textContent = splashTags[splashTagIndex % splashTags.length];
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+    splashTagIndex++;
+  }, 900);
+
+  function leaveSplash() {
+    if (viewMode !== 'splash') return;
+    viewMode = 'onboard';
+    initAudio();
+    playBeep(330, 90, 'square', 0.05);
+    setTimeout(() => playBeep(495, 90, 'square', 0.05), 90);
+    setTimeout(() => playBeep(660, 140, 'square', 0.05), 180);
+    splashEl.classList.add('leaving');
+    setTimeout(() => {
+      splashEl.classList.add('hidden');
+      clearInterval(splashTagTimer);
+      onboardEl.classList.remove('hidden');
+      try {
+        const saved = JSON.parse(localStorage.getItem('sePlayer') || 'null');
+        if (saved) {
+          if (!document.getElementById('obName').value) document.getElementById('obName').value = saved.name || '';
+          if (!document.getElementById('obClass').value) document.getElementById('obClass').value = saved.cls || '';
+        }
+      } catch (e) {}
+      document.getElementById('obName').focus();
+    }, 520);
+  }
+  splashEl.addEventListener('click', leaveSplash);
+
+  function setupChoices(containerId, onPick) {
+    const box = document.getElementById(containerId);
+    box.querySelectorAll('.choice-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        box.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        btn.blur();
+        playBeep(700, 40, 'square', 0.03);
+        onPick(btn.dataset.val);
+      });
+    });
+  }
+  let obPrediction = '';
+  let obConf = 0;
+  setupChoices('obPredict', v => { obPrediction = v; });
+  setupChoices('obConf', v => { obConf = parseInt(v, 10); });
+  setupChoices('confAfter', v => { player.confAfter = parseInt(v, 10); });
+
+  function tryStartGame() {
+    const name = document.getElementById('obName').value.trim();
+    const cls = document.getElementById('obClass').value.trim();
+    const msg = document.getElementById('obMsg');
+    const missing = [];
+    if (!name) missing.push('first name');
+    if (!cls) missing.push('class');
+    if (!obPrediction) missing.push('your guess (question 1)');
+    if (!obConf) missing.push('your confidence (question 2)');
+    if (missing.length) {
+      msg.textContent = 'Still needed: ' + missing.join(', ') + '.';
+      sfx.quizWrong();
+      return;
+    }
+    player.name = name;
+    player.cls = cls;
+    player.prediction = obPrediction;
+    player.confBefore = obConf;
+    player.interest = document.getElementById('obInterest').value.trim();
+    try { localStorage.setItem('sePlayer', JSON.stringify({ name, cls })); } catch (e) {}
+    onboardEl.classList.add('hidden');
+    viewMode = 'map';
+    updateHud();
+    draw();
+    instructionsEl.textContent = `Welcome, ${player.name}! You're at the Start Area – press Enter to meet your guide.`;
+    sfx.endWin();
+  }
+  document.getElementById('startBtn').addEventListener('click', tryStartGame);
+
+  // --- Restart (with confirmation) ---
+  function requestReset() {
+    const now = Date.now();
+    if (now < resetArmedUntil) {
+      resetArmedUntil = 0;
+      clearTimeout(resetTimer);
+      resetGame();
+      return;
+    }
+    resetArmedUntil = now + 3000;
+    if (viewMode === 'end') {
+      endHintEl.textContent = 'Press R again within 3 seconds to restart. You will lose your progress!';
+      endHintEl.classList.add('warn');
+    } else {
+      updateInstructions();
+    }
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => {
+      resetArmedUntil = 0;
+      endHintEl.textContent = 'Esc: back to the map  ·  R twice: restart';
+      endHintEl.classList.remove('warn');
+      updateInstructions();
+    }, 3000);
+  }
+
+  function resetGame() {
+    completedBuildings = new Set();
+    discoveredBuildings = new Set();
+    bonusStars = new Set();
+    earnedCards = new Set();
+    attemptedMain = new Set();
+    firstTry = new Set();
+    missedIds = new Set();
+    lastAskedId = {};
+    luckyStar = false;
+    gameComplete = false;
+    finalScore = 0;
+    finishedAt = null;
+    viewMode = 'map';
+    roomScreenEl.classList.add('hidden');
+    dialogEl.classList.add('hidden');
+    endScreenEl.classList.add('hidden');
+    dialogOpen = false;
+    currentBuilding = null;
+    currentQuiz = null;
+    bossActive = false;
+    bossQuestions = [];
+    bossIndex = 0;
+    bossCorrectCount = 0;
+    lastQuizCorrect = false;
+
+    if (roomAnimInterval) {
+      clearInterval(roomAnimInterval);
+      roomAnimInterval = null;
+    }
+    if (spinInterval) {
+      clearInterval(spinInterval);
+      spinInterval = null;
+    }
+    spinningActive = false;
+
+    hudEl.classList.remove('hidden');
+    instructionsEl.classList.remove('hidden');
+    mapEl.classList.remove('hidden');
+
+    randomiseBuildings();
+    updateHud();
+    draw();
+  }
+
+  // --- Input handling (keyboard + touch buttons both call handleKey) ---
+  function handleKey(rawKey) {
+    initAudio();
+    const key = rawKey.length === 1 ? rawKey.toLowerCase() : rawKey;
+
+    if (viewMode === 'splash') {
+      if (key === 'Enter' || key === ' ') leaveSplash();
+      return;
+    }
+    if (viewMode === 'onboard') {
+      if (key === 'Enter') tryStartGame();
+      return;
+    }
+
+    // End screen
+    if (viewMode === 'end') {
+      if (key === 'Escape') { hideEndScreen(); return; }
+      if (key === 'r') { requestReset(); return; }
+      if (key === 'd') { downloadCard(); return; }
+      return;
+    }
+
+    // Dialog open
+    if (dialogOpen) {
+      if (dialogMode === 'spin') { // wheel still turning: only Esc (cancel) works
+        if (key === 'Escape') closeDialog();
+        return;
+      }
+
+      if (dialogMode === 'info') { // Exit Gate prompt
+        if (key === 'Enter' || key === ' ') {
+          if (currentBuilding && currentBuilding.id === 'exit' && allMainBuildingsVisited()) {
+            startBossFight();
+          } else {
+            closeDialog();
+          }
+        } else if (key === 'Escape') {
+          closeDialog();
+        }
+        return;
+      }
+
+      if (dialogMode === 'quiz') {
+        if (['1', '2', '3', '4'].includes(key)) {
+          handleQuizAnswer(parseInt(key, 10) - 1);
+        } else if (key === 'Escape') {
+          closeDialog();
+        }
+        return;
+      }
+
+      if (dialogMode === 'feedback') {
+        if (key === 's' && !bossActive && currentBuilding && currentBuilding.id === 'spin') {
+          startSpinGame();
+          return;
+        }
+        if (key === 'Enter' || key === 'Escape' || key === ' ') {
+          if (bossActive) {
+            if (bossIndex < bossQuestions.length) showBossQuestion();
+            else finishBossChallenge();
+            return;
+          }
+          const wasCorrect = lastQuizCorrect;
+          const buildingId = currentBuilding ? currentBuilding.id : null;
+          closeDialog();
+          lastQuizCorrect = false;
+          // Auto-exit room after a correct quiz answer
+          if (wasCorrect && buildingId && buildingId !== 'exit' && viewMode === 'room') {
+            leaveRoom();
+          }
+        }
+        return;
+      }
+      return;
+    }
+
+    // Room mode, no dialog
+    if (viewMode === 'room') {
+      const id = currentBuilding ? currentBuilding.id : null;
+      if (key === 'Escape') { leaveRoom(); return; }
+
+      if (key === 'Enter' || key === 'n' || key === ' ') {
+        if (atEndOfRoom()) {
+          if (id === 'exit') { openExitDialog(); return; }
+          if (hasQuiz(id)) { showQuiz(); return; }
+          if (id === 'spin') { startSpinGame(); return; }
+        }
+        advanceRoomLine(+1);
+        return;
+      }
+      if (key === 'b') { advanceRoomLine(-1); return; }
+      if (key === 'q') {
+        if (id !== 'exit' && !hasQuiz(id)) return;
+        if (!atEndOfRoom()) {
+          roomHintEl.textContent = 'Read to the final slide first. Press Enter/N to continue.';
+          return;
+        }
+        if (id === 'exit') openExitDialog();
+        else showQuiz();
+        return;
+      }
+      if (key === 's') {
+        if (id === 'spin') startSpinGame();
+        return;
+      }
+      return;
+    }
+
+    // Map mode
+    if (viewMode === 'map') {
+      if (key === 'ArrowUp') { move(0, -1); return; }
+      if (key === 'ArrowDown') { move(0, 1); return; }
+      if (key === 'ArrowLeft') { move(-1, 0); return; }
+      if (key === 'ArrowRight') { move(1, 0); return; }
+      if (key === 'Enter' || key === ' ') {
+        const b = getBuildingAtPlayer();
+        if (b) enterRoom(b);
+        return;
+      }
+      if (key === 'r') { requestReset(); return; }
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    // Let students type freely in the exit ticket fields
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
+      if (e.key === 'Escape') t.blur();
+      return;
+    }
+    if (t && (t.id === 'downloadBtn' || t.id === 'startBtn' || t.classList.contains('choice-btn')) && (e.key === 'Enter' || e.key === ' ')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // Stop arrow keys / space from scrolling the page, and Enter from re-clicking a focused button
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'].includes(e.key)) {
+      e.preventDefault();
+    }
+    if (e.repeat && e.key !== 'ArrowUp' && e.key !== 'ArrowDown' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    handleKey(e.key);
+  });
+
+  // Touch / click controls
+  document.querySelectorAll('#touchControls .tbtn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      btn.blur();
+      handleKey(btn.dataset.key);
+    });
+  });
+
+  // --- Tiny runtime sanity checks ---
+  console.assert(buildings.length === 11, 'Expected 11 buildings');
+  Object.entries(buildingQuiz).forEach(([id, pool]) => pool.forEach(q => {
+    console.assert(q.id && q.q && q.correct && q.explain && q.wrong.length === 2 && q.joke.length === 2,
+      'Question shape problem in ' + id + ' ' + q.id);
+  }));
+  bossWildcardQuestions.forEach(q => console.assert(q.wrong.length === 2 && q.joke.length === 2, 'Wildcard shape ' + q.id));
+
+  // --- First-time setup ---
+  randomiseBuildings();
+  updateHud();
+  draw();
+</script>
+</body>
+</html>

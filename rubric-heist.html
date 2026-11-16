@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rubric Heist – Level 2 – Systems Engineering</title>
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --red: #f87171;
+    --bg: #05010d; --panel: rgba(0,0,0,0.82);
+  }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 0%, #1d0a33 0%, #05010d 60%, #000 100%);
+    color: #eee;
+    font-family: monospace;
+    min-height: 100vh;
+  }
+  .screen { display: none; min-height: 100vh; padding: 20px 14px 40px; }
+  .screen.on { display: block; }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1, h2, h3 { margin: 0; }
+  button { font-family: monospace; }
+  .btn {
+    display: inline-block; padding: 11px 16px; border: none; border-radius: 6px;
+    background: linear-gradient(90deg, var(--cyan), var(--pink)); color: #000;
+    font: bold 16px monospace; letter-spacing: 1px; cursor: pointer;
+  }
+  .btn.ghost { background: #111; color: #eee; border: 1px solid #555; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .panel {
+    background: var(--panel); border: 2px solid var(--cyan); border-radius: 8px;
+    padding: 16px 18px; box-shadow: 0 0 22px rgba(34,211,238,0.3);
+  }
+  input, textarea {
+    width: 100%; background: #111; color: #eee; border: 1px solid #555; border-radius: 4px;
+    padding: 8px 10px; font: 16px monospace;
+  }
+  label { display: block; margin: 12px 0 4px; font-size: 14px; }
+  .note { font-size: 12px; color: #999; margin-top: 4px; }
+  .err { color: var(--red); min-height: 1.3em; margin-top: 8px; font-size: 14px; }
+  .row2 { display: flex; gap: 10px; }
+  .row2 > div { flex: 1; }
+  .gold-star { color: var(--gold); text-shadow: 0 0 6px var(--gold); }
+
+  /* ---------- Splash ---------- */
+  #splash { position: relative; overflow: hidden; padding: 0; cursor: pointer; }
+  #splash.on { display: flex; align-items: center; justify-content: center; }
+  .grid-floor {
+    position: absolute; left: -50%; right: -50%; top: 52%; bottom: -20%;
+    background-image: linear-gradient(var(--cyan) 2px, transparent 2px), linear-gradient(90deg, var(--cyan) 2px, transparent 2px);
+    background-size: 60px 60px; transform: perspective(260px) rotateX(62deg); transform-origin: center top;
+    animation: gridmove 0.9s linear infinite; opacity: 0.45;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 35%); mask-image: linear-gradient(to bottom, transparent 0%, #000 35%);
+  }
+  @keyframes gridmove { to { background-position: 0 60px; } }
+  .vault-door {
+    position: absolute; left: 50%; top: 50%; width: 320px; height: 320px; margin: -300px 0 0 -160px;
+    border-radius: 50%; border: 10px solid #4b5563;
+    background: radial-gradient(circle, #1f2937 0 30%, #111827 31% 60%, #374151 61% 63%, #111827 64%);
+    box-shadow: 0 0 40px rgba(250,204,21,0.25), inset 0 0 40px #000;
+    animation: doorSpin 14s linear infinite; opacity: 0.6;
+  }
+  .vault-door::before, .vault-door::after {
+    content: ''; position: absolute; left: 50%; top: 50%; width: 220px; height: 14px; margin: -7px 0 0 -110px;
+    background: #6b7280; border-radius: 7px;
+  }
+  .vault-door::after { transform: rotate(90deg); }
+  @keyframes doorSpin { to { transform: rotate(360deg); } }
+  .scanlines {
+    position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px);
+  }
+  .splash-content { position: relative; z-index: 2; text-align: center; padding: 0 12px; }
+  .kicker { color: var(--cyan); letter-spacing: 6px; font-size: 14px; font-weight: bold; text-shadow: 0 0 4px #000, 0 0 10px var(--cyan); }
+  .glitch {
+    position: relative; margin: 8px 0 0; font: bold clamp(40px, 10vw, 84px) monospace; color: #fff; letter-spacing: 3px;
+    text-shadow: 0 0 3px #000, 0 0 12px var(--gold), 0 0 30px var(--pink);
+    animation: slam 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+  .glitch::before, .glitch::after { content: attr(data-text); position: absolute; left: 0; top: 0; width: 100%; text-shadow: none; }
+  .glitch::before { color: var(--cyan); clip-path: inset(0 0 58% 0); animation: gA 2.8s infinite steps(1); }
+  .glitch::after { color: var(--pink); clip-path: inset(55% 0 0 0); animation: gB 3.4s infinite steps(1); }
+  @keyframes slam { 0% { transform: scale(3); opacity: 0; filter: blur(12px); } 100% { transform: scale(1); opacity: 1; filter: blur(0); } }
+  @keyframes gA { 0%, 86%, 100% { transform: translate(0); opacity: 0; } 87% { transform: translate(-5px,-2px); opacity: .9; } 91% { transform: translate(4px,1px); opacity: .9; } }
+  @keyframes gB { 0%, 78%, 100% { transform: translate(0); opacity: 0; } 79% { transform: translate(5px,2px); opacity: .9; } 83% { transform: translate(-4px,-1px); opacity: .9; } }
+  .sub { margin-top: 6px; font: bold clamp(15px, 3.5vw, 24px) monospace; color: var(--green); letter-spacing: 6px; text-shadow: 0 0 10px #22c55e; }
+  .tag { margin-top: 20px; height: 1.4em; font: bold clamp(15px, 3vw, 22px) monospace; color: var(--gold); text-shadow: 0 0 10px #f59e0b; }
+  .press { margin-top: 30px; font: bold 16px monospace; letter-spacing: 3px; animation: blink 1.1s 1.5s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  #resumeBox { margin-top: 18px; }
+  @media (prefers-reduced-motion: reduce) { .grid-floor, .vault-door, .glitch::before, .glitch::after, .press { animation: none !important; } }
+
+  /* ---------- HUD ---------- */
+  .hud {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #0b0b0b; border: 1px solid #333; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px;
+  }
+  .hud b { color: #fff; }
+  .hud .score { color: var(--gold); font-weight: bold; }
+  .hud .net { font-size: 12px; color: #888; }
+  .hud .net.off { color: var(--red); }
+
+  /* ---------- Vault map ---------- */
+  .vaults { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .vault {
+    position: relative; min-height: 120px; border-radius: 10px; border: 2px solid #333; background: #0c0c12;
+    padding: 12px; text-align: left; color: #666; cursor: default; font: 14px monospace;
+  }
+  .vault .num { font: bold 22px monospace; }
+  .vault .crit { margin-top: 6px; font-size: 13px; line-height: 1.3; }
+  .vault .state { position: absolute; right: 10px; top: 10px; font-size: 20px; }
+  .vault.open { border-color: var(--cyan); color: #eee; cursor: pointer; box-shadow: 0 0 16px rgba(34,211,238,0.4); animation: pulse 1.6s ease-in-out infinite; }
+  .vault.done { border-color: var(--green); color: #cfe; cursor: pointer; }
+  .vault.final { grid-column: 1 / -1; min-height: 80px; text-align: center; }
+  .vault.final.open { border-color: var(--gold); box-shadow: 0 0 20px rgba(250,204,21,0.5); }
+  @keyframes pulse { 50% { box-shadow: 0 0 4px rgba(34,211,238,0.2); } }
+
+  /* ---------- Question ---------- */
+  .qhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .qtype { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #000; }
+  .t-find { background: var(--cyan); } .t-climb { background: var(--green); } .t-spot { background: var(--gold); } .t-place { background: var(--pink); }
+  .qprog { font-size: 13px; color: #aaa; }
+  .qtext { font-size: 19px; line-height: 1.4; margin: 14px 0; white-space: pre-wrap; }
+  .opt {
+    display: block; width: 100%; text-align: left; margin: 8px 0 0; padding: 11px 12px; background: #111; color: #eee;
+    border: 1px solid #555; border-radius: 6px; font: 16px monospace; cursor: pointer;
+  }
+  .opt:hover:not(:disabled) { border-color: var(--cyan); }
+  .opt:disabled { opacity: 0.45; cursor: default; text-decoration: line-through; }
+  .opt.right { border-color: var(--green); background: #052e16; opacity: 1; text-decoration: none; }
+  .tiles { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; min-height: 48px; }
+  .tile {
+    padding: 10px 14px; border-radius: 6px; border: 1px solid var(--green); background: #062012; color: #dfd;
+    font: bold 15px monospace; cursor: pointer;
+  }
+  .tile.used { visibility: hidden; }
+  .slotrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 48px; padding: 8px; border: 1px dashed #555; border-radius: 6px; }
+  .slot { padding: 10px 14px; border-radius: 6px; background: var(--green); color: #000; font: bold 15px monospace; }
+  .arrow { color: #888; }
+  .feedback { margin-top: 14px; padding: 12px; border-radius: 6px; white-space: pre-wrap; line-height: 1.4; display: none; }
+  .feedback.show { display: block; }
+  .feedback.good { background: #052e16; border: 1px solid var(--green); }
+  .feedback.bad { background: #2b0b0b; border: 1px solid var(--red); }
+  .feedback.reveal { background: #1e1b0b; border: 1px solid var(--gold); }
+  .qactions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .hintbox { margin-top: 10px; color: var(--gold); font-size: 14px; display: none; }
+  .hintbox.show { display: block; }
+
+  /* folio page */
+  .folio { margin-top: 12px; background: #f5f0e1; color: #222; border-radius: 6px; padding: 14px 16px; font: 15px/1.45 Georgia, serif; margin-bottom: 14px; box-shadow: 4px 4px 0 #333; }
+  .folio h3 { font: bold 17px Georgia, serif; margin-bottom: 6px; }
+  .folio table { border-collapse: collapse; margin: 8px 0; }
+  .folio td, .folio th { border: 1px solid #999; padding: 3px 10px; font-size: 14px; }
+
+  /* vault cracked overlay */
+  #cracked {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center;
+    z-index: 20; text-align: center; padding: 20px;
+  }
+  #cracked.on { display: flex; }
+  .crack-door { font-size: 90px; animation: doorOpen 0.9s ease-out both; }
+  @keyframes doorOpen { 0% { transform: rotateY(0) scale(0.6); } 60% { transform: rotateY(-70deg) scale(1.2); } 100% { transform: rotateY(0) scale(1); } }
+  .keycard {
+    display: inline-block; margin-top: 14px; padding: 14px 20px; border: 2px solid var(--green); border-radius: 10px;
+    background: linear-gradient(135deg, #062012, #0b0b0b); animation: pop 0.5s 0.5s ease-out both; min-width: 260px;
+  }
+  @keyframes pop { 0% { transform: scale(0.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+  /* targets */
+  .trow { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #222; }
+  .bands { display: flex; gap: 4px; flex-wrap: wrap; }
+  .band { padding: 7px 8px; border-radius: 5px; border: 1px solid #555; background: #111; color: #eee; font: bold 13px monospace; cursor: pointer; }
+  .band.on { background: var(--cyan); color: #000; border-color: var(--cyan); }
+
+  .next-level {
+    margin: 16px auto 0; padding: 12px 16px; border: 2px dashed var(--pink); border-radius: 8px; color: var(--pink);
+    font-weight: bold; text-align: center; max-width: 560px;
+  }
+  @media (max-width: 640px) {
+    .vaults { grid-template-columns: repeat(2, 1fr); }
+    .row2 { flex-direction: column; gap: 0; }
+    .trow { grid-template-columns: 1fr; }
+    .qtext { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<section id="splash" class="screen on">
+  <div class="vault-door"></div>
+  <div class="grid-floor"></div>
+  <div class="splash-content">
+    <div class="kicker">SYSTEMS ENGINEERING · LEVEL 2</div>
+    <h1 class="glitch" data-text="RUBRIC HEIST">RUBRIC HEIST</h1>
+    <div class="sub">CRACK THE SAT CRITERIA</div>
+    <div class="tag" id="tag">&nbsp;</div>
+    <div class="press">▶ PRESS ENTER OR TAP TO START ◀</div>
+    <div id="resumeBox"></div>
+  </div>
+  <div class="scanlines"></div>
+</section>
+
+<!-- SIGN IN -->
+<section id="signin" class="screen">
+  <div class="wrap" style="max-width:620px">
+    <div class="panel">
+      <h2 style="color:var(--cyan)">Sign in, safecracker</h2>
+      <p class="note" style="font-size:13px">Your name goes on the live leaderboard and on your end card.</p>
+      <div class="row2">
+        <div><label for="inName">First name</label><input id="inName" maxlength="24" autocomplete="off" /></div>
+        <div><label for="inClass">Class</label><input id="inClass" maxlength="12" autocomplete="off" /></div>
+      </div>
+      <label for="inCode">Session code (on the board at the front)</label>
+      <input id="inCode" maxlength="8" autocomplete="off" style="text-transform:uppercase; letter-spacing:4px; font-weight:bold" />
+      <div class="note">No code? Leave it blank to practise without the leaderboard.</div>
+      <div style="margin-top:16px"><button class="btn" id="signBtn" style="width:100%">NEXT ▶</button></div>
+      <div class="err" id="signErr"></div>
+    </div>
+  </div>
+</section>
+
+<!-- BRIEFING -->
+<section id="brief" class="screen">
+  <div class="wrap" style="max-width:700px">
+    <div class="panel">
+      <h2 style="color:var(--gold)">Mission briefing</h2>
+      <p style="line-height:1.5">There are <b>8 vaults</b>, one for each SAT criterion, then a <b>final vault</b>.
+      Every answer is on your printed rubric. Keep it beside you and keep checking it.</p>
+      <p style="line-height:1.5">
+        <span class="qtype t-find">FIND IT</span> locate a word or requirement<br>
+        <span class="qtype t-climb">CLIMB IT</span> put the verbs in order, lowest band to highest<br>
+        <span class="qtype t-spot">SPOT IT</span> what changes between two bands<br>
+        <span class="qtype t-place">PLACE IT</span> apply the rubric to real student work
+      </p>
+      <p style="line-height:1.5"><b>Scoring:</b> 5 points first try · 2 points second try · a hint costs 1 point.
+      Ranked by points, then time. The clock starts when you press GO.</p>
+      <p style="line-height:1.5"><b>Highlighter routine:</b> as you find each command verb, highlight it.<br>
+      Colour 1: identify / outline · Colour 2: describe / explain · Colour 3: justify / analyse / evaluate.</p>
+      <button class="btn" id="goBtn" style="width:100%; margin-top:8px">GO ▶</button>
+    </div>
+  </div>
+</section>
+
+<!-- VAULT MAP -->
+<section id="mapScreen" class="screen">
+  <div class="wrap">
+    <div class="hud" id="hudMap"></div>
+    <h2 style="color:var(--cyan)">Choose your vault</h2>
+    <div class="note" style="font-size:13px">Vaults unlock in order, like the SAT itself.</div>
+    <div class="vaults" id="vaults"></div>
+  </div>
+</section>
+
+<!-- QUESTION -->
+<section id="qScreen" class="screen">
+  <div class="wrap">
+    <div class="hud" id="hudQ"></div>
+    <div class="panel" id="qPanel">
+      <div class="qhead">
+        <h3 id="qVaultTitle" style="color:var(--cyan)"></h3>
+        <span class="qprog" id="qProg"></span>
+      </div>
+      <div id="folioBox"></div>
+      <div style="margin-top:10px"><span class="qtype" id="qType"></span></div>
+      <div class="qtext" id="qText"></div>
+      <div id="qBody"></div>
+      <div class="hintbox" id="hintBox"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="qactions" id="qActions"></div>
+    </div>
+  </div>
+</section>
+
+<!-- VAULT CRACKED OVERLAY -->
+<div id="cracked">
+  <div>
+    <div class="crack-door">🔓</div>
+    <h2 style="color:var(--green); text-shadow:0 0 10px var(--green)" id="crackTitle">VAULT CRACKED!</h2>
+    <div class="keycard" id="crackCard"></div>
+    <div style="margin-top:18px"><button class="btn" id="crackBtn">CONTINUE ▶</button></div>
+  </div>
+</div>
+
+<!-- TARGETS -->
+<section id="targets" class="screen">
+  <div class="wrap" style="max-width:760px">
+    <div class="panel">
+      <h2 style="color:var(--gold)">All vaults cracked! Set your targets</h2>
+      <p class="note" style="font-size:13px">Pick the band you're aiming for in each criterion. Be ambitious but honest. These go on your card and set you up for Level 3.</p>
+      <div id="targetRows"></div>
+      <label for="evidence">The first piece of evidence I'll collect is…</label>
+      <textarea id="evidence" maxlength="140" style="height:56px"></textarea>
+      <button class="btn" id="targetsBtn" style="width:100%; margin-top:14px">FINISH ▶</button>
+      <div class="err" id="targetErr"></div>
+    </div>
+  </div>
+</section>
+
+<!-- END -->
+<section id="end" class="screen">
+  <div class="wrap" style="max-width:760px; text-align:center">
+    <div class="kicker" style="margin-top:10px">LEVEL 2 CLEARED</div>
+    <h1 style="font-size:clamp(30px,7vw,54px); color:#fff; text-shadow:0 0 12px var(--gold), 0 0 30px var(--pink); margin-top:6px">RUBRIC HEIST COMPLETE</h1>
+    <div id="endStats" style="margin-top:14px; font-size:17px; line-height:1.6"></div>
+    <div style="margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
+      <button class="btn" id="dlBtn">DOWNLOAD MY CARD</button>
+      <a class="btn ghost" href="index.html" style="text-decoration:none">◀ LEVEL SELECT</a>
+    </div>
+    <div class="note" id="dlMsg" style="font-size:13px; margin-top:8px">Post your card in our Systems Engineering Teams channel.</div>
+    <div class="next-level">NEXT: LEVEL 3 – THE 9–10 EVIDENCE LAB<br><span style="font-weight:normal; color:#ccc; font-size:13px">Coming in a later lesson. Keep your card: your targets are your starting point.</span></div>
+  </div>
+</section>
+
+<script>
+  // ===================== CONFIG =====================
+  const SUPABASE_URL = 'https://elebvltrvcqqyyjwwydi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_wgUH3E8Nepy-6QC_dXpVtA_Uyszqkrm'; // publishable key: safe in a web page
+  const SHARE_INSTRUCTION = 'Post your card in our Systems Engineering Teams channel.';
+  const SAVE_KEY = 'rubricHeistProgress';
+  const PLAYER_KEY = 'sePlayer'; // shared with Level 1 (name + class)
+
+  // ===================== CONTENT =====================
+  // type: 'find' | 'climb' | 'spot' | 'place'
+  // mode: 'mc' (options) | 'typed' (accept list) | 'order' (items -> answer order)
+  const VAULTS = [
+    { num: 1, short: 'Investigating & defining', title: 'Criterion 1: Investigating and defining', qs: [
+      { id: '1.1', type: 'find', mode: 'typed', q: "Criterion 1's title says your problem must address what kind of consideration? (one word)",
+        accept: ['ethical', 'ethical consideration', 'ethical design', 'ethics'], answer: 'ethical',
+        explain: 'Criterion 1: the problem must consider ethical design. Your design brief starts there.',
+        hint: 'Read the criterion title in the far-left column.' },
+      { id: '1.2', type: 'climb', mode: 'order', q: "Put the verbs from Criterion 1's first row in order, lowest band to highest.",
+        answer: ['Identifies', 'Outlines', 'Describes', 'Explains'],
+        explain: '1–2 and 3–4 identify, then 5–6 outlines, 7–8 describes and 9–10 explains.',
+        hint: 'Read the first word of the top box in each column, left to right.' },
+      { id: '1.3', type: 'spot', mode: 'mc', q: 'In the evaluation-criteria row, what small change in wording separates 7–8 from 9–10?',
+        correct: '"and/or" becomes "and": at 9–10 your criteria must align with the brief AND the factors',
+        wrong: [['"describing" becomes "explaining"', 'Look again: both columns say "explaining".'],
+                ['"relevant parameters" is added', "That's there from 3–4 upwards."]],
+        joke: ['The font gets bigger', 'Tempting, but no. Read every word.'],
+        explain: 'At 7–8 the criteria align with the brief and/or the factors. At 9–10 they must align with both.',
+        hint: 'Compare the second box in the 7–8 and 9–10 columns word by word.' }
+    ]},
+    { num: 2, short: 'Generating & designing', title: 'Criterion 2: Generating and designing', qs: [
+      { id: '2.1', type: 'find', mode: 'typed', q: "Criterion 2 lists three kinds of thinking. One is creative and one is critical. What's the third?",
+        accept: ['speculative', 'speculative thinking'], answer: 'speculative',
+        explain: 'Creative, critical and speculative thinking all appear in Criterion 2.',
+        hint: "It's in the indicators and in every band description." },
+      { id: '2.2', type: 'climb', mode: 'order', q: "Put Criterion 2's verbs for design ideas in order, lowest band to highest.",
+        answer: ['Generate', 'Outline', 'Describe', 'Explain', 'Justify'],
+        explain: 'Generate → outline → describe → explain → justify. Justify sits at the top of most ladders.',
+        hint: 'Look at the end of the first box in each column.' },
+      { id: '2.3', type: 'spot', mode: 'mc', q: 'In the second row, "diagrams and/or technical data" at 3–4 changes at 5–6 to…',
+        correct: '"diagrams and technical data": from 5–6 you need both',
+        wrong: [['"sketches only"', "Sketches aren't mentioned. Read the wording again."],
+                ['"CAD models and prototypes"', 'Not in this row.']],
+        joke: ['"interpretive dance and vibes"', 'Creative thinking, but not what the rubric asks for.'],
+        explain: 'Lower bands accept diagrams and/or technical data. From 5–6 you need both.',
+        hint: 'Compare the second box in the 3–4 and 5–6 columns.' }
+    ]},
+    { num: 3, short: 'Planning', title: 'Criterion 3: Planning', qs: [
+      { id: '3.1', type: 'find', mode: 'typed', q: 'Criterion 3 says your safety and risk assessments must use what structure?',
+        accept: ['hierarchy of control', 'hierarchy of controls', 'the hierarchy of control', 'hierarchy of control structure'], answer: 'hierarchy of control',
+        explain: 'Every band asks for safety and risk assessments using the hierarchy of control structure.',
+        hint: 'Second row, any column: check the last few words.' },
+      { id: '3.2', type: 'find', mode: 'typed', q: 'From 3–4 upwards, what one word describes the milestones you plan?',
+        accept: ['measurable', 'measureable'], answer: 'measurable',
+        explain: 'From 3–4 up, milestones must be measurable, so you can tell whether you hit them.',
+        hint: 'First row, 3–4 column, near the end.' },
+      { id: '3.3', type: 'place', mode: 'mc', q: 'Riley\'s work plan has a sequenced timeline with prerequisites (chassis before wiring, wiring before code) and a tools list, but every milestone just says "Week 5: progress check".\n\nWhich rubric word is Riley\'s plan missing?',
+        correct: 'Measurable: a milestone needs something you can check off, like "chassis assembled and drive-tested"',
+        wrong: [['Sequenced', 'Riley already has a sequenced timeline with prerequisites. The problem is the milestones.'],
+                ['Independent', 'That word belongs to Criteria 4, 5 and 7, not planning.']],
+        joke: ['Laminated', 'Laminating a vague plan just makes it a shiny vague plan.'],
+        explain: '"Week 5: progress check" can\'t be measured. "Chassis assembled and drive-tested" can.',
+        hint: 'Re-read your answer to the last question.' }
+    ]},
+    { num: 4, short: 'Implementing', title: 'Criterion 4: Implementing', qs: [
+      { id: '4.1', type: 'spot', mode: 'typed', q: 'In Criterion 4\'s first row, which word replaces "With support" at 7–8?',
+        accept: ['independently', 'independent'], answer: 'independently',
+        explain: '1–2 to 5–6 say "With support". From 7–8 you implement the work plan independently.',
+        hint: 'First row, 7–8 column, first line.' },
+      { id: '4.2', type: 'spot', mode: 'mc', q: "What does 9–10 add to the first row that 7–8 doesn't have?",
+        correct: 'Accuracy',
+        wrong: [['Precision', 'Precision is already in 7–8.'],
+                ['Technical skill', "That's there from 5–6."]],
+        joke: ['A cape', 'Capes are a known OHS hazard near drill presses.'],
+        explain: '7–8: precision and technical skill. 9–10 adds accuracy.',
+        hint: 'Compare the last line of the first box in 7–8 and 9–10.' },
+      { id: '4.3', type: 'find', mode: 'mc', q: "Which requirement appears in EVERY band of Criterion 4's second row, from 1–2 to 9–10?",
+        correct: 'Complies with OHS requirements',
+        wrong: [['Justifies risk management strategies', 'Only at 9–10. Lower bands identify, outline, describe or explain.'],
+                ['Works independently', "That's the first row, and only from 7–8."]],
+        joke: ['Brings snacks for the teacher', 'Appreciated, but sadly not assessed.'],
+        explain: 'OHS compliance is required in every band. The verb for risk management strategies is what climbs.',
+        hint: 'Read the first three words of each box in the second row.' }
+    ]},
+    { num: 5, short: 'Realisation', title: 'Criterion 5: Realisation', qs: [
+      { id: '5.1', type: 'find', mode: 'typed', q: 'From 5–6 upwards, Criterion 5 says the system you produce must be… (one word)',
+        accept: ['operational', 'operating', 'operable'], answer: 'operational',
+        explain: 'From 5–6 the system must be operational: it has to work.',
+        hint: 'Compare the start of the 3–4 and 5–6 boxes. A new word appears.' },
+      { id: '5.2', type: 'find', mode: 'mc', q: 'From 5–6 upwards, what must you use to describe, explain or justify your decision-making?',
+        correct: 'Data',
+        wrong: [['Photos', 'Photos help as evidence, but the rubric says data.'],
+                ['Teacher feedback', 'Not mentioned in this criterion.']],
+        joke: ['A crystal ball', 'Predictive, but not measurable.'],
+        explain: 'From 5–6 you use data to describe, explain or justify decisions.',
+        hint: 'Look for "decision-making" in the 5–6 box.' },
+      { id: '5.3', type: 'place', mode: 'mc', q: 'Sam\'s logbook says: "Switched to a bigger motor because the old one felt weak."\n\nHow does this decision-making evidence match the rubric?',
+        correct: 'Low bands: it refers to a decision but uses no data. Adding current or speed test results would lift it.',
+        wrong: [['9–10: it clearly justifies the change', '"Felt weak" is an opinion. 9–10 needs data to justify decisions.'],
+                ["It doesn't count: decisions aren't part of Criterion 5", 'They are: the indicators include documenting decision-making and modifications.']],
+        joke: ['Top band: the new motor is bigger', 'Bigger motor, same mark.'],
+        explain: '"Felt weak" refers to a decision without data, which matches the 1–4 wording ("reference is made to decision-making").',
+        hint: 'Compare "reference is made to decision-making" (1–4) with "using data to…" (5–10).' }
+    ]},
+    { num: 6, short: 'Diagnostic testing', title: 'Criterion 6: Diagnostic testing', qs: [
+      { id: '6.1', type: 'find', mode: 'typed', q: "According to Criterion 6's indicators, what do you generate and use from your tests? (two words)",
+        accept: ['test data', 'data', 'testing data'], answer: 'test data',
+        explain: 'The indicators: conducts tests, then generates and uses test data.',
+        hint: 'Last indicator in the left-hand column.' },
+      { id: '6.2', type: 'climb', mode: 'order', q: "Put the second row's phrases in order, from 5–6 up to 9–10.",
+        answer: ['interprets and describes', 'interprets and explains', 'interprets and analyses'],
+        explain: 'Interprets and describes (5–6) → explains (7–8) → analyses (9–10).',
+        hint: 'Second row: the 5–6, 7–8 and 9–10 columns.' },
+      { id: '6.3', type: 'place', mode: 'mc', q: 'Mia runs her line follower 10 times on a curved track and records how often it stays on the line. The results show her sensor spacing fails on tight curves, so she tries a second layout.\n\nWhich part of Criterion 6 is she showing?',
+        correct: 'Using test data to identify alternative options for the system',
+        wrong: [['Complying with OHS requirements', "That's Criterion 4."],
+                ['Devising a work plan', "That's Criterion 3."]],
+        joke: ['Proving that robots hate curves', 'A strong hypothesis, but not a criterion.'],
+        explain: 'Using test data to identify alternative options appears in every band of the second row.',
+        hint: 'Second row, any column: look for "alternative options".' }
+    ]},
+    { num: 7, short: 'Project management', title: 'Criterion 7: Project management', qs: [
+      { id: '7.1', type: 'spot', mode: 'mc', q: 'In Criterion 7, at which band does "With support" change to "Independently"?',
+        correct: '5–6',
+        wrong: [['7–8', "That's when it happens in Criterion 4. Criterion 7 changes earlier."],
+                ['9–10', 'Earlier than that: check the 5–6 column.']],
+        joke: ['When you move out of home', 'Different rubric.'],
+        explain: 'In Criterion 7, 1–2 and 3–4 say "With support". From 5–6 it is "Independently".',
+        hint: 'First row: read the first word of each box.' },
+      { id: '7.2', type: 'find', mode: 'typed', q: "Criterion 7's second row compares the steps in your original plan with… what? (three words)",
+        accept: ['what actually occurred', 'what actually happened', 'what occurred', 'actually occurred'], answer: 'what actually occurred',
+        explain: 'You compare your original plan with what actually occurred.',
+        hint: 'Second row, any column, last line.' },
+      { id: '7.3', type: 'climb', mode: 'mc', q: "What's the top-band verb in Criterion 7's second row?",
+        correct: 'Evaluates',
+        wrong: [['Justifies', "That's the top verb in many criteria, but not this one."],
+                ['Explains', "That's 7–8."]],
+        joke: ['Vibes', 'Not a verb VCAA uses. Yet.'],
+        explain: 'Identifies → outlines → describes → explains → evaluates.',
+        hint: 'Second row, 9–10 column, first word.' }
+    ]},
+    { num: 8, short: 'Evaluating', title: 'Criterion 8: Evaluating', qs: [
+      { id: '8.1', type: 'find', mode: 'typed', q: 'Criterion 8 says you evaluate using diagnostic testing and what kind of evaluation criteria? (one word)',
+        accept: ['predetermined', 'pre-determined', 'pre determined'], answer: 'predetermined',
+        explain: 'You evaluate against predetermined criteria: ones you set before you build.',
+        hint: 'Any column: the first two lines.' },
+      { id: '8.2', type: 'spot', mode: 'mc', q: 'What separates 9–10 from 7–8 in Criterion 8?',
+        correct: 'Improvements are explained, not just described',
+        wrong: [['You evaluate overall system performance', "That's already in 7–8."],
+                ['You use diagnostic testing', 'Every band uses diagnostic testing.']],
+        joke: ['You submit it in a gold folder', 'Shiny, but no.'],
+        explain: '7–8 proposes and describes improvements. 9–10 proposes and explains them.',
+        hint: 'Compare the last few lines of the 7–8 and 9–10 boxes.' },
+      { id: '8.3', type: 'place', mode: 'mc', q: 'Where do the "predetermined evaluation criteria" in Criterion 8 come from?',
+        correct: 'Criterion 1: you develop them alongside your design brief',
+        wrong: [['Criterion 6: they come from your test results', 'Tests give you data. The criteria are set at the start.'],
+                ['You write them at the end, once you know how it went', "Then they wouldn't be predetermined."]],
+        joke: ['The flamingo', 'The flamingo judges cable management only.'],
+        explain: 'Criterion 1\'s indicators include "develops evaluation criteria".',
+        hint: "Check the indicators in Criterion 1's left-hand column." }
+    ]},
+    { num: 9, short: 'Final vault', title: 'Final vault: Mark the folio page', final: true, qs: [
+      { id: 'F1', type: 'place', mode: 'mc', q: 'Which criterion does most of this page provide evidence for?',
+        correct: 'Criterion 6: Diagnostic testing',
+        wrong: [['Criterion 3: Planning', "There's a next step, but it's mostly testing."],
+                ['Criterion 8: Evaluating', "It interprets one test. It doesn't evaluate the finished system."]],
+        joke: ['Criterion 0: Vibes', 'Not shown.'],
+        explain: 'Testing, test data and interpreting results are Criterion 6.',
+        hint: 'Which criterion is about tests and test data?' },
+      { id: 'F2', type: 'place', mode: 'mc', q: 'The page interprets the results and explains a likely cause. What would lift it towards 9–10?',
+        correct: 'Analyse the results, e.g. work out the error at each distance and compare it with the accuracy the design brief needs',
+        wrong: [['Add more photos of the sensor', 'Photos help authentication, but the top band asks you to analyse results.'],
+                ['Write "the results are interesting"', "That's a comment, not analysis."]],
+        joke: ['Re-do the test in Comic Sans', 'Bold choice. Still 7–8.'],
+        explain: '9–10 interprets and analyses the results to assess feasibility, e.g. error vs the accuracy you need.',
+        hint: 'Criterion 6, second row, 9–10 column.' },
+      { id: 'F3', type: 'place', mode: 'mc', q: '"Changed to the HC-SR04 sensor because it was cheaper."\n\nWhich criterion does this belong to, and what\'s missing?',
+        correct: 'Criterion 5: it records a decision, but needs data (e.g. cost comparison and accuracy) to explain or justify it',
+        wrong: [["Criterion 2: it's a new design idea", "It's a change during production, which is Criterion 5's modifications and decision-making."],
+                ['Criterion 4: it shows OHS compliance', 'Nothing here is about safety.']],
+        joke: ['Criterion 9: Shopping', 'There are only 8.'],
+        explain: 'Changes during production, and the reasons for them, are Criterion 5, which needs data from 5–6 up.',
+        hint: 'Which criterion mentions modifications and decision-making?' },
+      { id: 'F4', type: 'place', mode: 'mc', q: 'Which ONE addition would strengthen this page most across several criteria?',
+        correct: 'A dated photo or video of the test set-up, explaining how it was set up',
+        wrong: [['A longer title', "Titles don't earn marks."],
+                ['A summary of every previous week', "That belongs in those weeks' entries."]],
+        joke: ['A dramatic soundtrack', 'Optional, as ever.'],
+        explain: 'Criterion 6 asks you to explain how tests are set up, and dated photos help authenticate everything.',
+        hint: 'Check Criterion 6\'s indicators: one is about setting up tests.' }
+    ]}
+  ];
+  const FOLIO_HTML = `
+    <div class="folio">
+      <h3>Week 9 – Testing the ultrasonic distance sensor</h3>
+      <div>Test: placed a box at 25, 50, 100 and 150 cm from the sensor, 5 readings at each distance.</div>
+      <table><tr><th>Actual distance</th><th>Average reading</th></tr>
+        <tr><td>25 cm</td><td>25 cm</td></tr><tr><td>50 cm</td><td>51 cm</td></tr>
+        <tr><td>100 cm</td><td>103 cm</td></tr><tr><td>150 cm</td><td>154 cm</td></tr></table>
+      <div>The results show the sensor gets less accurate past 1 m, probably because the beam spreads out and picks up the table edge. Next I'll test mounting it 3 cm higher.</div>
+      <div style="margin-top:6px">Also changed to the HC-SR04 sensor because it was cheaper.</div>
+    </div>`;
+  const TYPE_LABEL = { find: 'FIND IT', climb: 'CLIMB IT', spot: 'SPOT IT', place: 'PLACE IT' };
+  const BANDS = ['1–2', '3–4', '5–6', '7–8', '9–10'];
+  const RANKS = [ { min: 125, name: 'Rubric Master' }, { min: 100, name: 'Criteria Cracker' }, { min: 60, name: 'Band Climber' }, { min: 0, name: 'Rubric Rookie' } ];
+  const MAX_POINTS = 140;
+
+  // ===================== STATE =====================
+  let S = null; // saved game state
+  function newState() {
+    return {
+      playerId: uuid(), name: '', cls: '', session: '', started: 0, finishedAt: 0,
+      vault: 0, q: 0, score: 0,
+      results: {},           // qid -> { points, firstTry, hint, attempts }
+      vaultClean: {},        // vault num -> true if no wrong answers
+      targets: {}, evidence: '', done: false
+    };
+  }
+  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
+  function loadSaved() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return null; } }
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+    });
+  }
+  const $ = id => document.getElementById(id);
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+    $(id).classList.add('on');
+    window.scrollTo(0, 0);
+  }
+  function elapsed() { return S && S.started ? Math.round(((S.finishedAt || Date.now()) - S.started) / 1000) : 0; }
+  function fmtTime(s) { const m = Math.floor(s / 60), r = s % 60; return `${m}:${String(r).padStart(2, '0')}`; }
+  function rankFor(p) { return RANKS.find(r => p >= r.min).name; }
+
+  // ===================== SOUND =====================
+  let actx = null;
+  function initAudio() {
+    if (!actx && (window.AudioContext || window.webkitAudioContext)) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (actx && actx.state === 'suspended') actx.resume();
+  }
+  function beep(f, d, type = 'square', v = 0.05) {
+    if (!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = f; g.gain.value = v; o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + d / 1000);
+  }
+  const sfx = {
+    good: () => { beep(660, 80); setTimeout(() => beep(880, 90), 80); },
+    bad: () => beep(160, 220, 'sawtooth', 0.07),
+    click: () => beep(700, 30, 'square', 0.03),
+    vault: () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 120), i * 110)); },
+    win: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => beep(f, 150, 'triangle', 0.07), i * 130)); }
+  };
+
+  // ===================== NETWORK (Supabase) =====================
+  const queue = [];
+  let flushing = false, online = true, retryTimer = null;
+  function post(event, extra) {
+    if (!S || !S.session) return; // practice mode: nothing sent
+    queue.push(Object.assign({
+      session_code: S.session, player_id: S.playerId, name: S.name, class: S.cls || null,
+      event, elapsed_s: Math.min(7200, elapsed())
+    }, extra || {}));
+    flush();
+  }
+  async function flush() {
+    if (flushing || !queue.length) return;
+    flushing = true;
+    while (queue.length) {
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/rubric_events', {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify(queue[0])
+        });
+        if (res.ok || (res.status >= 400 && res.status < 500)) queue.shift(); // 4xx = bad row, drop it
+        else throw new Error('server ' + res.status);
+        setOnline(true);
+      } catch (e) {
+        setOnline(false);
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(flush, 5000);
+        break;
+      }
+    }
+    flushing = false;
+  }
+  function setOnline(v) { online = v; renderHud(); }
+
+  // ===================== SPLASH =====================
+  const tags = ['Find it.', 'Climb it.', 'Spot it.', 'Place it.', 'Crack it.'];
+  let tagI = 0;
+  const tagTimer = setInterval(() => { $('tag').textContent = tags[tagI++ % tags.length]; }, 900);
+
+  function renderResume() {
+    const saved = loadSaved();
+    const box = $('resumeBox');
+    box.innerHTML = '';
+    if (saved && saved.started && !saved.done && saved.name) {
+      const v = Math.min(saved.vault + 1, 9);
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = `CONTINUE AS ${saved.name.toUpperCase()} (VAULT ${v})`;
+      b.addEventListener('click', e => { e.stopPropagation(); initAudio(); S = saved; leaveSplashTo('mapScreen'); });
+      const n = document.createElement('div');
+      n.className = 'note';
+      n.textContent = 'or tap anywhere else to start fresh';
+      box.appendChild(b); box.appendChild(n);
+    }
+  }
+  function leaveSplashTo(screen) {
+    clearInterval(tagTimer);
+    beep(330, 90); setTimeout(() => beep(495, 90), 90); setTimeout(() => beep(660, 140), 180);
+    if (screen === 'mapScreen') renderMap();
+    show(screen);
+  }
+  function startFresh() {
+    initAudio();
+    S = newState();
+    try {
+      const p = JSON.parse(localStorage.getItem(PLAYER_KEY) || 'null');
+      if (p) { $('inName').value = p.name || ''; $('inClass').value = p.cls || ''; }
+    } catch (e) {}
+    const urlCode = new URLSearchParams(location.search).get('session');
+    if (urlCode) $('inCode').value = urlCode.toUpperCase();
+    leaveSplashTo('signin');
+    setTimeout(() => $('inName').focus(), 50);
+  }
+  $('splash').addEventListener('click', startFresh);
+
+  // ===================== SIGN IN / BRIEF =====================
+  function trySignIn() {
+    const name = $('inName').value.trim(), cls = $('inClass').value.trim();
+    const code = $('inCode').value.trim().toUpperCase();
+    const missing = [];
+    if (!name) missing.push('first name');
+    if (!cls) missing.push('class');
+    if (missing.length) { $('signErr').textContent = 'Still needed: ' + missing.join(', ') + '.'; sfx.bad(); return; }
+    if (code && !/^[A-Z0-9]{4,8}$/.test(code)) { $('signErr').textContent = 'Session codes are 4–8 letters or numbers. Check the board.'; sfx.bad(); return; }
+    S.name = name; S.cls = cls; S.session = code;
+    try { localStorage.setItem(PLAYER_KEY, JSON.stringify({ name, cls })); } catch (e) {}
+    sfx.good();
+    show('brief');
+  }
+  $('signBtn').addEventListener('click', trySignIn);
+  $('goBtn').addEventListener('click', () => {
+    S.started = Date.now();
+    save();
+    post('join');
+    sfx.vault();
+    renderMap();
+    show('mapScreen');
+  });
+
+  // ===================== HUD =====================
+  let hudTimer = null;
+  function renderHud() {
+    if (!S) return;
+    const html = `<span><b>${esc(S.name)}</b> ${S.cls ? '(' + esc(S.cls) + ')' : ''}</span>
+      <span class="score">★ ${S.score} pts</span>
+      <span>⏱ ${fmtTime(elapsed())}</span>
+      <span>Vaults ${Math.min(S.vault, 9)}/9</span>
+      <span class="net ${online ? '' : 'off'}">${S.session ? (online ? '● live: ' + esc(S.session) : '● offline – saving on this device') : 'practice mode'}</span>`;
+    $('hudMap').innerHTML = html;
+    $('hudQ').innerHTML = html;
+  }
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  hudTimer = setInterval(renderHud, 1000);
+
+  // ===================== MAP =====================
+  function renderMap() {
+    renderHud();
+    const box = $('vaults');
+    box.innerHTML = '';
+    VAULTS.forEach((v, i) => {
+      const d = document.createElement('div');
+      const done = i < S.vault, open = i === S.vault;
+      d.className = 'vault' + (v.final ? ' final' : '') + (done ? ' done' : open ? ' open' : '');
+      const stateIcon = done ? (S.vaultClean[v.num] ? '<span class="gold-star">★</span>' : '✅') : open ? '🔓' : '🔒';
+      d.innerHTML = `<div class="state">${stateIcon}</div><div class="num">${v.final ? 'FINAL VAULT' : 'VAULT ' + v.num}</div>
+        <div class="crit">${esc(v.final ? 'Mark the folio page' : v.short)}</div>`;
+      if (open) d.addEventListener('click', () => { sfx.click(); openVault(i); });
+      if (done) d.title = 'Already cracked';
+      box.appendChild(d);
+    });
+  }
+
+  // ===================== QUESTIONS =====================
+  let cur = null; // { vaultIdx, qIdx, base, attempts, hintUsed, wrongPicked:Set, order:[], settled }
+  function openVault(i) {
+    S.vault = i;
+    if (S.q >= VAULTS[i].qs.length) { nextQuestion(); return; } // finished this vault just before a reload
+    showQuestion();
+  }
+  function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+  function showQuestion() {
+    const v = VAULTS[S.vault], base = v.qs[S.q];
+    cur = { base, attempts: 0, hintUsed: false, settled: false, picked: [] };
+    if (!$('qScreen').classList.contains('on')) show('qScreen');
+    else window.scrollTo(0, 0);
+    renderHud();
+    $('qVaultTitle').textContent = v.final ? 'FINAL VAULT – Mark the folio page' : `VAULT ${v.num} – ${v.title}`;
+    $('qProg').textContent = `Question ${S.q + 1} of ${v.qs.length}`;
+    $('folioBox').innerHTML = v.final ? FOLIO_HTML : '';
+    const t = $('qType');
+    t.className = 'qtype t-' + base.type;
+    t.textContent = TYPE_LABEL[base.type];
+    $('qText').textContent = base.q;
+    $('hintBox').className = 'hintbox';
+    $('hintBox').textContent = '';
+    const fb = $('feedback'); fb.className = 'feedback'; fb.textContent = '';
+    const body = $('qBody'); body.innerHTML = '';
+
+    if (base.mode === 'mc') {
+      cur.options = shuffle([
+        { text: base.correct, correct: true },
+        { text: base.wrong[0][0], why: base.wrong[0][1] },
+        { text: base.wrong[1][0], why: base.wrong[1][1] },
+        { text: base.joke[0], why: base.joke[1], joke: true }
+      ]);
+      cur.options.forEach((o, idx) => {
+        const b = document.createElement('button');
+        b.className = 'opt';
+        b.textContent = `${idx + 1}. ${o.text}`;
+        b.addEventListener('click', () => answerMC(idx, b));
+        o.btn = b;
+        body.appendChild(b);
+      });
+    } else if (base.mode === 'typed') {
+      const inp = document.createElement('input');
+      inp.id = 'typed';
+      inp.autocomplete = 'off';
+      inp.placeholder = 'Type your answer…';
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); answerTyped(); } });
+      body.appendChild(inp);
+      setTimeout(() => inp.focus(), 30);
+    } else if (base.mode === 'order') {
+      cur.order = [];
+      const slots = document.createElement('div'); slots.className = 'slotrow'; slots.id = 'slots';
+      slots.innerHTML = '<span class="note">Tap the words below in order: lowest band first.</span>';
+      const tiles = document.createElement('div'); tiles.className = 'tiles'; tiles.id = 'tiles';
+      let items = shuffle(base.answer);
+      if (items.join() === base.answer.join()) items = items.slice().reverse();
+      items.forEach(word => {
+        const b = document.createElement('button');
+        b.className = 'tile'; b.textContent = word;
+        b.addEventListener('click', () => {
+          if (cur.settled) return;
+          sfx.click(); b.classList.add('used'); cur.order.push({ word, btn: b }); renderSlots();
+        });
+        tiles.appendChild(b);
+      });
+      body.appendChild(slots); body.appendChild(tiles);
+    }
+    renderActions();
+    save();
+  }
+
+  function renderSlots() {
+    const slots = $('slots');
+    slots.innerHTML = '';
+    if (!cur.order.length) { slots.innerHTML = '<span class="note">Tap the words below in order: lowest band first.</span>'; return; }
+    cur.order.forEach((o, i) => {
+      if (i) { const a = document.createElement('span'); a.className = 'arrow'; a.textContent = '→'; slots.appendChild(a); }
+      const s = document.createElement('span'); s.className = 'slot'; s.textContent = o.word; slots.appendChild(s);
+    });
+    renderActions();
+  }
+
+  function renderActions() {
+    const box = $('qActions');
+    box.innerHTML = '';
+    const base = cur.base;
+    if (cur.settled) {
+      const n = document.createElement('button'); n.className = 'btn'; n.textContent = 'NEXT ▶';
+      n.addEventListener('click', nextQuestion);
+      box.appendChild(n);
+      setTimeout(() => n.focus(), 30);
+      return;
+    }
+    if (base.mode === 'typed') {
+      const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'SUBMIT';
+      b.addEventListener('click', answerTyped); box.appendChild(b);
+    }
+    if (base.mode === 'order') {
+      const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'SUBMIT ORDER';
+      b.disabled = cur.order.length !== base.answer.length;
+      b.addEventListener('click', answerOrder); box.appendChild(b);
+      const r = document.createElement('button'); r.className = 'btn ghost'; r.textContent = 'RESET';
+      r.addEventListener('click', () => { cur.order.forEach(o => o.btn.classList.remove('used')); cur.order = []; renderSlots(); });
+      box.appendChild(r);
+    }
+    if (!cur.hintUsed) {
+      const h = document.createElement('button'); h.className = 'btn ghost'; h.textContent = '💡 HINT (−1 pt)';
+      h.addEventListener('click', () => {
+        cur.hintUsed = true; sfx.click();
+        const hb = $('hintBox'); hb.textContent = '💡 ' + base.hint; hb.className = 'hintbox show';
+        renderActions();
+      });
+      box.appendChild(h);
+    }
+  }
+
+  function normalise(s) {
+    return String(s).toLowerCase().replace(/[“”"'.,!?]/g, '').replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function lev(a, b) {
+    const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= n; j++) d[0][j] = j;
+    for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[m][n];
+  }
+  function typedMatches(text, accept) {
+    const t = normalise(text);
+    if (!t) return false;
+    return accept.some(a => {
+      const n = normalise(a);
+      if (t === n) return true;
+      const tol = n.length >= 12 ? 2 : n.length >= 6 ? 1 : 0;
+      return lev(t, n) <= tol;
+    });
+  }
+
+  function answerMC(idx, btn) {
+    if (cur.settled) return;
+    const o = cur.options[idx];
+    if (o.correct) {
+      btn.classList.add('right');
+      settle(true);
+    } else {
+      btn.disabled = true;
+      wrongAttempt((o.joke ? 'Ha. Nice try.\n' : 'Not quite.\n') + o.why);
+    }
+  }
+  function answerTyped() {
+    if (cur.settled) return;
+    const inp = $('typed');
+    if (!inp.value.trim()) return;
+    if (typedMatches(inp.value, cur.base.accept)) settle(true);
+    else { wrongAttempt(`Not quite: "${inp.value.trim()}" isn't it. Check the rubric again.`); inp.select(); }
+  }
+  function answerOrder() {
+    if (cur.settled) return;
+    const got = cur.order.map(o => o.word);
+    const correctCount = got.filter((w, i) => w === cur.base.answer[i]).length;
+    if (correctCount === cur.base.answer.length) settle(true);
+    else {
+      wrongAttempt(`Not quite: ${correctCount} of ${cur.base.answer.length} are in the right spot.`);
+      cur.order.forEach(o => o.btn.classList.remove('used'));
+      cur.order = [];
+      renderSlots();
+    }
+  }
+
+  function wrongAttempt(msg) {
+    cur.attempts++;
+    sfx.bad();
+    S.vaultClean[VAULTS[S.vault].num] = false;
+    if (cur.attempts >= 2) { settle(false, msg); return; }
+    const fb = $('feedback');
+    fb.className = 'feedback show bad';
+    fb.textContent = msg + '\n\nOne more try.';
+  }
+
+  function settle(correct, lastMsg) {
+    cur.settled = true;
+    const base = cur.base;
+    let pts = 0;
+    if (correct) pts = cur.attempts === 0 ? 5 : 2;
+    if (cur.hintUsed) pts = Math.max(0, pts - 1);
+    S.score += pts;
+    S.results[base.id] = { points: pts, firstTry: correct && cur.attempts === 0, hint: cur.hintUsed, attempts: cur.attempts + (correct ? 1 : 0) };
+    const fb = $('feedback');
+    let answerText = base.mode === 'mc' ? base.correct : base.mode === 'typed' ? base.answer : base.answer.join(' → ');
+    if (correct) {
+      sfx.good();
+      fb.className = 'feedback show good';
+      fb.textContent = (cur.attempts === 0 ? 'Correct! ' : 'Got it on the second try. ') + `+${pts} pts\n\n${base.explain}`;
+    } else {
+      fb.className = 'feedback show reveal';
+      fb.textContent = (lastMsg ? lastMsg + '\n\n' : '') + `The answer: ${answerText}\n${base.explain}`;
+      if (base.mode === 'mc') cur.options.forEach(o => { if (o.correct) o.btn.classList.add('right'); });
+    }
+    if (base.mode === 'mc') cur.options.forEach(o => { if (!o.correct) o.btn.disabled = true; });
+    if (base.mode === 'typed') $('typed').disabled = true;
+    post('answer', {
+      vault: VAULTS[S.vault].num, question_id: base.id + (cur.hintUsed ? '+hint' : ''),
+      correct: correct && cur.attempts === 0, score: pts
+    });
+    S.q++;
+    if (S.vaultClean[VAULTS[S.vault].num] === undefined) S.vaultClean[VAULTS[S.vault].num] = true;
+    save();
+    renderHud();
+    renderActions();
+  }
+
+  function nextQuestion() {
+    const v = VAULTS[S.vault];
+    if (S.q < v.qs.length) { showQuestion(); return; }
+    // vault complete
+    if (S.vaultClean[v.num] === undefined) S.vaultClean[v.num] = true;
+    S.vault++;
+    S.q = 0;
+    save();
+    if (v.final) {
+      S.finishedAt = Date.now();
+      save();
+      post('finish', { vault: 9, score: S.score });
+      sfx.win();
+      buildTargets();
+      show('targets');
+      return;
+    }
+    post('vault', { vault: v.num, score: S.score });
+    showCracked(v);
+  }
+
+  function showCracked(v) {
+    sfx.vault();
+    const clean = S.vaultClean[v.num];
+    $('crackTitle').textContent = `VAULT ${v.num} CRACKED!`;
+    $('crackCard').innerHTML = `<div style="font-size:12px;color:#9f9;letter-spacing:3px">KEYCARD ${v.num}/8</div>
+      <div style="font-size:20px;font-weight:bold;margin-top:4px">${esc(v.title)}</div>
+      ${clean ? '<div style="margin-top:6px" class="gold-star">★ PERFECT VAULT: no wrong answers</div>' : ''}
+      <div style="margin-top:6px;color:var(--gold)">${S.score} pts · ${fmtTime(elapsed())}</div>`;
+    $('cracked').classList.add('on');
+    setTimeout(() => $('crackBtn').focus(), 50);
+  }
+  $('crackBtn').addEventListener('click', () => {
+    $('cracked').classList.remove('on');
+    renderMap();
+    show('mapScreen');
+  });
+
+  // ===================== TARGETS & END =====================
+  function buildTargets() {
+    const box = $('targetRows');
+    box.innerHTML = '';
+    VAULTS.filter(v => !v.final).forEach(v => {
+      const row = document.createElement('div'); row.className = 'trow';
+      const lab = document.createElement('div'); lab.textContent = v.title;
+      const bands = document.createElement('div'); bands.className = 'bands';
+      BANDS.forEach(b => {
+        const btn = document.createElement('button'); btn.className = 'band' + (S.targets[v.num] === b ? ' on' : ''); btn.textContent = b;
+        btn.addEventListener('click', () => {
+          sfx.click(); S.targets[v.num] = b;
+          bands.querySelectorAll('.band').forEach(x => x.classList.remove('on')); btn.classList.add('on'); save();
+        });
+        bands.appendChild(btn);
+      });
+      row.appendChild(lab); row.appendChild(bands); box.appendChild(row);
+    });
+    $('evidence').value = S.evidence || '';
+  }
+  $('targetsBtn').addEventListener('click', () => {
+    const missing = VAULTS.filter(v => !v.final && !S.targets[v.num]).map(v => v.num);
+    const ev = $('evidence').value.trim();
+    if (missing.length) { $('targetErr').textContent = 'Pick a target band for criterion ' + missing.join(', ') + '.'; sfx.bad(); return; }
+    if (!ev) { $('targetErr').textContent = 'Write the first piece of evidence you\'ll collect.'; sfx.bad(); return; }
+    S.evidence = ev; S.done = true; save();
+    const tcode = 'TARGETS:' + VAULTS.filter(v => !v.final).map(v => S.targets[v.num].split('–')[0]).join(',');
+    post('answer', { vault: 9, question_id: tcode, score: 0 });
+    showEnd();
+  });
+
+  function showEnd() {
+    const firstTries = Object.values(S.results).filter(r => r.firstTry).length;
+    const stars = Object.values(S.vaultClean).filter(Boolean).length;
+    $('endStats').innerHTML = `<b style="color:var(--gold); font-size:24px">${rankFor(S.score).toUpperCase()}</b><br>
+      ${S.score}/${MAX_POINTS} points · ${fmtTime(elapsed())} · ${firstTries}/28 first try · <span class="gold-star">★</span> ${stars} perfect vaults`;
+    show('end');
+    sfx.win();
+  }
+
+  // ---- card ----
+  function wrapText(g, text, x, y, maxW, lh, maxLines) {
+    const words = String(text).split(/\s+/).filter(Boolean); let line = '', n = 0;
+    for (const w of words) {
+      const t = line ? line + ' ' + w : w;
+      if (g.measureText(t).width > maxW && line) { n++; if (n === maxLines) { g.fillText(line + ' …', x, y); return y + lh; } g.fillText(line, x, y); y += lh; line = w; }
+      else line = t;
+    }
+    if (line) { g.fillText(line, x, y); y += lh; }
+    return y;
+  }
+  function checkCode(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0; return h.toString(36).toUpperCase().slice(-5).padStart(5, '0'); }
+
+  function downloadCard() {
+    const W = 1000, H = 1270, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = '#05010d'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#22d3ee'; g.lineWidth = 6; g.strokeRect(20, 20, W - 40, H - 40);
+    g.strokeStyle = '#ff4ecf'; g.lineWidth = 2; g.strokeRect(36, 36, W - 72, H - 72);
+    g.textAlign = 'center';
+    g.fillStyle = '#22d3ee'; g.font = 'bold 26px monospace'; g.fillText('SYSTEMS ENGINEERING · LEVEL 2', W / 2, 95);
+    g.fillStyle = '#fff'; g.font = 'bold 60px monospace'; g.fillText('RUBRIC HEIST', W / 2, 160);
+    g.fillStyle = '#4ade80'; g.font = 'bold 26px monospace'; g.fillText('CLEARED', W / 2, 200);
+    const when = new Date(S.finishedAt || Date.now());
+    g.fillStyle = '#fff'; g.font = 'bold 32px monospace'; g.fillText(`${S.name}  |  ${S.cls}`, W / 2, 262);
+    g.fillStyle = '#aaa'; g.font = '22px monospace';
+    g.fillText(when.toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), W / 2, 296);
+    g.fillStyle = '#aaa'; g.font = '22px monospace'; g.fillText('RANK', W / 2, 352);
+    g.fillStyle = '#facc15'; g.font = 'bold 54px monospace'; g.fillText(rankFor(S.score).toUpperCase(), W / 2, 410);
+    g.fillStyle = '#eee'; g.font = '26px monospace';
+    const firstTries = Object.values(S.results).filter(r => r.firstTry).length;
+    g.fillText(`${S.score}/${MAX_POINTS} points  ·  ${fmtTime(elapsed())}  ·  ${firstTries}/28 first try`, W / 2, 462);
+
+    // keycards
+    g.textAlign = 'left';
+    const bw = 205, bh = 92, gx = 18, sx = 60, sy = 500;
+    VAULTS.filter(v => !v.final).forEach((v, i) => {
+      const col = i % 4, row = Math.floor(i / 4), x = sx + col * (bw + gx), y = sy + row * (bh + 16);
+      g.strokeStyle = '#4ade80'; g.lineWidth = 2; g.strokeRect(x, y, bw, bh);
+      g.fillStyle = '#4ade80'; g.font = 'bold 18px monospace'; g.fillText('KEYCARD ' + v.num, x + 12, y + 28);
+      if (S.vaultClean[v.num]) { g.fillStyle = '#facc15'; g.font = 'bold 22px monospace'; g.fillText('★', x + bw - 32, y + 28); }
+      g.fillStyle = '#ddd'; g.font = '16px monospace'; wrapText(g, v.short, x + 12, y + 56, bw - 24, 20, 2);
+    });
+
+    // targets
+    let ty = sy + 2 * (bh + 16) + 40;
+    g.fillStyle = '#22d3ee'; g.font = 'bold 26px monospace'; g.fillText('MY TARGET BANDS', 60, ty);
+    ty += 18;
+    VAULTS.filter(v => !v.final).forEach((v, i) => {
+      const col = i % 2, row = Math.floor(i / 2), x = 60 + col * 450, y = ty + 34 + row * 38;
+      g.fillStyle = '#ccc'; g.font = '20px monospace'; g.fillText(`C${v.num} ${v.short}`, x, y);
+      g.fillStyle = '#facc15'; g.font = 'bold 22px monospace'; g.textAlign = 'right'; g.fillText(S.targets[v.num] || '–', x + 410, y); g.textAlign = 'left';
+    });
+    ty += 34 + 4 * 38 + 20;
+    g.fillStyle = '#facc15'; g.font = 'bold 22px monospace'; g.fillText('First evidence I\'ll collect:', 60, ty);
+    g.fillStyle = '#fff'; g.font = '21px monospace'; ty = wrapText(g, '"' + S.evidence + '"', 60, ty + 32, W - 120, 30, 3);
+
+    // next level
+    ty += 24;
+    g.strokeStyle = '#ff4ecf'; g.setLineDash([10, 8]); g.strokeRect(60, ty, W - 120, 70); g.setLineDash([]);
+    g.textAlign = 'center'; g.fillStyle = '#ff4ecf'; g.font = 'bold 24px monospace';
+    g.fillText('NEXT: LEVEL 3 – THE 9–10 EVIDENCE LAB', W / 2, ty + 44);
+
+    g.textAlign = 'left'; g.fillStyle = '#888'; g.font = '18px monospace'; g.fillText(SHARE_INSTRUCTION, 60, H - 62);
+    const code = checkCode([S.name, S.cls, S.score, elapsed(), S.playerId].join('|'));
+    g.textAlign = 'right'; g.fillStyle = '#22d3ee'; g.font = 'bold 22px monospace'; g.fillText('Code: ' + code, W - 60, H - 62);
+
+    const safe = s => String(s).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+    const filename = `Rubric-Heist-${safe(S.name)}-${safe(S.cls)}.png`;
+    const finish = url => {
+      const a = document.createElement('a'); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      $('dlMsg').textContent = `Card downloaded (${filename}). ${SHARE_INSTRUCTION}`;
+    };
+    if (c.toBlob) c.toBlob(b => { if (!b) return finish(c.toDataURL('image/png')); const u = URL.createObjectURL(b); finish(u); setTimeout(() => URL.revokeObjectURL(u), 10000); }, 'image/png');
+    else finish(c.toDataURL('image/png'));
+  }
+  $('dlBtn').addEventListener('click', downloadCard);
+
+  // ===================== KEYBOARD =====================
+  document.addEventListener('keydown', e => {
+    const t = e.target;
+    const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
+    if ($('splash').classList.contains('on')) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFresh(); }
+      return;
+    }
+    if ($('signin').classList.contains('on') && e.key === 'Enter') { e.preventDefault(); trySignIn(); return; }
+    if (typing) return;
+    if ($('qScreen').classList.contains('on') && cur && !cur.settled && cur.base.mode === 'mc' && ['1', '2', '3', '4'].includes(e.key)) {
+      const i = parseInt(e.key, 10) - 1;
+      const o = cur.options[i];
+      if (o && !o.btn.disabled) answerMC(i, o.btn);
+    }
+  });
+
+  // ===================== INIT =====================
+  renderResume();
+  // If a finished game is saved, offer the card again
+  (function () {
+    const saved = loadSaved();
+    if (saved && saved.done) {
+      const box = $('resumeBox');
+      const b = document.createElement('button');
+      b.className = 'btn ghost'; b.style.marginTop = '10px';
+      b.textContent = `VIEW ${saved.name.toUpperCase()}'S CARD AGAIN`;
+      b.addEventListener('click', e => { e.stopPropagation(); S = saved; clearInterval(tagTimer); showEnd(); });
+      box.appendChild(b);
+    }
+  })();
+  flush();
+</script>
+</body>
+</html>

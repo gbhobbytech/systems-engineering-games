@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rubric Heist – Live Dashboard</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --red: #f87171; }
+  body {
+    margin: 0; min-height: 100vh; color: #eee; font-family: monospace;
+    background: radial-gradient(ellipse at 50% 0%, #1d0a33 0%, #05010d 60%, #000 100%);
+  }
+  button { font-family: monospace; }
+  .btn { padding: 8px 14px; border: 1px solid #555; border-radius: 6px; background: #111; color: #eee; font: bold 14px monospace; cursor: pointer; }
+  .btn.main { background: linear-gradient(90deg, var(--cyan), var(--pink)); color: #000; border: none; }
+  .hidden { display: none !important; }
+
+  /* setup */
+  #setup { max-width: 560px; margin: 10vh auto; padding: 22px; border: 2px solid var(--cyan); border-radius: 10px; background: rgba(0,0,0,0.8); }
+  #setup h1 { color: var(--cyan); margin: 0 0 8px; }
+  #setup input { width: 100%; padding: 10px; font: bold 22px monospace; letter-spacing: 6px; text-transform: uppercase; background: #111; color: #fff; border: 1px solid #555; border-radius: 6px; margin: 8px 0; }
+
+  /* board */
+  #board { padding: 16px 20px 20px; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .title { font: bold clamp(26px, 3vw, 44px) monospace; color: #fff; text-shadow: 0 0 10px var(--gold), 0 0 26px var(--pink); }
+  .join { text-align: right; }
+  .join .lbl { color: #aaa; font-size: 14px; }
+  .join .code { font: bold clamp(36px, 5vw, 70px) monospace; color: var(--gold); letter-spacing: 8px; text-shadow: 0 0 14px #f59e0b; line-height: 1; }
+  .join .url { color: var(--cyan); font-size: 15px; word-break: break-all; }
+  .stats { display: flex; gap: 22px; margin: 8px 0 14px; font-size: 18px; color: #ccc; flex-wrap: wrap; }
+  .stats b { color: #fff; font-size: 24px; }
+  .grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 16px; }
+  .card { background: rgba(0,0,0,0.6); border: 1px solid #333; border-radius: 10px; padding: 12px 14px; }
+  .card h2 { margin: 0 0 10px; font-size: 18px; letter-spacing: 3px; color: var(--cyan); }
+  table { width: 100%; border-collapse: collapse; }
+  .lb td { padding: 6px 6px; font-size: clamp(16px, 1.6vw, 24px); border-bottom: 1px solid #222; }
+  .lb td.r { width: 2.2em; color: #888; font-weight: bold; }
+  .lb tr:nth-child(1) td.r { color: var(--gold); } .lb tr:nth-child(2) td.r { color: #d1d5db; } .lb tr:nth-child(3) td.r { color: #d97706; }
+  .lb td.n { font-weight: bold; }
+  .lb td.s { text-align: right; color: var(--gold); font-weight: bold; }
+  .lb td.t { text-align: right; color: #aaa; font-size: 0.75em; width: 6em; }
+  .lb tr.flash td { animation: flash 1.2s ease-out; }
+  @keyframes flash { 0% { background: rgba(250,204,21,0.35); } 100% { background: transparent; } }
+  .race .row { display: grid; grid-template-columns: 9em 1fr 2.5em; gap: 8px; align-items: center; margin: 5px 0; font-size: 15px; }
+  .race .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .race .bar { height: 16px; background: #1a1a1a; border-radius: 8px; overflow: hidden; }
+  .race .fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--pink)); border-radius: 8px; transition: width 0.8s ease; }
+  .race .fill.done { background: linear-gradient(90deg, var(--green), var(--gold)); }
+  .race .v { text-align: right; color: #aaa; }
+  .race { max-height: 40vh; overflow-y: auto; }
+  .heat { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+  .heat .cell { border-radius: 6px; padding: 8px 4px; text-align: center; font-weight: bold; color: #000; }
+  .heat .cell .k { font-size: 12px; } .heat .cell .p { font-size: clamp(16px, 1.6vw, 24px); }
+  .heat .cell.none { background: #222; color: #666; }
+  .feed { font-size: 16px; line-height: 1.7; min-height: 6em; }
+  .feed div { animation: slideIn 0.5s ease-out; }
+  @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; opacity: 0.55; }
+  .controls:hover { opacity: 1; }
+  .net { font-size: 13px; color: #888; }
+  .net.off { color: var(--red); }
+
+  /* teacher view */
+  #teacher { position: fixed; inset: 4vh 4vw; background: #0b0b0b; border: 2px solid var(--pink); border-radius: 10px; padding: 16px; overflow: auto; z-index: 10; }
+  #teacher h2 { color: var(--pink); margin: 0 0 6px; }
+  #teacher table td, #teacher table th { padding: 5px 6px; border-bottom: 1px solid #222; font-size: 13px; text-align: left; vertical-align: top; }
+  #teacher th { color: #aaa; }
+  .tavg { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin: 8px 0 14px; }
+  .tavg div { background: #111; border: 1px solid #333; border-radius: 6px; padding: 6px; text-align: center; font-size: 13px; }
+  .tavg b { display: block; color: var(--gold); font-size: 18px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .heat { grid-template-columns: repeat(3, 1fr); } .tavg { grid-template-columns: repeat(4, 1fr); } }
+</style>
+</head>
+<body>
+
+<div id="setup" class="hidden">
+  <h1>Rubric Heist – Live Dashboard</h1>
+  <p>Start a session for this class. Students type the code when they sign in.</p>
+  <input id="codeIn" maxlength="8" placeholder="SE12A" />
+  <div style="display:flex; gap:8px; flex-wrap:wrap">
+    <button class="btn main" id="startBtn">START SESSION</button>
+    <button class="btn" id="genBtn">MAKE A RANDOM CODE</button>
+  </div>
+  <p class="net" id="setupMsg" style="margin-top:10px">4–8 letters or numbers. Reuse a code to reopen an earlier session.</p>
+</div>
+
+<div id="board" class="hidden">
+  <div class="top">
+    <div>
+      <div class="title">RUBRIC HEIST · LIVE</div>
+      <div class="net" id="net">connecting…</div>
+    </div>
+    <div class="join">
+      <div class="lbl">SESSION CODE</div>
+      <div class="code" id="codeShow"></div>
+      <div class="url" id="urlShow"></div>
+    </div>
+  </div>
+  <div class="stats">
+    <span>Joined <b id="stJoined">0</b></span>
+    <span>Finished <b id="stDone">0</b></span>
+    <span>Vaults cracked <b id="stVaults">0</b></span>
+    <span>Session time <b id="stTime">0:00</b></span>
+  </div>
+  <div class="grid">
+    <div class="card"><h2>🏆 LEADERBOARD</h2><table class="lb"><tbody id="lb"></tbody></table></div>
+    <div>
+      <div class="card"><h2>🏁 THE RACE</h2><div class="race" id="race"></div></div>
+      <div class="card" style="margin-top:16px"><h2>📡 LIVE FEED</h2><div class="feed" id="feed"></div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>🔥 CLASS HEATMAP – % correct first try</h2>
+    <div class="heat" id="heat"></div>
+  </div>
+  <div class="controls">
+    <button class="btn" id="tBtn">TEACHER VIEW (T)</button>
+    <button class="btn" id="fsBtn">FULL SCREEN (F)</button>
+    <button class="btn" id="csvBtn">EXPORT CSV</button>
+    <button class="btn" id="newBtn">NEW SESSION</button>
+  </div>
+</div>
+
+<div id="teacher" class="hidden">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+    <h2>Teacher view (private – don't project)</h2>
+    <button class="btn" id="tClose">CLOSE (T)</button>
+  </div>
+  <div class="net">Average target band per criterion (from students who finished):</div>
+  <div class="tavg" id="tavg"></div>
+  <table>
+    <thead><tr><th>Name</th><th>Class</th><th>Points</th><th>Vault</th><th>Time</th><th>Wrong first try</th><th>Hints</th><th>Targets C1–C8</th><th></th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <p class="net">"Hide" removes someone from this dashboard only (e.g. a test or joke entry). Rows stay in Supabase until you delete them there.</p>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://elebvltrvcqqyyjwwydi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_wgUH3E8Nepy-6QC_dXpVtA_Uyszqkrm';
+  const RANKS = [ { min: 125, name: 'Rubric Master' }, { min: 100, name: 'Criteria Cracker' }, { min: 60, name: 'Band Climber' }, { min: 0, name: 'Rubric Rookie' } ];
+  const SHORT = ['', 'Investigating', 'Designing', 'Planning', 'Implementing', 'Realisation', 'Testing', 'Project mgmt', 'Evaluating', 'Final vault'];
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmt = s => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  const rankFor = p => RANKS.find(r => p >= r.min).name;
+
+  let session = '', events = [], lastId = 0, players = {}, hidden = new Set(), pollTimer = null, firstAt = null;
+  let prevScores = {};
+
+  // ---------- session ----------
+  function gameUrl() {
+    const base = location.href.replace(/[^/]*([?#].*)?$/, '');
+    return base + 'rubric-heist.html?session=' + session;
+  }
+  function startSession(code) {
+    session = code;
+    try { localStorage.setItem('rhDashSession', code); hidden = new Set(JSON.parse(localStorage.getItem('rhHidden:' + code) || '[]')); } catch (e) {}
+    history.replaceState(null, '', '?session=' + code);
+    events = []; lastId = 0; players = {}; firstAt = null; prevScores = {};
+    $('codeShow').textContent = code;
+    $('urlShow').textContent = gameUrl().replace(/^https?:\/\//, '');
+    $('setup').classList.add('hidden');
+    $('board').classList.remove('hidden');
+    $('feed').innerHTML = '';
+    clearInterval(pollTimer);
+    poll();
+    pollTimer = setInterval(poll, 3000);
+  }
+  function showSetup() {
+    clearInterval(pollTimer);
+    $('board').classList.add('hidden');
+    $('teacher').classList.add('hidden');
+    $('setup').classList.remove('hidden');
+    $('codeIn').focus();
+  }
+  function randomCode() {
+    const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = ''; for (let i = 0; i < 5; i++) s += ch[Math.random() * ch.length | 0]; return s;
+  }
+  $('genBtn').addEventListener('click', () => { $('codeIn').value = randomCode(); });
+  $('startBtn').addEventListener('click', () => {
+    const c = $('codeIn').value.trim().toUpperCase();
+    if (!/^[A-Z0-9]{4,8}$/.test(c)) { $('setupMsg').textContent = 'Use 4–8 letters or numbers.'; return; }
+    startSession(c);
+  });
+  $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('startBtn').click(); });
+  $('newBtn').addEventListener('click', () => { $('codeIn').value = randomCode(); showSetup(); });
+
+  // ---------- data ----------
+  async function poll() {
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/rubric_events?session_code=eq.${encodeURIComponent(session)}&id=gt.${lastId}&order=id.asc&limit=1000`;
+      const res = await fetch(url, { headers: { apikey: SUPABASE_KEY } });
+      if (!res.ok) throw new Error(res.status);
+      const rows = await res.json();
+      $('net').textContent = '● live · updated ' + new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      $('net').className = 'net';
+      if (rows.length) {
+        rows.forEach(r => { events.push(r); lastId = Math.max(lastId, r.id); ingest(r, true); });
+        render();
+      } else {
+        renderClock();
+      }
+    } catch (e) {
+      $('net').textContent = '● connection problem – retrying…';
+      $('net').className = 'net off';
+    }
+  }
+
+  function P(r) {
+    if (!players[r.player_id]) players[r.player_id] = { id: r.player_id, name: r.name, cls: r.class, score: 0, vault: 0, done: false, time: 0, wrong: [], hints: 0, targets: null };
+    return players[r.player_id];
+  }
+  let liveFeed = [];
+  function ingest(r, live) {
+    const p = P(r);
+    if (!firstAt || new Date(r.created_at) < firstAt) firstAt = new Date(r.created_at);
+    p.time = Math.max(p.time, r.elapsed_s || 0);
+    if (r.event === 'answer') {
+      if (r.question_id && r.question_id.startsWith('TARGETS:')) {
+        p.targets = r.question_id.slice(8).split(',').map(Number);
+      } else {
+        p.score += r.score || 0;
+        if (r.question_id && r.question_id.endsWith('+hint')) p.hints++;
+        if (r.correct === false) p.wrong.push((r.question_id || '').replace('+hint', ''));
+      }
+    } else if (r.event === 'vault') {
+      p.vault = Math.max(p.vault, r.vault || 0);
+      if (live) pushFeed(`🔓 <b>${esc(p.name)}</b> cracked Vault ${r.vault}!`);
+    } else if (r.event === 'finish') {
+      p.vault = 9; p.done = true; p.time = r.elapsed_s || p.time;
+      if (live) pushFeed(`🏆 <b>${esc(p.name)}</b> finished: ${esc(rankFor(r.score || p.score))}!`);
+    } else if (r.event === 'join') {
+      if (live) pushFeed(`👋 <b>${esc(p.name)}</b> joined the heist`);
+    }
+  }
+  function pushFeed(html) {
+    liveFeed.unshift(html);
+    liveFeed = liveFeed.slice(0, 7);
+  }
+  function visiblePlayers() { return Object.values(players).filter(p => !hidden.has(p.id)); }
+
+  // ---------- render ----------
+  function renderClock() {
+    $('stTime').textContent = firstAt ? fmt((Date.now() - firstAt.getTime()) / 1000) : '0:00';
+  }
+  function render() {
+    const ps = visiblePlayers();
+    $('stJoined').textContent = ps.length;
+    $('stDone').textContent = ps.filter(p => p.done).length;
+    $('stVaults').textContent = ps.reduce((t, p) => t + Math.min(p.vault, 8), 0);
+    renderClock();
+
+    // leaderboard: points, then time
+    const lb = ps.slice().sort((a, b) => b.score - a.score || (b.done - a.done) || a.time - b.time).slice(0, 10);
+    $('lb').innerHTML = lb.map((p, i) => {
+      const changed = prevScores[p.id] !== undefined && prevScores[p.id] !== p.score;
+      return `<tr class="${changed ? 'flash' : ''}"><td class="r">${i + 1}</td><td class="n">${esc(p.name)}${p.done ? ' ✓' : ''}</td>
+        <td class="s">${p.score}</td><td class="t">${p.done ? fmt(p.time) : (p.vault >= 8 ? 'Final' : 'Vault ' + (p.vault + 1))}</td></tr>`;
+    }).join('') || '<tr><td style="color:#777">Waiting for players… share the code!</td></tr>';
+    ps.forEach(p => prevScores[p.id] = p.score);
+
+    // race
+    const rc = ps.slice().sort((a, b) => b.vault - a.vault || b.score - a.score);
+    $('race').innerHTML = rc.map(p => `<div class="row"><div class="name">${esc(p.name)}</div>
+      <div class="bar"><div class="fill ${p.done ? 'done' : ''}" style="width:${(p.vault / 9) * 100}%"></div></div>
+      <div class="v">${p.done ? '🏆' : p.vault + '/9'}</div></div>`).join('') || '<div style="color:#777">No one yet.</div>';
+
+    // heatmap
+    const stats = {};
+    events.forEach(r => {
+      if (r.event !== 'answer' || hidden.has(r.player_id) || !r.vault || (r.question_id || '').startsWith('TARGETS:')) return;
+      stats[r.vault] = stats[r.vault] || { n: 0, c: 0 };
+      stats[r.vault].n++; if (r.correct) stats[r.vault].c++;
+    });
+    let h = '';
+    for (let v = 1; v <= 9; v++) {
+      const s = stats[v];
+      if (!s) { h += `<div class="cell none"><div class="k">${v === 9 ? 'FINAL' : 'C' + v}</div><div class="p">–</div><div class="k">${SHORT[v]}</div></div>`; continue; }
+      const pct = Math.round((s.c / s.n) * 100);
+      const hue = Math.round((pct / 100) * 120); // red → green
+      h += `<div class="cell" style="background:hsl(${hue},75%,55%)"><div class="k">${v === 9 ? 'FINAL' : 'C' + v}</div><div class="p">${pct}%</div><div class="k">${SHORT[v]}</div></div>`;
+    }
+    $('heat').innerHTML = h;
+
+    $('feed').innerHTML = liveFeed.map(f => `<div>${f}</div>`).join('') || '<div style="color:#777">Events will appear here.</div>';
+    renderTeacher();
+  }
+
+  function renderTeacher() {
+    const all = Object.values(players).sort((a, b) => b.score - a.score);
+    $('tbody').innerHTML = all.map(p => `<tr style="${hidden.has(p.id) ? 'opacity:.4' : ''}">
+      <td>${esc(p.name)}</td><td>${esc(p.cls)}</td><td>${p.score}</td><td>${p.done ? 'done' : p.vault + '/9'}</td><td>${fmt(p.time)}</td>
+      <td>${esc(p.wrong.join(', ')) || '–'}</td><td>${p.hints}</td>
+      <td>${p.targets ? p.targets.map(t => t + '–' + (t + 1)).join(' · ') : '–'}</td>
+      <td><button class="btn" data-hide="${esc(p.id)}">${hidden.has(p.id) ? 'Unhide' : 'Hide'}</button></td></tr>`).join('');
+    $('tbody').querySelectorAll('[data-hide]').forEach(b => b.addEventListener('click', () => {
+      const id = b.dataset.hide;
+      hidden.has(id) ? hidden.delete(id) : hidden.add(id);
+      try { localStorage.setItem('rhHidden:' + session, JSON.stringify([...hidden])); } catch (e) {}
+      render();
+    }));
+    const withT = all.filter(p => p.targets && !hidden.has(p.id));
+    let t = '';
+    for (let c = 0; c < 8; c++) {
+      if (!withT.length) { t += `<div>C${c + 1}<b>–</b></div>`; continue; }
+      const avg = withT.reduce((s, p) => s + p.targets[c], 0) / withT.length;
+      t += `<div>C${c + 1}<b>${avg.toFixed(1)}</b>${SHORT[c + 1]}</div>`;
+    }
+    $('tavg').innerHTML = t;
+  }
+
+  // ---------- controls ----------
+  function toggleTeacher() { $('teacher').classList.toggle('hidden'); renderTeacher(); }
+  $('tBtn').addEventListener('click', toggleTeacher);
+  $('tClose').addEventListener('click', toggleTeacher);
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+  }
+  $('fsBtn').addEventListener('click', fullscreen);
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 't' || e.key === 'T') toggleTeacher();
+    if (e.key === 'f' || e.key === 'F') fullscreen();
+  });
+  $('csvBtn').addEventListener('click', () => {
+    const rows = [['name', 'class', 'points', 'vault', 'finished', 'time_s', 'wrong_first_try', 'hints', ...Array.from({ length: 8 }, (_, i) => 'target_C' + (i + 1))]];
+    Object.values(players).forEach(p => rows.push([p.name, p.cls, p.score, p.vault, p.done, p.time, p.wrong.join(' '), p.hints, ...(p.targets ? p.targets.map(t => t + '-' + (t + 1)) : Array(8).fill(''))]));
+    const csv = rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `rubric-heist-${session}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  setInterval(renderClock, 1000);
+
+  // ---------- start ----------
+  (function () {
+    const fromUrl = (new URLSearchParams(location.search).get('session') || '').toUpperCase();
+    if (/^[A-Z0-9]{4,8}$/.test(fromUrl)) startSession(fromUrl);
+    else { $('codeIn').value = randomCode(); showSetup(); }
+  })();
+</script>
+</body>
+</html>
