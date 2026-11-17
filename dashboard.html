@@ -11,6 +11,19 @@
     margin: 0; min-height: 100vh; color: #eee; font-family: monospace;
     background: radial-gradient(ellipse at 50% 0%, #1d0a33 0%, #05010d 60%, #000 100%);
   }
+  body.l4 { background: radial-gradient(ellipse at 50% 0%, #2a1406 0%, #0f0702 60%, #000 100%); }
+  body.l4 .title { text-shadow: 0 0 10px #fb923c, 0 0 26px var(--gold); }
+  body.l4 .card h2 { color: #fb923c; }
+  .gbar { display: grid; grid-template-columns: 12em 1fr 9em; gap: 10px; align-items: center; margin: 7px 0; font-size: 16px; }
+  .gbar .bar { display: flex; height: 22px; border-radius: 6px; overflow: hidden; background: #222; }
+  .gbar .bar div { transition: width 0.8s ease; }
+  .gbar .G { background: var(--green); } .gbar .A { background: #fbbf24; } .gbar .R { background: var(--red); }
+  .gbar .n { color: #aaa; font-size: 14px; text-align: right; }
+  .big3 { display: flex; gap: 10px; flex-wrap: wrap; }
+  .big3 div { flex: 1; min-width: 7em; background: #111; border: 1px solid #333; border-radius: 8px; padding: 10px; text-align: center; font-size: 14px; color: #ccc; }
+  .big3 b { display: block; font-size: 30px; color: #fff; }
+  .dots span { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 3px; background: #333; vertical-align: middle; }
+  .dots .G { background: var(--green); } .dots .A { background: #fbbf24; } .dots .R { background: var(--red); }
   body.l3 { background: radial-gradient(ellipse at 50% 0%, #062a2a 0%, #03100f 60%, #000 100%); }
   button { font-family: monospace; }
   .btn { padding: 8px 14px; border: 1px solid #555; border-radius: 6px; background: #111; color: #eee; font: bold 14px monospace; cursor: pointer; }
@@ -138,7 +151,21 @@
     <span>Session time <b id="stTime">0:00</b></span>
     <span>Level rating <b id="stRate">–</b></span>
   </div>
-  <div class="grid">
+  <div id="l4board" class="hidden">
+    <div class="grid">
+      <div class="card"><h2>✈️ CHECK RESULTS (whole class)</h2><div id="gbars"></div>
+        <div class="net" style="margin-top:6px"><span style="color:var(--green)">■</span> green &nbsp; <span style="color:#fbbf24">■</span> amber &nbsp; <span style="color:var(--red)">■</span> red</div></div>
+      <div>
+        <div class="card"><h2>🧭 WHERE WE'RE AT</h2><div class="big3" id="status4"></div></div>
+        <div class="card" style="margin-top:16px"><h2>📡 LIVE FEED</h2><div class="feed" id="feed4"></div></div>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card"><h2>💲 CLASS BUDGET (estimated school share)</h2><div class="big3" id="budget4"></div></div>
+      <div class="card"><h2>📦 STORAGE</h2><div class="big3" id="storage4"></div></div>
+    </div>
+  </div>
+  <div class="grid" id="mainGrid">
     <div class="card" id="lbCard"><h2>🏆 LEADERBOARD</h2><table class="lb"><tbody id="lb"></tbody></table></div>
     <div class="card hidden" id="raceBig"><h2>🧪 PLANS IN PROGRESS</h2><div class="race" id="raceL3"></div></div>
     <div>
@@ -146,7 +173,7 @@
       <div class="card" id="feedCard" style="margin-top:16px"><h2>📡 LIVE FEED</h2><div class="feed" id="feed"></div></div>
     </div>
   </div>
-  <div class="card" style="margin-top:16px">
+  <div class="card" id="heatCard" style="margin-top:16px">
     <h2 id="heatTitle">🔥 CLASS HEATMAP – % correct first try</h2>
     <div class="heat" id="heat"></div>
   </div>
@@ -184,7 +211,11 @@
   const SUPABASE_KEY = 'sb_publishable_wgUH3E8Nepy-6QC_dXpVtA_Uyszqkrm';
   const RANKS = [ { min: 125, name: 'Rubric Master' }, { min: 100, name: 'Criteria Cracker' }, { min: 60, name: 'Band Climber' }, { min: 0, name: 'Rubric Rookie' } ];
   const SHORT = ['', 'Investigating', 'Designing', 'Planning', 'Implementing', 'Realisation', 'Testing', 'Project mgmt', 'Evaluating', 'Final vault'];
-  const LEVELS = { 2: { name: 'RUBRIC HEIST', file: 'rubric-heist.html' }, 3: { name: '9–10 EVIDENCE LAB', file: 'evidence-lab.html' } };
+  const LEVELS = { 2: { name: 'RUBRIC HEIST', file: 'rubric-heist.html' }, 3: { name: '9–10 EVIDENCE LAB', file: 'evidence-lab.html' },
+                  4: { name: 'WILL IT FLY?', file: 'will-it-fly.html', label: 'PROJECT CHECK' } };
+  const GATE_NAMES = ['', 'Integrated system', 'Power and voltage', 'Size and storage', 'Making it', 'Budget and parts', 'Time'];
+  const STATUS_NAMES = { decided: 'Decided', few: 'A few ideas', none: 'Undecided' };
+  const RESW = { G: 'green', A: 'amber', R: 'red' };
   const FORMAT_NAMES = { website: 'Website', slides: 'Slides', interactive: 'Interactive', video: 'Video', folio: 'Folio/document', other: 'Other' };
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -261,7 +292,7 @@
   // ---------- level switch ----------
   function renderLevelButtons() {
     ['setupLvl', 'boardLvl'].forEach(id => {
-      $(id).innerHTML = Object.entries(LEVELS).map(([n, l]) => `<button class="btn ${Number(n) === level ? 'on' : ''}" data-lvl="${n}">LEVEL ${n}</button>`).join('');
+      $(id).innerHTML = Object.entries(LEVELS).map(([n, l]) => `<button class="btn ${Number(n) === level ? 'on' : ''}" data-lvl="${n}">${l.label || 'LEVEL ' + n}</button>`).join('');
       $(id).querySelectorAll('[data-lvl]').forEach(b => b.addEventListener('click', () => setLevel(Number(b.dataset.lvl))));
     });
   }
@@ -269,6 +300,7 @@
     level = n;
     try { localStorage.setItem('dashLevel', String(n)); } catch (e) {}
     document.body.classList.toggle('l3', level === 3);
+    document.body.classList.toggle('l4', level === 4);
     renderLevelButtons();
     if (session) startSession(session);
   }
@@ -306,7 +338,12 @@
     $('l3extra').classList.toggle('hidden', !l3);
     $('stVaultsLbl').textContent = l3 ? 'Criteria planned' : 'Vaults cracked';
     $('heatTitle').textContent = l3 ? '🔥 CLASS HEATMAP – Investigate + Interpret, % correct first try' : '🔥 CLASS HEATMAP – % correct first try';
-    $('tavgLbl').textContent = l3 ? 'Aiming for Very High (share of students who planned that criterion):' : 'Average target band per criterion (from students who finished):';
+    const l4 = level === 4;
+    $('l4board').classList.toggle('hidden', !l4);
+    $('mainGrid').classList.toggle('hidden', l4);
+    $('heatCard').classList.toggle('hidden', l4);
+    if (l4) { $('l3extra').classList.add('hidden'); $('lbToggle').classList.add('hidden'); $('stVaultsLbl').textContent = 'Checks done'; }
+    $('tavgLbl').textContent = l4 ? 'Share of students with a red result, per check:' : l3 ? 'Aiming for Very High (share of students who planned that criterion):' : 'Average target band per criterion (from students who finished):';
   }
   $('lbToggle').addEventListener('click', () => {
     showLB3 = !showLB3;
@@ -355,7 +392,8 @@
   }
   function P(r) {
     if (!players[r.player_id]) players[r.player_id] = { id: r.player_id, name: r.name, cls: r.class, score: 0, vault: 0, done: false, time: 0,
-      wrong: [], hints: 0, targets: null, rating: 0, format: '', otherFmt: '', plans: {}, planned: 0, firstAction: 0 };
+      wrong: [], hints: 0, targets: null, rating: 0, format: '', otherFmt: '', plans: {}, planned: 0, firstAction: 0,
+      gates: {}, status: '', idea: '', pitch: null, explorer: null };
     return players[r.player_id];
   }
   function ingest(r) {
@@ -364,6 +402,7 @@
     p.time = Math.max(p.time, r.elapsed_s || 0);
     const qid = r.question_id || '';
     const pl = r.payload || {};
+    if (level === 4) return ingest4(r, p, qid, pl);
     if (r.event === 'join') {
       if (pl.format) { p.format = pl.format; p.otherFmt = pl.other || ''; }
       pushFeed(level === 3 ? `🧪 <b>${esc(p.name)}</b> entered the lab${p.format ? ' (' + esc(FORMAT_NAMES[p.format] || p.format) + ')' : ''}` : `👋 <b>${esc(p.name)}</b> joined the heist`);
@@ -399,6 +438,37 @@
       }
     }
   }
+  function ingest4(r, p, qid, pl) {
+    if (r.event === 'join') { p.status = pl.status || ''; pushFeed(`✈️ <b>${esc(p.name)}</b> started their project check`); }
+    else if (r.event === 'vault' && pl.gate) {
+      const isNew = !p.gates[pl.gate]; p.gates[pl.gate] = pl; p.vault = Object.keys(p.gates).length;
+      if (isNew) pushFeed(`🔎 <b>${esc(p.name)}</b> ran check ${pl.gate}: ${esc(GATE_NAMES[pl.gate])}`);
+    } else if (r.event === 'finish' || qid === 'PITCH-UPDATE') {
+      if (r.event === 'finish') { p.done = true; pushFeed(`🃏 <b>${esc(p.name)}</b> made their pitch card`); }
+      p.pitch = pl; if (pl.idea) p.idea = pl.idea; if (pl.status) p.status = pl.status;
+    } else if (qid === 'STATUS') p.status = pl.status || p.status;
+    else if (qid === 'IDEA') p.idea = pl.idea || p.idea;
+    else if (qid === 'EXPLORER') p.explorer = pl;
+    else if (qid.startsWith('RATING:')) p.rating = Number(qid.slice(7));
+  }
+  function render4(ps) {
+    let h = '';
+    for (let g = 1; g <= 6; g++) {
+      const c = { G: 0, A: 0, R: 0 }; ps.forEach(p => { const x = p.gates[g]; if (x && c[x.r] !== undefined) c[x.r]++; });
+      const t = c.G + c.A + c.R;
+      h += `<div class="gbar"><div>${g}. ${GATE_NAMES[g]}</div><div class="bar">${t ? ['G', 'A', 'R'].map(k => `<div class="${k}" style="width:${c[k] / t * 100}%"></div>`).join('') : ''}</div>
+        <div class="n">${t ? `${c.G} · ${c.A} · ${c.R}` : '–'}</div></div>`;
+    }
+    $('gbars').innerHTML = h;
+    const st = { decided: 0, few: 0, none: 0 }; ps.forEach(p => { if (st[p.status] !== undefined) st[p.status]++; });
+    $('status4').innerHTML = `<div><b>${st.decided}</b>Decided</div><div><b>${st.few}</b>A few ideas</div><div><b>${st.none}</b>Undecided</div>`;
+    const withB = ps.filter(p => p.gates[5] && p.gates[5].a), school = withB.reduce((t, p) => t + Math.max(0, (p.gates[5].a.total || 0) - (p.gates[5].a.own || 0)), 0);
+    const avg = withB.length ? school / withB.length : 0;
+    $('budget4').innerHTML = `<div><b>$${Math.round(school)}</b>school share (${withB.length} priced)</div><div><b>$${Math.round(avg)}</b>average per student</div><div><b>$${ps.length * 100}</b>budget ($100 × ${ps.length})</div>`;
+    const s3 = { G: 0, A: 0, R: 0 }; ps.forEach(p => { const x = p.gates[3]; if (x) s3[x.r]++; });
+    $('storage4').innerHTML = `<div><b>${s3.G}</b>fit the storage box</div><div><b>${s3.A}</b>need a storage spot</div><div><b>${s3.R}</b>too big</div>`;
+    $('feed4').innerHTML = liveFeed.map(f => `<div>${f}</div>`).join('') || '<div style="color:#777">Events will appear here.</div>';
+  }
   function pushFeed(html) { liveFeed.unshift(html); liveFeed = liveFeed.slice(0, 7); }
   function visiblePlayers() { return Object.values(players).filter(p => !hidden.has(p.id)); }
 
@@ -408,6 +478,13 @@
     const ps = visiblePlayers(), l3 = level === 3, maxV = l3 ? 8 : 9;
     $('stJoined').textContent = ps.length;
     $('stDone').textContent = ps.filter(p => p.done).length;
+    if (level === 4) {
+      $('stVaults').textContent = ps.reduce((t, p) => t + Object.keys(p.gates).length, 0);
+      renderClock();
+      const rc4 = [1, 2, 3].map(n => ps.filter(p => p.rating === n).length);
+      $('stRate').innerHTML = rc4.some(Boolean) ? `😴 ${rc4[0]} &nbsp;🙂 ${rc4[1]} &nbsp;🔥 ${rc4[2]}` : '–';
+      render4(ps); renderTeacher(); return;
+    }
     $('stVaults').textContent = l3 ? ps.reduce((t, p) => t + p.planned, 0) : ps.reduce((t, p) => t + Math.min(p.vault, 8), 0);
     renderClock();
     const rc3 = [1, 2, 3].map(n => ps.filter(p => p.rating === n).length);
@@ -464,7 +541,30 @@
   function renderTeacher() {
     const all = Object.values(players).sort((a, b) => level === 3 ? (b.planned - a.planned || a.name.localeCompare(b.name)) : b.score - a.score);
     const hideBtn = p => `<button class="btn" data-hide="${esc(p.id)}">${hidden.has(p.id) ? 'Unhide' : 'Hide'}</button>`;
-    if (level === 3) {
+    if (level === 4) {
+      const reds = p => Object.values(p.gates).filter(x => x.r === 'R').length, ambers = p => Object.values(p.gates).filter(x => x.r === 'A').length;
+      const pri = p => (p.status === 'none' && !p.idea ? 100 : 0) + reds(p) * 10 + ambers(p);
+      const list = Object.values(players).sort((a, b) => pri(b) - pri(a) || a.name.localeCompare(b.name));
+      $('thead').innerHTML = '<tr><th>Name</th><th>Class</th><th>Status</th><th>Idea</th><th>Checks 1–6</th><th>Cost (own)</th><th>Size mm</th><th>Details</th><th>Rating</th><th></th></tr>';
+      $('tbody').innerHTML = list.map(p => {
+        const dots = [1, 2, 3, 4, 5, 6].map(g => { const x = p.gates[g]; return `<span class="${x ? x.r : ''}" title="${g}. ${esc(GATE_NAMES[g])}: ${x ? esc(x.why) : 'not checked'}"></span>`; }).join('');
+        const b = (p.gates[5] || {}).a, sz = (p.gates[3] || {}).a;
+        const det = [1, 2, 3, 4, 5, 6].filter(g => p.gates[g]).map(g => { const x = p.gates[g];
+          return `<div class="planbox"><b>${g}. ${esc(GATE_NAMES[g])}: ${RESW[x.r]}</b><br>${esc(x.why)}${x.next ? `<br>Next: ${esc(x.next)}` : ''}</div>`; }).join('');
+        const ex = p.explorer ? `<div class="planbox"><b>Shortlist</b><br>${(p.explorer.shortlist || []).map(esc).join('<br>')}</div>` : '';
+        const g1 = (p.gates[1] || {}).a, g6 = (p.gates[6] || {}).a;
+        const sub = g1 ? `<div class="planbox"><b>Subsystems</b><br>Mech: ${esc(g1.mech)}<br>Elec: ${esc(g1.elec)}</div>` : '';
+        const fb = g6 && g6.fall ? `<div class="planbox"><b>Fallback</b><br>${esc(g6.fall)}</div>` : '';
+        return `<tr style="${hidden.has(p.id) ? 'opacity:.4' : ''}"><td>${esc(p.name)}${p.done ? ' 🃏' : ''}</td><td>${esc(p.cls)}</td><td>${esc(STATUS_NAMES[p.status] || '–')}</td>
+          <td style="max-width:22em">${esc(p.idea) || '–'}</td><td class="dots">${dots}</td>
+          <td>${b ? '$' + b.total + (b.own ? ' ($' + b.own + ')' : '') : '–'}</td><td>${sz ? esc([sz.l, sz.w, sz.h].join('×')) : '–'}</td>
+          <td>${det || ex ? `<details><summary>View</summary>${sub}${det}${fb}${ex}</details>` : '–'}</td><td>${['–', '😴', '🙂', '🔥'][p.rating || 0]}</td><td>${hideBtn(p)}</td></tr>`;
+      }).join('');
+      const vis = list.filter(p => !hidden.has(p.id)); let t = '';
+      for (let g = 1; g <= 6; g++) { const have = vis.filter(p => p.gates[g]); const r = have.filter(p => p.gates[g].r === 'R').length;
+        t += `<div>${g}<b>${have.length ? Math.round(r / have.length * 100) + '%' : '–'}</b>${GATE_NAMES[g]}</div>`; }
+      $('tavg').innerHTML = t;
+    } else if (level === 3) {
       $('thead').innerHTML = '<tr><th>Name</th><th>Class</th><th>Format</th><th>Planned</th><th>Points</th><th>Wrong first try</th><th>Rating</th><th>Plan</th><th></th></tr>';
       $('tbody').innerHTML = all.map(p => {
         const fmtTxt = p.format === 'other' ? 'Other: ' + p.otherFmt : (FORMAT_NAMES[p.format] || '–');
@@ -527,6 +627,19 @@
   }
   $('csvBtn').addEventListener('click', () => {
     const date = new Date().toISOString().slice(0, 10);
+    if (level === 4) {
+      const rows = [['name', 'class', 'status', 'idea', 'for', 'mechanical', 'electrotechnological', ...[1, 2, 3, 4, 5, 6].flatMap(g => ['check' + g + '_' + GATE_NAMES[g].split(' ')[0].toLowerCase(), 'check' + g + '_reason', 'check' + g + '_next']),
+        'total_cost', 'self_funded', 'size_mm', 'lives', 'fallback', 'shortlist', 'pitch_card', 'rating_1to3']];
+      Object.values(players).forEach(p => {
+        const g1 = (p.gates[1] || {}).a || {}, g3 = (p.gates[3] || {}).a || {}, g5 = (p.gates[5] || {}).a || {}, g6 = (p.gates[6] || {}).a || {};
+        rows.push([p.name, p.cls, STATUS_NAMES[p.status] || '', p.idea, (p.pitch || {}).forWho || '', g1.mech || '', g1.elec || '',
+          ...[1, 2, 3, 4, 5, 6].flatMap(g => { const x = p.gates[g]; return x ? [RESW[x.r], x.why, x.next] : ['', '', '']; }),
+          g5.total == null ? '' : g5.total, g5.own == null ? '' : g5.own, g3.l ? [g3.l, g3.w, g3.h].join('x') : '', g3.live || '', g6.fall || '',
+          p.explorer ? (p.explorer.shortlist || []).join(' | ') : '', p.done ? 'yes' : '', p.rating || '']);
+      });
+      downloadCsv(rows, `project-check-${session}-${date}.csv`);
+      return;
+    }
     if (level === 3) {
       const rows = [['name', 'class', 'format', 'criterion', 'aiming_for', 'where', 'evidence', 'how', 'next_action', 'first_action', 'points', 'rating_1to3']];
       Object.values(players).forEach(p => {
@@ -556,6 +669,7 @@
     const qs = new URLSearchParams(location.search);
     const lv = Number(qs.get('level')); if (LEVELS[lv]) level = lv;
     document.body.classList.toggle('l3', level === 3);
+    document.body.classList.toggle('l4', level === 4);
     renderLevelButtons();
     const saved = loadAuth();
     if (saved && saved.refresh) {

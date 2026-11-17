@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Will It Fly? – Project Check – Systems Engineering</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --red: #f87171; --amber: #fbbf24; --fly: #fb923c; --sky: #38bdf8; }
+  html, body { margin: 0; }
+  body { background: radial-gradient(ellipse at 50% 0%, #2a1406 0%, #0f0702 55%, #000 100%); color: #eee; font-family: monospace; min-height: 100vh; }
+  .screen { display: none; min-height: 100vh; padding: 20px 14px 50px; }
+  .screen.on { display: block; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1, h2, h3 { margin: 0; }
+  .btn { display: inline-block; padding: 11px 16px; border: none; border-radius: 6px; cursor: pointer;
+    background: linear-gradient(90deg, var(--fly), var(--gold)); color: #000; font: bold 15px monospace; letter-spacing: 1px; text-decoration: none; }
+  .btn.ghost { background: #111; color: #eee; border: 1px solid #555; }
+  .btn:disabled { opacity: 0.35; cursor: default; }
+  .panel { background: rgba(0,0,0,0.82); border: 2px solid var(--fly); border-radius: 8px; padding: 16px 18px; box-shadow: 0 0 22px rgba(251,146,60,0.22); }
+  input[type=text], input[type=number], textarea { width: 100%; background: #111; color: #eee; border: 1px solid #555; border-radius: 4px; padding: 8px 10px; font: 15px monospace; }
+  textarea { resize: vertical; min-height: 54px; }
+  label, .lbl { display: block; margin: 14px 0 5px; font-size: 14px; color: #ddd; font-weight: bold; }
+  .note { font-size: 12px; color: #999; margin-top: 4px; line-height: 1.45; }
+  .err { color: var(--red); min-height: 1.3em; margin-top: 8px; font-size: 14px; }
+  .row2 { display: flex; gap: 10px; } .row2 > div { flex: 1; }
+  .row3 { display: flex; gap: 8px; align-items: center; } .row3 input { flex: 1; } .row3 span { color: #888; }
+  .teach { background: #1c1208; border-left: 3px solid var(--fly); padding: 8px 10px; font-size: 13px; color: #edd; margin: 10px 0; line-height: 1.5; }
+
+  /* splash */
+  #splash { position: relative; overflow: hidden; padding: 0; cursor: pointer; }
+  #splash.on { display: flex; align-items: center; justify-content: center; }
+  .sky { position: absolute; inset: 0; background: linear-gradient(to bottom, #0c1a2e 0%, #1b0e05 70%); opacity: 0.8; }
+  .plane { position: absolute; font-size: 48px; animation: fly 7s linear infinite; }
+  @keyframes fly { 0% { left: -10%; transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-30px) rotate(4deg); } 100% { left: 110%; transform: translateY(10px) rotate(-6deg); } }
+  .prop { position: absolute; font-size: 40px; opacity: 0.55; animation: bob 3s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-12px); } }
+  .splash-content { position: relative; z-index: 2; text-align: center; padding: 0 12px; }
+  .kicker { color: var(--fly); letter-spacing: 6px; font-weight: bold; font-size: 14px; text-shadow: 0 0 4px #000, 0 0 10px var(--fly); }
+  .title { margin: 8px 0 0; font: bold clamp(40px, 10vw, 86px) monospace; color: #fff; letter-spacing: 2px;
+    text-shadow: 0 0 3px #000, 0 0 12px var(--fly), 0 0 30px var(--gold); animation: slam 0.9s cubic-bezier(0.2,1.4,0.4,1) both; }
+  @keyframes slam { 0% { transform: scale(3); opacity: 0; filter: blur(12px); } 100% { transform: scale(1); opacity: 1; filter: blur(0); } }
+  .sub { margin-top: 6px; font: bold clamp(14px, 3.4vw, 22px) monospace; color: var(--sky); letter-spacing: 5px; }
+  .tag { margin-top: 18px; height: 1.4em; font: bold clamp(15px, 3vw, 21px) monospace; color: var(--green); }
+  .press { margin-top: 28px; font: bold 16px monospace; letter-spacing: 3px; animation: blink 1.1s 1.5s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .plane, .prop, .press { animation: none !important; } .plane { left: 10%; top: 12%; } }
+
+  /* hud */
+  .hud { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #0b0b0b; border: 1px solid #333; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
+  .hud .net { font-size: 12px; color: #888; } .hud .net.off { color: var(--red); }
+
+  /* choices */
+  .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  .choice { padding: 14px; border-radius: 8px; border: 2px solid #333; background: #0c0c0c; color: #eee; text-align: left; cursor: pointer; font: 14px monospace; line-height: 1.4; }
+  .choice b { display: block; font-size: 16px; margin: 6px 0 4px; }
+  .choice .ic { font-size: 30px; }
+  .choice.on { border-color: var(--fly); box-shadow: 0 0 14px rgba(251,146,60,0.5); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 7px 11px; border-radius: 16px; border: 1px solid #555; background: #111; color: #ddd; font: 13px monospace; cursor: pointer; }
+  .chip.on { background: var(--fly); color: #000; border-color: var(--fly); font-weight: bold; }
+  .radios { display: flex; flex-direction: column; gap: 6px; }
+  .radio { display: flex; gap: 10px; align-items: flex-start; padding: 9px 11px; border: 1px solid #444; border-radius: 6px; background: #0d0d0d; cursor: pointer; font-size: 14px; line-height: 1.4; }
+  .radio input { margin-top: 2px; accent-color: var(--fly); }
+  .radio.on { border-color: var(--fly); background: #1c1006; }
+  .radios.inline { flex-direction: row; flex-wrap: wrap; } .radios.inline .radio { flex: 1; min-width: 150px; }
+  .ticks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .tick { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid #333; border-radius: 6px; background: #0d0d0d; font-size: 13px; cursor: pointer; line-height: 1.35; }
+  .tick input { accent-color: var(--fly); margin-top: 1px; }
+  .tick small { display: block; color: #999; font-size: 11px; }
+  .tick.no small { color: var(--red); } .tick.ts small { color: var(--amber); }
+  .patterns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+  .pattern { border: 1px solid #3a2a1a; border-radius: 8px; padding: 10px; background: #120b05; font-size: 13px; line-height: 1.45; }
+  .pattern b { color: var(--fly); display: block; font-size: 14px; }
+  .ex { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .ex div { border-radius: 6px; padding: 8px 10px; font-size: 13px; line-height: 1.45; }
+  .ex .yes { background: #052e16; border: 1px solid var(--green); } .ex .no { background: #2b0b0b; border: 1px solid var(--red); }
+  .sentence { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 14px; }
+  .sentence input { flex: 1; min-width: 150px; }
+  .parts .prow { display: grid; grid-template-columns: 1fr 110px auto auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .parts .prow label { margin: 0; font-weight: normal; font-size: 12px; display: flex; gap: 4px; align-items: center; white-space: nowrap; }
+  .xbtn { background: #222; color: #aaa; border: 1px solid #444; border-radius: 4px; padding: 6px 9px; cursor: pointer; font: 13px monospace; }
+  .totals { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 14px; }
+  .totals b { color: var(--gold); }
+
+  /* gates map */
+  .ideabox { border: 1px solid #3a2a1a; background: #120b05; border-radius: 8px; padding: 10px 12px; font-size: 15px; line-height: 1.45; }
+  .gates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .gate { position: relative; min-height: 120px; border-radius: 10px; border: 2px solid #444; background: #0f0b08; padding: 12px; color: #ddd; font: 13px monospace; cursor: pointer; text-align: left; }
+  .gate .num { font: bold 15px monospace; color: #aaa; }
+  .gate .gt { font: bold 17px monospace; margin-top: 4px; color: #fff; }
+  .gate .ic { position: absolute; right: 10px; top: 8px; font-size: 26px; }
+  .gate .res { margin-top: 10px; font-weight: bold; }
+  .gate.G { border-color: var(--green); } .gate.G .res { color: var(--green); }
+  .gate.A { border-color: var(--amber); } .gate.A .res { color: var(--amber); }
+  .gate.R { border-color: var(--red); } .gate.R .res { color: var(--red); }
+  .gate:hover { box-shadow: 0 0 14px rgba(251,146,60,0.45); }
+
+  /* result */
+  .result { margin-top: 16px; padding: 14px; border-radius: 8px; line-height: 1.5; display: none; }
+  .result.show { display: block; animation: pop 0.4s ease-out both; }
+  @keyframes pop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .result.G { background: #052e16; border: 2px solid var(--green); }
+  .result.A { background: #2a1f05; border: 2px solid var(--amber); }
+  .result.R { background: #2b0b0b; border: 2px solid var(--red); }
+  .result .big { font: bold 22px monospace; }
+  .result.G .big { color: var(--green); } .result.A .big { color: var(--amber); } .result.R .big { color: var(--red); }
+  .result .nx { margin-top: 6px; color: #fff; }
+  .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+  /* pitch */
+  .pr { display: grid; grid-template-columns: 7.5em 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid #222; font-size: 14px; line-height: 1.45; }
+  .pr .k { font-weight: bold; }
+  .pr .k.G { color: var(--green); } .pr .k.A { color: var(--amber); } .pr .k.R { color: var(--red); }
+  .pr .why { color: #ccc; } .pr .nx { color: #fff; margin-top: 2px; }
+  .exports { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  .exports .btn { width: 100%; text-align: center; }
+  .rate { margin: 18px auto 0; padding: 12px; max-width: 420px; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.6); text-align: center; }
+  .rate-row { display: flex; gap: 10px; }
+  .rate-btn { flex: 1; padding: 10px 6px; border-radius: 8px; border: 1px solid #555; background: #111; color: #eee; font: bold 13px monospace; cursor: pointer; }
+  .rate-btn span { display: block; font-size: 34px; margin-bottom: 4px; }
+  .rate-btn.on { border-color: var(--gold); background: #2a2205; box-shadow: 0 0 12px rgba(250,204,21,0.5); }
+
+  #printPitch { display: none; }
+  @media print {
+    body { background: #fff; color: #000; }
+    .screen { display: none !important; }
+    #printPitch { display: block; font: 12pt Georgia, serif; color: #000; }
+    #printPitch h1 { font-size: 20pt; margin-bottom: 4pt; }
+    #printPitch .pc { page-break-inside: avoid; border: 1px solid #999; padding: 6pt 10pt; margin: 6pt 0; }
+  }
+  @media (max-width: 720px) {
+    .choices, .gates { grid-template-columns: repeat(2, 1fr); }
+    .row2 { flex-direction: column; gap: 0; }
+    .ticks, .patterns, .ex { grid-template-columns: 1fr; }
+    .exports { grid-template-columns: 1fr; }
+    .parts .prow { grid-template-columns: 1fr 90px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<section id="splash" class="screen on">
+  <div class="sky"></div>
+  <div class="plane" style="top:14%">✈️</div>
+  <div class="prop" style="left:8%; bottom:18%">📦</div>
+  <div class="prop" style="right:9%; bottom:22%; animation-delay:.7s">⚡</div>
+  <div class="prop" style="left:14%; top:30%; animation-delay:1.3s">🛠️</div>
+  <div class="prop" style="right:14%; top:34%; animation-delay:.4s">💲</div>
+  <div class="splash-content">
+    <div class="kicker">SYSTEMS ENGINEERING · PROJECT CHECK</div>
+    <h1 class="title">WILL IT FLY?</h1>
+    <div class="sub">TEST YOUR PROJECT IDEA BEFORE YOU BUILD IT</div>
+    <div class="tag" id="tag">&nbsp;</div>
+    <div class="press">▶ PRESS ENTER OR TAP TO START ◀</div>
+    <div id="resumeBox" style="margin-top:16px"></div>
+  </div>
+</section>
+
+<!-- SIGN IN -->
+<section id="signin" class="screen">
+  <div class="wrap" style="max-width:620px">
+    <div class="panel">
+      <h2 style="color:var(--fly)">Pre-flight check</h2>
+      <p class="note" style="font-size:13px">Run your project idea through six checks. You'll leave with a pitch card and a clear list of what to sort out next.</p>
+      <div class="row2">
+        <div><label for="inName">First name</label><input type="text" id="inName" maxlength="24" autocomplete="off" /></div>
+        <div><label for="inClass">Class</label><input type="text" id="inClass" maxlength="12" autocomplete="off" /></div>
+      </div>
+      <label for="inCode">Session code (optional: on the board at the front)</label>
+      <input type="text" id="inCode" maxlength="8" autocomplete="off" style="text-transform:uppercase; letter-spacing:4px; font-weight:bold" />
+      <div class="note">Leave blank to check your idea on your own without sending it to your teacher.</div>
+      <div style="margin-top:16px"><button class="btn" id="signBtn" style="width:100%">NEXT ▶</button></div>
+      <div class="err" id="signErr"></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATUS -->
+<section id="statusScreen" class="screen">
+  <div class="wrap">
+    <div class="panel">
+      <h2 style="color:var(--fly)">Where are you at with your project?</h2>
+      <div class="note" style="font-size:13px">Be honest. Lots of people haven't decided yet, and that's what this is for.</div>
+      <div class="choices" id="statusChoices"></div>
+      <div style="margin-top:16px"><button class="btn" id="statusBtn" style="width:100%">NEXT ▶</button></div>
+      <div class="err" id="statusErr"></div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPLORER A: interests -->
+<section id="exploreA" class="screen">
+  <div class="wrap">
+    <div class="panel">
+      <h2 style="color:var(--fly)">Idea explorer 1/2: what are you into?</h2>
+      <div class="note" style="font-size:13px">Good projects usually start with something you care about, plus a problem that bugs you.</div>
+      <label>Pick up to three interests</label>
+      <div class="chips" id="interestChips"></div>
+      <div id="problemBox"></div>
+      <div class="actions"><button class="btn" id="exABtn">NEXT ▶</button></div>
+      <div class="err" id="exAErr"></div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPLORER B: patterns + shortlist -->
+<section id="exploreB" class="screen">
+  <div class="wrap">
+    <div class="panel">
+      <h2 style="color:var(--fly)">Idea explorer <span id="exBstep">2/2</span>: shortlist</h2>
+      <div class="note" style="font-size:13px">Most integrated systems follow one of these patterns. Each example is small enough to store in class.</div>
+      <div class="patterns" id="patterns"></div>
+      <label>Write two or three ideas: "A ___ that ___ when ___"</label>
+      <div id="shortlist"></div>
+      <div class="note">Tap ☆ to star your favourite. That's the one you'll check first.</div>
+      <div class="actions"><button class="btn" id="exBBtn">CHECK MY FAVOURITE ▶</button></div>
+      <div class="err" id="exBErr"></div>
+    </div>
+  </div>
+</section>
+
+<!-- IDEA -->
+<section id="ideaScreen" class="screen">
+  <div class="wrap">
+    <div class="panel">
+      <h2 style="color:var(--fly)">Your idea</h2>
+      <label for="inIdea">What does your system do? (one or two lines)</label>
+      <textarea id="inIdea" maxlength="300" placeholder="e.g. An automatic plant-watering arm that waters each pot when its soil sensor reads dry."></textarea>
+      <label for="inFor">Who or what is it for? (optional)</label>
+      <input type="text" id="inFor" maxlength="120" placeholder="e.g. my nan's balcony garden" />
+      <div class="actions"><button class="btn" id="ideaBtn">TO THE CHECKS ▶</button></div>
+      <div class="err" id="ideaErr"></div>
+    </div>
+  </div>
+</section>
+
+<!-- GATES MAP -->
+<section id="mapScreen" class="screen">
+  <div class="wrap">
+    <div class="hud" id="hudMap"></div>
+    <div class="ideabox"><span style="color:var(--fly); font-weight:bold">YOUR IDEA:</span> <span id="mapIdea"></span>
+      <button class="xbtn" id="editIdea" style="margin-left:8px">edit</button></div>
+    <div class="gates" id="gates"></div>
+    <div class="note" style="margin-top:10px">Do the checks in any order. You can re-run a check as many times as you like.</div>
+    <div class="actions"><button class="btn" id="pitchBtn">MAKE MY PITCH CARD ▶</button></div>
+    <div class="err" id="mapErr"></div>
+  </div>
+</section>
+
+<!-- GATE -->
+<section id="gateScreen" class="screen">
+  <div class="wrap">
+    <div class="hud" id="hudGate"></div>
+    <div class="panel">
+      <h2 id="gateTitle" style="color:var(--fly)"></h2>
+      <div id="gateBody"></div>
+      <div class="actions"><button class="btn" id="checkBtn">CHECK IT ▶</button><button class="btn ghost" id="gateBack">◀ ALL CHECKS</button></div>
+      <div class="err" id="gateErr"></div>
+      <div class="result" id="result"></div>
+    </div>
+  </div>
+</section>
+
+<!-- END / PITCH -->
+<section id="end" class="screen">
+  <div class="wrap" style="text-align:center">
+    <div class="kicker" style="margin-top:10px">PROJECT CHECK COMPLETE</div>
+    <h1 style="font-size:clamp(28px,6.5vw,50px); color:#fff; text-shadow:0 0 12px var(--fly), 0 0 30px var(--gold); margin-top:6px">YOUR PITCH CARD</h1>
+    <div id="endSum" style="margin-top:10px; font-size:16px; line-height:1.6"></div>
+    <div class="panel" style="margin-top:16px; text-align:left">
+      <div class="ideabox" id="endIdea"></div>
+      <div id="pitchRows" style="margin-top:8px"></div>
+      <div class="exports">
+        <button class="btn" id="exCard">🃏 DOWNLOAD CARD</button>
+        <button class="btn" id="exPrint">🖨 PRINT / PDF</button>
+        <button class="btn ghost" id="exCopy">📋 COPY AS TEXT</button>
+      </div>
+      <div class="note" id="exMsg" style="font-size:13px; margin-top:8px">Post your card in our Systems Engineering Teams channel.</div>
+    </div>
+    <div class="rate">
+      <div style="font-weight:bold; margin-bottom:8px">How useful was this check?</div>
+      <div class="rate-row">
+        <button class="rate-btn" data-r="1"><span>😴</span>Not much</button>
+        <button class="rate-btn" data-r="2"><span>🙂</span>Okay</button>
+        <button class="rate-btn" data-r="3"><span>🔥</span>Very</button>
+      </div>
+      <div class="note" id="rateMsg" style="font-size:13px; margin-top:6px">Tap one.</div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
+      <button class="btn ghost" id="backMap">◀ EDIT MY ANSWERS</button>
+      <a class="btn ghost" href="index.html">◀ LEVEL SELECT</a>
+      <a class="btn" href="evidence-lab.html">NEXT: LEVEL 3 ▶</a>
+    </div>
+  </div>
+</section>
+
+<div id="printPitch"></div>
+
+<script>
+  // ===================== TEACHER SETTINGS =====================
+  const CUPBOARDS = 1;                     // change to 2 when the second Year 12 cupboard arrives
+  const BOX = CUPBOARDS >= 2 ? [290, 215, 350] : [290, 215, 175];   // each student's storage space, mm
+  const AMBER_MAX = [600, 400, 400];       // largest size allowed with an agreed storage spot, mm
+  const BUDGET = 100, BUDGET_MAX = 250;    // $: hard cap without a self-funding plan / absolute max
+  const SAFE_DC = 12, MAX_DC = 120, MAX_AC = 50; // volts (VCAA: no student electrical work above 50 V AC / 120 V ripple-free DC)
+
+  // ===================== CONFIG =====================
+  const SUPABASE_URL = 'https://elebvltrvcqqyyjwwydi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_wgUH3E8Nepy-6QC_dXpVtA_Uyszqkrm'; // publishable key: safe in a web page
+  const LEVEL = 4; // database id for the Project Check
+  const SHARE_INSTRUCTION = 'Post your card in our Systems Engineering Teams channel.';
+  const SAVE_KEY = 'willItFlyProgress';
+  const PLAYER_KEY = 'sePlayer';
+  const boxTxt = BOX.join(' × ') + ' mm';
+  const RES = { G: 'GREEN', A: 'AMBER', R: 'RED' };
+  const RES_LONG = { G: 'Good to go', A: 'Possible, with a next step', R: "This version won't work" };
+
+  const STATUSES = {
+    decided: { icon: '🎯', name: "I know what I'm making", desc: 'Check it against the constraints.' },
+    few:     { icon: '🤔', name: "I've got a few ideas", desc: 'Shortlist them, then check your favourite.' },
+    none:    { icon: '🌱', name: 'No idea yet', desc: 'Find some ideas first. Totally fine.' }
+  };
+  const INTERESTS = ['Sport', 'Music', 'Pets', 'Plants and gardening', 'Gaming', 'Cars and bikes', 'Cooking', 'The home', 'Helping someone', 'Outdoors', 'Art and making', 'Science'];
+  const PATTERNS = [
+    { t: 'Sense, then move', d: 'A sensor reading makes something move.', e: 'Plant-watering arm, auto pet feeder' },
+    { t: 'Sort or count', d: 'Items are detected and pushed to the right place.', e: 'Coin sorter, mini recycling sorter' },
+    { t: 'Track or follow', d: 'The system keeps adjusting to follow a target.', e: 'Sun-tracking solar panel, line-following cart' },
+    { t: 'Lift or position', d: 'Moves an object to an exact spot, again and again.', e: 'Pick-and-place arm, automatic camera slider' },
+    { t: 'Measure and display', d: 'A mechanism produces motion that is measured and shown.', e: 'Ball-launch speed tester, bike cadence display' }
+  ];
+  const GATES = [
+    { n: 1, icon: '🔗', title: 'Integrated system', q: 'Is it an integrated system?' },
+    { n: 2, icon: '⚡', title: 'Power and voltage', q: 'Is the power safe?' },
+    { n: 3, icon: '📦', title: 'Size and storage', q: 'Will it fit?' },
+    { n: 4, icon: '🛠️', title: 'Making it', q: 'Can we make it here?' },
+    { n: 5, icon: '💲', title: 'Budget and parts', q: 'Can you afford it?' },
+    { n: 6, icon: '⏱️', title: 'Time', q: 'Can it be finished in time?' }
+  ];
+  const SOURCES = { aa: 'AA/AAA batteries', usb: 'USB power bank', plug: '12 V plug pack / adaptor', lipo: 'LiPo or other rechargeable pack', solar: 'Solar panel', mains: 'Mains (240 V) wired into the project' };
+  const PROCS = [
+    { k: 'print', t: '3D printing', s: 'Available' }, { k: 'wood', t: 'Simple woodwork', s: 'Available' },
+    { k: 'metal', t: 'Simple metalwork', s: 'Available' }, { k: 'sheet', t: 'Sheet metal', s: 'Available' },
+    { k: 'solder', t: 'Soldering', s: 'Available' }, { k: 'pcb', t: 'PCB making', s: 'Available' },
+    { k: 'mill', t: 'Light-duty milling', s: 'Available, small parts only' },
+    { k: 'laser', t: 'Laser cutting', s: 'Via Banyule Nillumbik Tech School', ts: true },
+    { k: 'lathe', t: 'Lathe turning', s: 'Via Banyule Nillumbik Tech School', ts: true },
+    { k: 'out', t: 'Outsourced parts (CNC, laser, PCB service)', s: 'Via Banyule Nillumbik Tech School', ts: true },
+    { k: 'weld', t: 'Welding', s: 'Not available', no: true }
+  ];
+  const MATS = [
+    { k: 'ply', t: 'Plywood' }, { k: 'pine', t: 'Pine / timber' }, { k: 'acrylic', t: 'Acrylic' }, { k: 'alu', t: 'Aluminium' },
+    { k: 'steel', t: 'Steel' }, { k: 'pla', t: '3D print filament' }, { k: 'mdf', t: 'MDF', s: 'Banned', no: true }, { k: 'otherm', t: 'Other' }
+  ];
+
+  // ===================== STATE =====================
+  let S = null;
+  function newState() {
+    return { playerId: uuid(), name: '', cls: '', session: '', started: 0, finishedAt: 0, status: '', interests: [], problems: {},
+      shortlist: ['', '', ''], fav: 0, idea: '', forWho: '', g: {}, res: {}, done: false, rating: 0 };
+  }
+  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
+  function loadSaved() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return null; } }
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+  }
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('on')); $(id).classList.add('on'); window.scrollTo(0, 0); }
+  function elapsed() { return S && S.started ? Math.round(((S.finishedAt || Date.now()) - S.started) / 1000) : 0; }
+  const num = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : null; };
+  const money = n => '$' + Math.round(n);
+  const allChecked = () => GATES.every(g => S.res[g.n]);
+
+  // ===================== SOUND =====================
+  let actx = null;
+  function initAudio() {
+    if (!actx && (window.AudioContext || window.webkitAudioContext)) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (actx && actx.state === 'suspended') actx.resume();
+  }
+  function beep(f, d, type = 'square', v = 0.05) {
+    if (!actx) return; const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = f; g.gain.value = v; o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d / 1000);
+  }
+  const sfx = {
+    good: () => { beep(660, 80); setTimeout(() => beep(880, 90), 80); },
+    amber: () => { beep(520, 90, 'triangle'); setTimeout(() => beep(520, 90, 'triangle'), 130); },
+    bad: () => beep(160, 220, 'sawtooth', 0.07),
+    click: () => beep(700, 30, 'square', 0.03),
+    win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => beep(f, 150, 'triangle', 0.07), i * 130))
+  };
+
+  // ===================== NETWORK =====================
+  const queue = []; let flushing = false, online = true, retryTimer = null;
+  function post(event, extra) {
+    if (!S || !S.session) return;
+    queue.push(Object.assign({ session_code: S.session, player_id: S.playerId, name: S.name, class: S.cls || null,
+      event, level: LEVEL, elapsed_s: Math.min(7200, elapsed()) }, extra || {}));
+    flush();
+  }
+  async function flush() {
+    if (flushing || !queue.length) return; flushing = true;
+    while (queue.length) {
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/rubric_events', { method: 'POST',
+          headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(queue[0]) });
+        if (res.ok || (res.status >= 400 && res.status < 500)) queue.shift(); else throw new Error(res.status);
+        setOnline(true);
+      } catch (e) { setOnline(false); clearTimeout(retryTimer); retryTimer = setTimeout(flush, 5000); break; }
+    }
+    flushing = false;
+  }
+  function setOnline(v) { online = v; renderHud(); }
+  function renderHud() {
+    if (!S) return;
+    const counts = { G: 0, A: 0, R: 0 }; Object.values(S.res).forEach(r => counts[r.r]++);
+    const html = `<span><b>${esc(S.name)}</b> ${S.cls ? '(' + esc(S.cls) + ')' : ''}</span>
+      <span>Checked ${Object.keys(S.res).length}/6 · <span style="color:var(--green)">●${counts.G}</span> <span style="color:var(--amber)">●${counts.A}</span> <span style="color:var(--red)">●${counts.R}</span></span>
+      <span class="net ${online ? '' : 'off'}">${S.session ? (online ? '● live: ' + esc(S.session) : '● offline – saving on this device') : 'solo mode'}</span>`;
+    ['hudMap', 'hudGate'].forEach(id => { $(id).innerHTML = html; });
+  }
+
+  // ===================== SPLASH / SIGN IN =====================
+  const tags = ['Integrated?', 'Safe?', 'Fits?', 'Makeable?', 'Affordable?', 'Finishable?'];
+  let tagI = 0; const tagTimer = setInterval(() => { $('tag').textContent = tags[tagI++ % tags.length]; }, 900);
+  function renderResume() {
+    const saved = loadSaved(), box = $('resumeBox'); box.innerHTML = '';
+    if (saved && saved.started && saved.name) {
+      const b = document.createElement('button'); b.className = 'btn';
+      b.textContent = saved.done ? `OPEN ${saved.name.toUpperCase()}'S PITCH CARD` : `CONTINUE AS ${saved.name.toUpperCase()} (${Object.keys(saved.res || {}).length}/6 CHECKED)`;
+      b.addEventListener('click', e => { e.stopPropagation(); initAudio(); S = saved; clearInterval(tagTimer); resumeWhere(); });
+      const n = document.createElement('div'); n.className = 'note'; n.textContent = 'or tap anywhere else to start again';
+      box.appendChild(b); box.appendChild(n);
+    }
+  }
+  function resumeWhere() {
+    if (S.done) return showEnd();
+    if (S.idea) { renderMap(); return show('mapScreen'); }
+    if (S.status === 'decided') { openIdea(); return; }
+    if (S.status) { renderExploreB(); return show('exploreB'); }
+    renderStatus(); show('statusScreen');
+  }
+  function startFresh() {
+    initAudio(); clearInterval(tagTimer);
+    beep(330, 90); setTimeout(() => beep(495, 90), 90); setTimeout(() => beep(660, 140), 180);
+    S = newState();
+    try { const p = JSON.parse(localStorage.getItem(PLAYER_KEY) || 'null'); if (p) { $('inName').value = p.name || ''; $('inClass').value = p.cls || ''; } } catch (e) {}
+    const urlCode = new URLSearchParams(location.search).get('session'); if (urlCode) $('inCode').value = urlCode.toUpperCase();
+    show('signin'); setTimeout(() => $('inName').focus(), 50);
+  }
+  $('splash').addEventListener('click', startFresh);
+  function trySignIn() {
+    const name = $('inName').value.trim(), cls = $('inClass').value.trim(), code = $('inCode').value.trim().toUpperCase();
+    const missing = []; if (!name) missing.push('first name'); if (!cls) missing.push('class');
+    if (missing.length) { $('signErr').textContent = 'Still needed: ' + missing.join(', ') + '.'; sfx.bad(); return; }
+    if (code && !/^[A-Z0-9]{4,8}$/.test(code)) { $('signErr').textContent = 'Session codes are 4–8 letters or numbers. Check the board.'; sfx.bad(); return; }
+    S.name = name; S.cls = cls; S.session = code;
+    try { localStorage.setItem(PLAYER_KEY, JSON.stringify({ name, cls })); } catch (e) {}
+    sfx.good(); renderStatus(); show('statusScreen');
+  }
+  $('signBtn').addEventListener('click', trySignIn);
+
+  // ===================== STATUS =====================
+  function renderStatus() {
+    const box = $('statusChoices'); box.innerHTML = '';
+    Object.entries(STATUSES).forEach(([k, s]) => {
+      const b = document.createElement('button'); b.className = 'choice' + (S.status === k ? ' on' : '');
+      b.innerHTML = `<span class="ic">${s.icon}</span><b>${esc(s.name)}</b>${esc(s.desc)}`;
+      b.addEventListener('click', () => { sfx.click(); S.status = k; renderStatus(); });
+      box.appendChild(b);
+    });
+  }
+  $('statusBtn').addEventListener('click', () => {
+    if (!S.status) { $('statusErr').textContent = 'Pick the one that fits best.'; sfx.bad(); return; }
+    $('statusErr').textContent = '';
+    if (!S.started) { S.started = Date.now(); post('join', { payload: { status: S.status } }); }
+    else post('answer', { vault: 0, question_id: 'STATUS', payload: { status: S.status } });
+    save(); sfx.good();
+    if (S.status === 'decided') openIdea();
+    else if (S.status === 'none') { renderExploreA(); show('exploreA'); }
+    else { renderExploreB(); show('exploreB'); }
+  });
+
+  // ===================== EXPLORER =====================
+  function renderExploreA() {
+    const box = $('interestChips'); box.innerHTML = '';
+    INTERESTS.forEach(t => {
+      const b = document.createElement('button'); b.className = 'chip' + (S.interests.includes(t) ? ' on' : ''); b.textContent = t;
+      b.addEventListener('click', () => {
+        captureProblems();
+        if (S.interests.includes(t)) S.interests = S.interests.filter(x => x !== t);
+        else if (S.interests.length < 3) S.interests.push(t); else { $('exAErr').textContent = 'Three is the limit. Untick one first.'; return; }
+        $('exAErr').textContent = ''; sfx.click(); renderExploreA();
+      });
+      box.appendChild(b);
+    });
+    $('problemBox').innerHTML = S.interests.map((t, i) => `<label for="prob${i}">${esc(t)}: what's annoying, slow, forgotten or done by hand?</label>
+      <input type="text" id="prob${i}" maxlength="140" value="${esc(S.problems[t] || '')}" />`).join('');
+  }
+  function captureProblems() { S.interests.forEach((t, i) => { const el = $('prob' + i); if (el) S.problems[t] = el.value.trim(); }); }
+  $('exABtn').addEventListener('click', () => {
+    captureProblems();
+    if (!S.interests.length) { $('exAErr').textContent = 'Pick at least one interest.'; sfx.bad(); return; }
+    if (!S.interests.some(t => (S.problems[t] || '').length > 3)) { $('exAErr').textContent = 'Write at least one problem. A few words is fine.'; sfx.bad(); return; }
+    $('exAErr').textContent = ''; save(); sfx.good(); renderExploreB(); show('exploreB');
+  });
+  function renderExploreB() {
+    $('exBstep').textContent = S.status === 'none' ? '2/2' : '';
+    const probs = S.interests.filter(t => S.problems[t]).map(t => `<b>${esc(t)}:</b> ${esc(S.problems[t])}`).join('<br>');
+    $('patterns').innerHTML = (probs ? `<div class="pattern" style="grid-column:1/-1"><b>Your problems</b>${probs}</div>` : '') +
+      PATTERNS.map(p => `<div class="pattern"><b>${esc(p.t)}</b>${esc(p.d)}<br><span style="color:#999">e.g. ${esc(p.e)}</span></div>`).join('');
+    $('shortlist').innerHTML = S.shortlist.map((s, i) => `<div class="row3" style="margin-bottom:6px">
+      <button class="xbtn" data-star="${i}" style="font-size:16px; color:${S.fav === i ? 'var(--gold)' : '#888'}">${S.fav === i ? '★' : '☆'}</button>
+      <input type="text" id="sl${i}" maxlength="200" value="${esc(s)}" placeholder="${i === 2 ? '(optional) ' : ''}A ___ that ___ when ___" /></div>`).join('');
+    $('shortlist').querySelectorAll('[data-star]').forEach(b => b.addEventListener('click', () => { captureShortlist(); S.fav = Number(b.dataset.star); sfx.click(); renderExploreB(); }));
+  }
+  function captureShortlist() { S.shortlist = S.shortlist.map((_, i) => ($('sl' + i) ? $('sl' + i).value.trim() : '')); }
+  $('exBBtn').addEventListener('click', () => {
+    captureShortlist();
+    const filled = S.shortlist.filter(s => s.length > 5).length;
+    if (filled < 2) { $('exBErr').textContent = 'Write at least two ideas. Rough is fine.'; sfx.bad(); return; }
+    if (!S.shortlist[S.fav] || S.shortlist[S.fav].length <= 5) { $('exBErr').textContent = 'Star one of the ideas you wrote.'; sfx.bad(); return; }
+    $('exBErr').textContent = '';
+    post('answer', { vault: 0, question_id: 'EXPLORER', payload: { interests: S.interests, problems: S.problems, shortlist: S.shortlist.filter(Boolean), fav: S.shortlist[S.fav] } });
+    save(); sfx.good(); openIdea();
+  });
+
+  // ===================== IDEA =====================
+  function openIdea() { $('inIdea').value = S.idea || (S.status !== 'decided' && S.shortlist[S.fav]) || ''; $('inFor').value = S.forWho || ''; show('ideaScreen'); setTimeout(() => $('inIdea').focus(), 50); }
+  $('ideaBtn').addEventListener('click', () => {
+    const idea = $('inIdea').value.trim();
+    if (idea.length < 10) { $('ideaErr').textContent = 'Describe it in at least a sentence.'; sfx.bad(); return; }
+    $('ideaErr').textContent = '';
+    const changed = idea !== S.idea || $('inFor').value.trim() !== S.forWho;
+    S.idea = idea; S.forWho = $('inFor').value.trim();
+    if (changed) post('answer', { vault: 0, question_id: 'IDEA', payload: { idea: S.idea, forWho: S.forWho } });
+    save(); sfx.good(); renderMap(); show('mapScreen');
+  });
+  $('editIdea').addEventListener('click', openIdea);
+
+  // ===================== MAP =====================
+  function renderMap() {
+    $('mapIdea').textContent = S.idea;
+    $('gates').innerHTML = GATES.map(g => {
+      const r = S.res[g.n];
+      return `<button class="gate ${r ? r.r : ''}" data-g="${g.n}"><span class="ic">${g.icon}</span><div class="num">CHECK ${g.n}</div>
+        <div class="gt">${esc(g.title)}</div><div class="res">${r ? '● ' + RES[r.r] : 'Not checked yet ▶'}</div></button>`;
+    }).join('');
+    $('gates').querySelectorAll('[data-g]').forEach(b => b.addEventListener('click', () => { sfx.click(); openGate(Number(b.dataset.g)); }));
+    $('pitchBtn').disabled = !allChecked();
+    $('pitchBtn').textContent = allChecked() ? (S.done ? 'UPDATE MY PITCH CARD ▶' : 'MAKE MY PITCH CARD ▶') : `MAKE MY PITCH CARD (${Object.keys(S.res).length}/6 CHECKED)`;
+    renderHud();
+  }
+  $('pitchBtn').addEventListener('click', () => {
+    if (!allChecked()) return;
+    const first = !S.done; S.done = true; if (!S.finishedAt) S.finishedAt = Date.now(); save();
+    post(first ? 'finish' : 'answer', Object.assign({ vault: 9, payload: pitchPayload() }, first ? {} : { question_id: 'PITCH-UPDATE' }));
+    sfx.win(); showEnd();
+  });
+
+  // ===================== GATES =====================
+  let G = 0;
+  const radio = (name, opts, val, inline) => `<div class="radios ${inline ? 'inline' : ''}">` + Object.entries(opts).map(([k, t]) =>
+    `<label class="radio ${val === k ? 'on' : ''}"><input type="radio" name="${name}" value="${k}" ${val === k ? 'checked' : ''}/> <span>${t}</span></label>`).join('') + '</div>';
+  const rval = name => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; };
+  const tick = (id, t, s, on, cls) => `<label class="tick ${cls || ''}"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}/><span>${esc(t)}${s ? `<small>${esc(s)}</small>` : ''}</span></label>`;
+  const val = id => ($(id) ? $(id).value.trim() : '');
+  const chk = id => !!($(id) && $(id).checked);
+
+  const FORMS = {
+    1: a => `<div class="teach">The study design requires an <b>integrated system</b>: a mechanical subsystem and an electrotechnological subsystem that work together, with the electronics sensing or controlling the mechanism.</div>
+      <div class="ex"><div class="yes"><b>✓ Integrated</b><br>Plant-watering arm: a soil sensor tells the microcontroller when to drive the arm and pump.</div>
+      <div class="no"><b>✗ Not integrated</b><br>Light-up sign: LEDs on a wooden stand. Nothing mechanical is controlled.</div></div>
+      <label for="g1mech">Mechanical subsystem: what moves, carries load or transmits force?</label>
+      <input type="text" id="g1mech" maxlength="160" value="${esc(a.mech)}" placeholder="e.g. a geared arm on a rotating base" />
+      <label for="g1elec">Electrotechnological subsystem: what senses, controls or powers it?</label>
+      <input type="text" id="g1elec" maxlength="160" value="${esc(a.elec)}" placeholder="e.g. soil moisture sensor, Arduino, motor driver, 12 V supply" />
+      <label>Finish the sentence</label>
+      <div class="sentence">When the system senses <input type="text" id="g1s" maxlength="80" value="${esc(a.s)}" /> it <input type="text" id="g1d" maxlength="80" value="${esc(a.d)}" /> which makes the <input type="text" id="g1m" maxlength="80" value="${esc(a.m)}" /> move.</div>
+      <label>How do the electronics affect the mechanism?</label>
+      ${radio('g1link', { loop: 'They sense something and decide how the mechanism moves.', switch: 'They just switch it on and off (a button or switch).', none: "They don't really affect each other. They share a box." }, a.link)}`,
+    2: a => `<div class="teach">VCAA rule: students must not do electrical work on anything above <b>${MAX_AC} V AC or ${MAX_DC} V ripple-free DC</b>. Mains tools (drills, soldering irons) are used only as complete appliances. Most projects run at <b>${SAFE_DC} V DC or below</b>.</div>
+      <label>What powers it?</label>${radio('g2src', SOURCES, a.src)}
+      <label>Highest voltage anywhere in the system</label>
+      <div class="row3"><input type="number" id="g2v" min="0" step="0.1" value="${esc(a.v)}" placeholder="e.g. 12" style="max-width:140px" /> <span>volts</span>
+        ${radio('g2type', { DC: 'DC', AC: 'AC' }, a.type || 'DC', true)}</div>
+      <label>Does anything get hot or draw a lot of current? (heaters, big motors, solenoids)</label>
+      ${radio('g2heat', { no: 'No', yes: 'Yes', unsure: 'Not sure' }, a.heat, true)}`,
+    3: a => `<div class="teach">Each student's storage space in the Year 12 cupboard is about <b>${boxTxt}</b>${CUPBOARDS < 2 ? ' (roughly one and a half shoeboxes)' : ''}. Bigger projects need a storage spot agreed with your teacher.</div>
+      <label>Roughly how big will it be when built? (mm)</label>
+      <div class="row3"><input type="number" id="g3l" min="0" value="${esc(a.l)}" placeholder="length" /><span>×</span><input type="number" id="g3w" min="0" value="${esc(a.w)}" placeholder="width" /><span>×</span><input type="number" id="g3h" min="0" value="${esc(a.h)}" placeholder="height" /></div>
+      <div class="note">Shoebox ≈ 330 × 190 × 110 · carry-on bag ≈ 560 × 360 × 230 · washing basket ≈ 600 × 450 × 300</div>
+      <label>Can it come apart or fold down for storage?</label>
+      ${radio('g3apart', { no: 'No', yes: 'Yes' }, a.apart, true)}
+      <div id="g3packBox" style="display:${a.apart === 'yes' ? 'block' : 'none'}"><label>Packed-down size (mm)</label>
+      <div class="row3"><input type="number" id="g3pl" min="0" value="${esc(a.pl)}" placeholder="length" /><span>×</span><input type="number" id="g3pw" min="0" value="${esc(a.pw)}" placeholder="width" /><span>×</span><input type="number" id="g3ph" min="0" value="${esc(a.ph)}" placeholder="height" /></div></div>
+      <label>Where will it live between lessons?</label>
+      ${radio('g3live', { cupboard: 'Year 12 cupboard', other: 'Another approved spot', home: 'I take it home (if safe to carry)' }, a.live, true)}`,
+    4: a => `<label>Tick every process your build needs</label>
+      <div class="ticks">${PROCS.map(p => tick('g4p_' + p.k, p.t, p.s, (a.procs || []).includes(p.k), p.no ? 'no' : p.ts ? 'ts' : '')).join('')}</div>
+      <div id="g4millBox" style="display:${(a.procs || []).includes('mill') ? 'block' : 'none'}; margin-top:8px">${tick('g4millbig', 'A milled part is bigger than about 150 mm', '', a.millBig)}</div>
+      <label>Main materials</label>
+      <div class="ticks">${MATS.map(m => tick('g4m_' + m.k, m.t, m.s || '', (a.mats || []).includes(m.k), m.no ? 'no' : '')).join('')}</div>`,
+    5: a => `<div class="teach">The school covers about <b>${money(BUDGET)}</b> per student. Anything beyond that you pay for. Parts you already own or buy yourself (often the microcontroller) count as self-funded.</div>
+      <label>Main parts, with a rough price each</label>
+      <div class="parts" id="partsBox"></div>
+      <button class="xbtn" id="addPart">+ add a part</button>
+      <div class="totals" id="totals"></div>
+      <div style="margin-top:10px">${tick('g5plan', `I have a plan to pay for anything over ${money(BUDGET)}`, 'e.g. parts I already own, saving up, family help', a.plan)}</div>
+      <div class="note">Leave a price blank if you haven't found one yet.</div>`,
+    6: a => `<label>How many separate modules or subsystems does the build have?</label>
+      ${radio('g6mod', { a: '1–2', b: '3–4', c: '5 or more' }, a.mod, true)}
+      <label for="g6hard">What's the hardest part?</label>
+      <input type="text" id="g6hard" maxlength="160" value="${esc(a.hard)}" placeholder="e.g. getting the arm to stop in the same place every time" />
+      <label>Have you done anything like that hardest part before?</label>
+      ${radio('g6before', { yes: 'Yes', no: 'No' }, a.before, true)}
+      <label for="g6fall">Fallback: a smaller version that still works as a whole system</label>
+      <textarea id="g6fall" maxlength="240" placeholder="e.g. one pot instead of four, with a fixed arm position">${esc(a.fall)}</textarea>`
+  };
+
+  function openGate(n) {
+    G = n; const g = GATES[n - 1], a = S.g[n] || {};
+    $('gateTitle').textContent = `Check ${n}: ${g.q}`;
+    $('gateBody').innerHTML = FORMS[n](a);
+    $('gateErr').textContent = '';
+    const r = S.res[n]; if (r) showResult(r, false); else $('result').className = 'result';
+    $('gateBody').querySelectorAll('.radio input').forEach(inp => inp.addEventListener('change', () => {
+      document.querySelectorAll(`input[name="${inp.name}"]`).forEach(o => o.closest('.radio').classList.toggle('on', o.checked));
+      if (inp.name === 'g3apart') $('g3packBox').style.display = inp.value === 'yes' ? 'block' : 'none';
+    }));
+    if (n === 4) $('g4p_mill').addEventListener('change', e => { $('g4millBox').style.display = e.target.checked ? 'block' : 'none'; });
+    if (n === 5) { renderParts((a.parts && a.parts.length) ? a.parts : [{ name: '', price: '', mine: false }, { name: '', price: '', mine: false }, { name: '', price: '', mine: false }]); }
+    renderHud(); show('gateScreen');
+  }
+  $('gateBack').addEventListener('click', () => { renderMap(); show('mapScreen'); });
+
+  // budget parts list
+  function readParts() {
+    return Array.from(document.querySelectorAll('#partsBox .prow')).map(r => ({ name: r.querySelector('.pn').value.trim(), price: r.querySelector('.pp').value.trim(), mine: r.querySelector('.pm').checked }));
+  }
+  function renderParts(parts) {
+    $('partsBox').innerHTML = parts.map((p, i) => `<div class="prow"><input type="text" class="pn" maxlength="60" placeholder="part, e.g. Arduino Nano" value="${esc(p.name)}" />
+      <input type="number" class="pp" min="0" step="0.5" placeholder="$" value="${esc(p.price)}" />
+      <label><input type="checkbox" class="pm" ${p.mine ? 'checked' : ''}/> I supply it</label>
+      <button class="xbtn" data-del="${i}" title="Remove">✕</button></div>`).join('');
+    $('partsBox').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => { const ps = readParts(); ps.splice(Number(b.dataset.del), 1); renderParts(ps.length ? ps : [{ name: '', price: '', mine: false }]); }));
+    $('partsBox').querySelectorAll('input').forEach(i => i.addEventListener('input', updateTotals));
+    $('partsBox').querySelectorAll('.pm').forEach(i => i.addEventListener('change', updateTotals));
+    updateTotals();
+  }
+  function costs(parts) {
+    const named = parts.filter(p => p.name);
+    const total = named.reduce((t, p) => t + (num(p.price) || 0), 0);
+    const own = named.filter(p => p.mine).reduce((t, p) => t + (num(p.price) || 0), 0);
+    const unpriced = named.filter(p => num(p.price) === null).length;
+    return { named: named.length, total, own, school: Math.max(0, total - own), unpriced };
+  }
+  function updateTotals() {
+    const c = costs(readParts());
+    $('totals').innerHTML = `<span>Total <b>${money(c.total)}</b></span><span>Self-funded <b>${money(c.own)}</b></span><span>School share <b>${money(c.school)}</b></span>${c.unpriced ? `<span style="color:var(--amber)">${c.unpriced} not priced yet</span>` : ''}`;
+  }
+  document.addEventListener('click', e => { if (e.target && e.target.id === 'addPart') { const ps = readParts(); if (ps.length < 15) { ps.push({ name: '', price: '', mine: false }); renderParts(ps); } } });
+
+  // ---------- evaluation ----------
+  const fits = (dims, lim) => { const d = dims.slice().sort((x, y) => y - x), l = lim.slice().sort((x, y) => y - x); return d.every((v, i) => v <= l[i]); };
+  function evaluate(n) {
+    const out = (r, why, next) => ({ r, why, next: next || '' });
+    if (n === 1) {
+      const a = { mech: val('g1mech'), elec: val('g1elec'), s: val('g1s'), d: val('g1d'), m: val('g1m'), link: rval('g1link') };
+      if (!a.link) return { err: 'Choose how the electronics affect the mechanism.' };
+      if (!a.mech || !a.elec) return { a, res: out('R', 'One subsystem is missing.', 'Add the missing subsystem: something that moves (mechanical) or something that senses and controls it (electrotechnological).') };
+      if (a.link === 'none') return { a, res: out('R', "The parts don't affect each other. They only share a box.", 'Add a sensor or controller that changes how the mechanism moves.') };
+      if (a.link === 'switch') return { a, res: out('A', 'Both subsystems exist, but the electronics only switch it on and off.', 'Add a sensor or a control decision so the system responds to something.') };
+      if (!a.s || !a.d || !a.m) return { err: 'Finish the sentence. It proves the two subsystems are linked.' };
+      return { a, res: out('G', `Integrated: it senses ${a.s}, ${a.d}, and the ${a.m} moves.`, 'Check your wording with your teacher against the study design.') };
+    }
+    if (n === 2) {
+      const a = { src: rval('g2src'), v: val('g2v'), type: rval('g2type') || 'DC', heat: rval('g2heat') };
+      if (!a.src) return { err: 'Choose what powers it.' };
+      if (!a.heat) return { err: 'Answer the heat / current question (Not sure is fine).' };
+      const v = num(a.v);
+      if (a.src === 'mains') return { a, res: out('R', 'Mains (240 V) wired into the project.', 'Use a plug pack so the mains stays outside your project, and run the project at 12 V DC or below.') };
+      if (v !== null && ((a.type === 'AC' && v > MAX_AC) || (a.type === 'DC' && v > MAX_DC)))
+        return { a, res: out('R', `${v} V ${a.type} is above VCAA's limit for student electrical work (${MAX_AC} V AC / ${MAX_DC} V ripple-free DC).`, `Redesign to run at ${SAFE_DC} V DC or below.`) };
+      const why = [];
+      if (v === null) why.push('voltage not known yet');
+      if (a.src === 'lipo') why.push('LiPo / rechargeable pack');
+      if (v !== null && a.type === 'AC') why.push('AC supply');
+      if (v !== null && a.type === 'DC' && v > SAFE_DC) why.push(`over ${SAFE_DC} V DC`);
+      if (a.heat === 'yes') why.push('high-current or heating parts');
+      if (a.heat === 'unsure') why.push('not sure about current draw');
+      if (why.length) return { a, res: out('A', 'Needs a closer look: ' + why.join(', ') + '.', v === null ? 'Find out your supply voltage, then write a short safety plan with your teacher.' : 'Write a short safety plan (charging, fusing, heat) and check it with your teacher.') };
+      return { a, res: out('G', `${v} V DC (${SOURCES[a.src]}).`, '') };
+    }
+    if (n === 3) {
+      const a = { l: val('g3l'), w: val('g3w'), h: val('g3h'), apart: rval('g3apart'), pl: val('g3pl'), pw: val('g3pw'), ph: val('g3ph'), live: rval('g3live') };
+      const dims = [num(a.l), num(a.w), num(a.h)];
+      if (dims.some(d => !d)) return { err: 'Enter all three sizes in mm. A rough guess is fine.' };
+      if (!a.apart) return { err: 'Say whether it can come apart.' };
+      if (!a.live) return { err: 'Say where it will live between lessons.' };
+      const packed = [num(a.pl), num(a.pw), num(a.ph)], hasPacked = a.apart === 'yes' && packed.every(Boolean);
+      const sizeTxt = dims.join(' × ') + ' mm';
+      if (fits(dims, BOX)) return { a, res: out('G', `${sizeTxt} fits the storage space (${boxTxt}).`, '') };
+      if (hasPacked && fits(packed, BOX)) return { a, res: out('G', `Packs down to ${packed.join(' × ')} mm, which fits the storage space.`, 'Plan how it comes apart without damaging the wiring.') };
+      if (fits(dims, AMBER_MAX) || (hasPacked && fits(packed, AMBER_MAX)))
+        return { a, res: out('A', `${sizeTxt} is bigger than the storage space (${boxTxt}).`, 'Agree a storage spot with your teacher before you start building.') };
+      return { a, res: out('R', `${sizeTxt} is too big to store in class (limit ${AMBER_MAX.join(' × ')} mm).`, 'Build a scale model, or one working module of the full system.') };
+    }
+    if (n === 4) {
+      const a = { procs: PROCS.filter(p => chk('g4p_' + p.k)).map(p => p.k), mats: MATS.filter(m => chk('g4m_' + m.k)).map(m => m.k), millBig: chk('g4millbig') };
+      if (!a.procs.length) return { err: 'Tick at least one process.' };
+      if (!a.mats.length) return { err: 'Tick at least one material.' };
+      if (!a.procs.includes('mill')) a.millBig = false;
+      const red = []; if (a.procs.includes('weld')) red.push('welding (not available)'); if (a.mats.includes('mdf')) red.push('MDF (banned)');
+      if (red.length) return { a, res: out('R', 'Uses ' + red.join(' and ') + '.', [a.procs.includes('weld') ? 'Redesign joints as bolted, riveted, folded sheet metal or 3D printed.' : '', a.mats.includes('mdf') ? 'Use plywood, pine, acrylic or aluminium instead of MDF.' : ''].filter(Boolean).join(' ')) };
+      const ts = PROCS.filter(p => p.ts && a.procs.includes(p.k)).map(p => p.t.split(' (')[0].toLowerCase());
+      const amb = ts.slice(); if (a.millBig) amb.push('milling a large part');
+      if (amb.length) return { a, res: out('A', 'Needs ' + amb.join(', ') + '.', ts.length ? 'Check with your teacher and book Banyule Nillumbik Tech School access early.' : 'Check with your teacher whether the mill can handle that part.') };
+      return { a, res: out('G', 'Everything can be made in our workshop.', '') };
+    }
+    if (n === 5) {
+      const a = { parts: readParts().filter(p => p.name || p.price), plan: chk('g5plan') };
+      const c = costs(a.parts);
+      if (!c.named) return { err: 'List at least your main part, even without a price.' };
+      Object.assign(a, { total: Math.round(c.total), own: Math.round(c.own), unpriced: c.unpriced });
+      const plan = a.plan || c.own >= c.total - BUDGET;
+      const up = c.unpriced ? ` ${c.unpriced} part${c.unpriced > 1 ? 's' : ''} not priced yet.` : '';
+      if (c.total > BUDGET_MAX) return { a, res: out('R', `Total about ${money(c.total)}, over the ${money(BUDGET_MAX)} limit.${up}`, 'Cut the scope to one working module, or swap the most expensive parts.') };
+      if (c.total > BUDGET) {
+        if (!plan) return { a, res: out('R', `Total about ${money(c.total)}, over ${money(BUDGET)} with no plan to pay for the extra.${up}`, `Plan how you'll pay for the extra, or cut the cost below ${money(BUDGET)}.`) };
+        return { a, res: out('A', `Total about ${money(c.total)}, with a plan to self-fund the extra.${up}`, 'Confirm how you\'ll pay for the extra' + (c.unpriced ? ', and price every part before the next lesson.' : '.')) };
+      }
+      if (c.unpriced) return { a, res: out('A', `About ${money(c.total)} so far.${up}`, 'Price every part before the next lesson.') };
+      return { a, res: out('G', `Total about ${money(c.total)}: within the ${money(BUDGET)} budget.`, '') };
+    }
+    if (n === 6) {
+      const a = { mod: rval('g6mod'), hard: val('g6hard'), before: rval('g6before'), fall: val('g6fall') };
+      if (!a.mod) return { err: 'Choose how many modules.' };
+      if (!a.hard) return { err: 'Name the hardest part.' };
+      if (!a.before) return { err: 'Say whether you have done something like it before.' };
+      const why = []; if (a.mod === 'c') why.push('5 or more modules is a big build');
+      if (a.fall.length < 10) why.push('no fallback version yet');
+      if (why.length) return { a, res: out('A', why.join('; ') + '.', a.fall.length < 10 ? 'Write down a smaller fallback version that still works as a whole system.' : 'Agree milestones with your teacher so the core system works first.') };
+      return { a, res: out('G', 'A realistic size, with a fallback version planned.', '') };
+    }
+  }
+  function showResult(r, fresh) {
+    const box = $('result');
+    box.className = 'result show ' + r.r;
+    const nextG = GATES.find(g => !S.res[g.n]);
+    box.innerHTML = `<div class="big">● ${RES[r.r]}: ${RES_LONG[r.r]}</div><div>${esc(r.why)}</div>${r.next ? `<div class="nx"><b>Next step:</b> ${esc(r.next)}</div>` : ''}
+      ${r.r === 'R' ? '<div class="note" style="color:#fcc">A red is not a dead end. Change your answers or your idea and check again.</div>' : ''}
+      <div class="actions">${nextG ? `<button class="btn" id="goNext">NEXT: CHECK ${nextG.n} ▶</button>` : `<button class="btn" id="goMap">ALL CHECKS DONE ▶</button>`}</div>`;
+    if (nextG) $('goNext').addEventListener('click', () => openGate(nextG.n)); else $('goMap').addEventListener('click', () => { renderMap(); show('mapScreen'); });
+    if (fresh) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  $('checkBtn').addEventListener('click', () => {
+    const e = evaluate(G);
+    if (e.err) { $('gateErr').textContent = e.err; sfx.bad(); return; }
+    $('gateErr').textContent = '';
+    S.g[G] = e.a; S.res[G] = e.res; save();
+    post('vault', { vault: G, question_id: 'GATE' + G, payload: { gate: G, r: e.res.r, why: e.res.why, next: e.res.next, a: e.a } });
+    ({ G: sfx.good, A: sfx.amber, R: sfx.bad })[e.res.r]();
+    showResult(e.res, true); renderHud();
+  });
+
+  // ===================== PITCH =====================
+  function pitchPayload() {
+    const g1 = S.g[1] || {}, g2 = S.g[2] || {}, g3 = S.g[3] || {}, g5 = S.g[5] || {}, g6 = S.g[6] || {};
+    return { status: S.status, idea: S.idea, forWho: S.forWho, mech: g1.mech, elec: g1.elec,
+      results: GATES.map(g => (S.res[g.n] || {}).r || ''), size: [g3.l, g3.w, g3.h].join('x'), live: g3.live,
+      power: g2.src ? SOURCES[g2.src] + (g2.v ? ', ' + g2.v + ' V ' + (g2.type || 'DC') : '') : '',
+      total: g5.total || 0, own: g5.own || 0, fallback: g6.fall || '' };
+  }
+  function counts() { const c = { G: 0, A: 0, R: 0 }; GATES.forEach(g => { const r = S.res[g.n]; if (r) c[r.r]++; }); return c; }
+  function showEnd() {
+    const c = counts();
+    $('endSum').innerHTML = `<span style="color:var(--green)">● ${c.G} green</span> &nbsp; <span style="color:var(--amber)">● ${c.A} amber</span> &nbsp; <span style="color:var(--red)">● ${c.R} red</span><br>
+      ${c.R ? 'Sort out the reds before you commit to this idea.' : c.A ? 'Looks possible. Work through the amber next steps.' : 'Cleared for take-off. Show your teacher.'}`;
+    const g1 = S.g[1] || {};
+    $('endIdea').innerHTML = `<b style="color:var(--fly)">${esc(S.name)} (${esc(S.cls)}):</b> ${esc(S.idea)}${S.forWho ? `<br><span style="color:#aaa">For: ${esc(S.forWho)}</span>` : ''}
+      ${g1.mech ? `<br><span style="color:#aaa">Mechanical:</span> ${esc(g1.mech)}<br><span style="color:#aaa">Electrotechnological:</span> ${esc(g1.elec)}` : ''}`;
+    $('pitchRows').innerHTML = GATES.map(g => { const r = S.res[g.n] || {};
+      return `<div class="pr"><div class="k ${r.r}">${g.icon} ${esc(g.title)}<br>● ${RES[r.r] || ''}</div><div><div class="why">${esc(r.why)}</div>${r.next ? `<div class="nx"><b>Next:</b> ${esc(r.next)}</div>` : ''}</div></div>`; }).join('');
+    renderRating(); show('end');
+  }
+  $('backMap').addEventListener('click', () => { renderMap(); show('mapScreen'); });
+
+  function pitchText() {
+    const L = [`WILL IT FLY? – PROJECT CHECK`, `${S.name} (${S.cls}) · ${new Date(S.finishedAt || Date.now()).toLocaleDateString('en-AU')}`, '', `IDEA: ${S.idea}`];
+    if (S.forWho) L.push(`FOR: ${S.forWho}`);
+    const g1 = S.g[1] || {}; if (g1.mech) L.push(`MECHANICAL: ${g1.mech}`, `ELECTROTECHNOLOGICAL: ${g1.elec}`);
+    L.push('');
+    GATES.forEach(g => { const r = S.res[g.n] || {}; L.push(`${g.n}. ${g.title.toUpperCase()}: ${RES[r.r] || '-'}`, `   ${r.why || ''}`); if (r.next) L.push(`   Next: ${r.next}`); });
+    L.push('', 'NEXT: LEVEL 3 – THE 9–10 EVIDENCE LAB');
+    return L.join('\n');
+  }
+  $('exCopy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(pitchText()); $('exMsg').textContent = 'Copied. Paste it into your folio notes or Teams.'; }
+    catch (e) { $('exMsg').textContent = 'Copy blocked by the browser. Use Print / PDF instead.'; }
+  });
+  $('exPrint').addEventListener('click', () => {
+    const g1 = S.g[1] || {};
+    $('printPitch').innerHTML = `<h1>Will It Fly? – Project Check</h1><p>${esc(S.name)} (${esc(S.cls)}) · ${new Date(S.finishedAt || Date.now()).toLocaleDateString('en-AU')}</p>
+      <div class="pc"><b>Idea:</b> ${esc(S.idea)}${S.forWho ? `<br><b>For:</b> ${esc(S.forWho)}` : ''}${g1.mech ? `<br><b>Mechanical:</b> ${esc(g1.mech)}<br><b>Electrotechnological:</b> ${esc(g1.elec)}` : ''}</div>` +
+      GATES.map(g => { const r = S.res[g.n] || {}; return `<div class="pc"><b>${g.n}. ${esc(g.title)}: ${RES[r.r] || '–'}</b><br>${esc(r.why)}${r.next ? `<br><i>Next step:</i> ${esc(r.next)}` : ''}</div>`; }).join('') +
+      '<p><b>Next: Level 3 – The 9–10 Evidence Lab</b></p>';
+    window.print();
+  });
+
+  function wrapText(g, text, x, y, maxW, lh, maxLines) {
+    const words = String(text).split(/\s+/).filter(Boolean); let line = '', n = 0;
+    for (const w of words) { const t = line ? line + ' ' + w : w;
+      if (g.measureText(t).width > maxW && line) { n++; if (n === maxLines) { g.fillText(line + ' …', x, y); return y + lh; } g.fillText(line, x, y); y += lh; line = w; } else line = t; }
+    if (line) { g.fillText(line, x, y); y += lh; } return y;
+  }
+  function checkCode(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0; return h.toString(36).toUpperCase().slice(-5).padStart(5, '0'); }
+  const COL = { G: '#4ade80', A: '#fbbf24', R: '#f87171' };
+  $('exCard').addEventListener('click', () => {
+    const W = 1000, H = 1400, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+    g.fillStyle = '#0f0702'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#fb923c'; g.lineWidth = 6; g.strokeRect(20, 20, W - 40, H - 40);
+    g.strokeStyle = '#facc15'; g.lineWidth = 2; g.strokeRect(36, 36, W - 72, H - 72);
+    g.textAlign = 'center';
+    g.fillStyle = '#fb923c'; g.font = 'bold 26px monospace'; g.fillText('SYSTEMS ENGINEERING · PROJECT CHECK', W / 2, 92);
+    g.fillStyle = '#fff'; g.font = 'bold 64px monospace'; g.fillText('WILL IT FLY?', W / 2, 165);
+    g.fillStyle = '#fff'; g.font = 'bold 32px monospace'; g.fillText(`${S.name}  |  ${S.cls}`, W / 2, 225);
+    g.fillStyle = '#aaa'; g.font = '22px monospace';
+    g.fillText(new Date(S.finishedAt || Date.now()).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), W / 2, 260);
+    g.textAlign = 'left';
+    g.fillStyle = '#facc15'; g.font = 'bold 24px monospace'; g.fillText('MY IDEA', 60, 315);
+    g.fillStyle = '#fff'; g.font = '24px monospace'; let y = wrapText(g, S.idea, 60, 350, W - 120, 32, 3);
+    y += 10;
+    GATES.forEach(gt => {
+      const r = S.res[gt.n] || {}, bh = 118;
+      g.strokeStyle = COL[r.r] || '#555'; g.lineWidth = 3; g.strokeRect(60, y, W - 120, bh);
+      g.fillStyle = COL[r.r] || '#555'; g.beginPath(); g.arc(95, y + 34, 16, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff'; g.font = 'bold 24px monospace'; g.fillText(`${gt.n}. ${gt.title.toUpperCase()}`, 125, y + 42);
+      g.textAlign = 'right'; g.fillStyle = COL[r.r] || '#aaa'; g.fillText(RES[r.r] || '', W - 80, y + 42); g.textAlign = 'left';
+      g.fillStyle = '#ccc'; g.font = '18px monospace'; let yy = wrapText(g, r.why || '', 80, y + 72, W - 160, 22, 1);
+      if (r.next) { g.fillStyle = '#fff'; wrapText(g, 'Next: ' + r.next, 80, yy + 2, W - 160, 22, 1); }
+      y += bh + 10;
+    });
+    y += 6;
+    g.strokeStyle = '#ff4ecf'; g.setLineDash([10, 8]); g.strokeRect(60, y, W - 120, 60); g.setLineDash([]);
+    g.textAlign = 'center'; g.fillStyle = '#ff4ecf'; g.font = 'bold 24px monospace'; g.fillText('NEXT: LEVEL 3 – THE 9–10 EVIDENCE LAB', W / 2, y + 39);
+    g.textAlign = 'left'; g.fillStyle = '#888'; g.font = '18px monospace'; g.fillText(SHARE_INSTRUCTION, 60, H - 56);
+    g.textAlign = 'right'; g.fillStyle = '#fb923c'; g.font = 'bold 22px monospace';
+    g.fillText('Code: ' + checkCode([S.name, S.cls, S.playerId, GATES.map(x => (S.res[x.n] || {}).r).join(''), S.finishedAt].join('|')), W - 60, H - 56);
+    const safe = s => String(s).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+    const filename = `Will-It-Fly-${safe(S.name)}-${safe(S.cls)}.png`;
+    const finish = url => { const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      $('exMsg').textContent = `Card downloaded (${filename}). ${SHARE_INSTRUCTION}`; };
+    if (c.toBlob) c.toBlob(b => { if (!b) return finish(c.toDataURL('image/png')); const u = URL.createObjectURL(b); finish(u); setTimeout(() => URL.revokeObjectURL(u), 10000); }, 'image/png');
+    else finish(c.toDataURL('image/png'));
+  });
+
+  function renderRating() { document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('on', S && Number(b.dataset.r) === S.rating)); }
+  document.querySelectorAll('.rate-btn').forEach(b => b.addEventListener('click', () => {
+    if (!S) return; const r = Number(b.dataset.r); if (S.rating === r) return;
+    S.rating = r; save(); post('answer', { vault: 9, question_id: 'RATING:' + r }); sfx.good();
+    $('rateMsg').textContent = 'Thanks! You can change your answer.'; renderRating();
+  }));
+
+  document.addEventListener('keydown', e => {
+    if ($('splash').classList.contains('on')) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFresh(); } return; }
+    if ($('signin').classList.contains('on') && e.key === 'Enter') { e.preventDefault(); trySignIn(); }
+  });
+
+  renderResume();
+  flush();
+</script>
+</body>
+</html>
