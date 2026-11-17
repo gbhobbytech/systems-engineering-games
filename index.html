@@ -48,9 +48,10 @@
     position: absolute; top: -12px; right: 12px; background: var(--gold); color: #000; font-weight: bold;
     font-size: 12px; padding: 4px 8px; border-radius: 4px; letter-spacing: 1px;
   }
-  .l3 { border-style: dashed; border-color: #555; opacity: 0.7; }
-  .l3 h2 { color: #888; }
-  .l3 .btn { background: #111; color: #666; border: 1px solid #333; cursor: default; }
+  .l3 { border-color: #2dd4bf; box-shadow: 0 0 26px rgba(45,212,191,0.35); }
+  .l3 h2 { color: #2dd4bf; }
+  .l3 .btn { background: linear-gradient(90deg, #2dd4bf, var(--cyan)); color: #000; }
+  .l2 { transform: none; box-shadow: none; }
   .done { color: var(--green); font-size: 13px; }
   footer { margin-top: 40px; font-size: 12px; color: #777; }
   footer a { color: #888; }
@@ -75,7 +76,6 @@
     </div>
 
     <div class="lvl l2">
-      <div class="badge">START HERE</div>
       <div class="n">LEVEL 2</div>
       <h2>Rubric Heist</h2>
       <p>Crack 8 vaults, one for each SAT criterion, using your printed rubric. Live leaderboard: get your session code from the board at the front.</p>
@@ -84,11 +84,16 @@
     </div>
 
     <div class="lvl l3">
+      <div class="badge">NEW</div>
       <div class="n">LEVEL 3</div>
-      <h2>🔒 The 9–10 Evidence Lab</h2>
-      <p>What very-high-band evidence actually looks like for each criterion, and how to build it. Unlocks in a later lesson. Keep your Level 2 card: your targets are your starting point.</p>
-      <span class="btn">COMING SOON</span>
+      <h2>The 9–10 Evidence Lab</h2>
+      <p>Compare evidence against the High and Very High descriptors for all eight criteria, then plan your own SAT evidence: what goes where in your chosen format, and what you'll do next.</p>
+      <div class="done" id="l3done"></div>
+      <a class="btn" href="evidence-lab.html">PLAY LEVEL 3 ▶</a>
     </div>
+  </div>
+  <div style="margin-top:22px; padding:12px; border:2px dashed #555; border-radius:10px; color:#888; font-weight:bold; letter-spacing:2px">
+    🔒 MORE LEVELS COMING
   </div>
 
   <footer>Teachers: <a href="dashboard.html">open the live dashboard</a></footer>
@@ -98,6 +103,9 @@
     const p = JSON.parse(localStorage.getItem('rubricHeistProgress') || 'null');
     if (p && p.done) document.getElementById('l2done').textContent = '✓ Cleared on this device';
     else if (p && p.started) document.getElementById('l2done').textContent = '▶ In progress on this device';
+    const q = JSON.parse(localStorage.getItem('evidenceLabProgress') || 'null');
+    if (q && q.done) document.getElementById('l3done').textContent = '✓ Plan finished on this device';
+    else if (q && q.started) document.getElementById('l3done').textContent = '▶ In progress on this device';
   } catch (e) {}
 </script>
 </body>

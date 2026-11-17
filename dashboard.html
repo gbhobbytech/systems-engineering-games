@@ -3,28 +3,31 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Rubric Heist – Live Dashboard</title>
+<title>Systems Engineering – Live Dashboard</title>
 <style>
   * { box-sizing: border-box; }
-  :root { --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --red: #f87171; }
+  :root { --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --red: #f87171; --lab: #2dd4bf; }
   body {
     margin: 0; min-height: 100vh; color: #eee; font-family: monospace;
     background: radial-gradient(ellipse at 50% 0%, #1d0a33 0%, #05010d 60%, #000 100%);
   }
+  body.l3 { background: radial-gradient(ellipse at 50% 0%, #062a2a 0%, #03100f 60%, #000 100%); }
   button { font-family: monospace; }
   .btn { padding: 8px 14px; border: 1px solid #555; border-radius: 6px; background: #111; color: #eee; font: bold 14px monospace; cursor: pointer; }
   .btn.main { background: linear-gradient(90deg, var(--cyan), var(--pink)); color: #000; border: none; }
+  .btn.on { background: var(--gold); color: #000; border-color: var(--gold); }
   .hidden { display: none !important; }
 
-  /* setup */
   #setup { max-width: 560px; margin: 10vh auto; padding: 22px; border: 2px solid var(--cyan); border-radius: 10px; background: rgba(0,0,0,0.8); }
   #setup h1 { color: var(--cyan); margin: 0 0 8px; }
   #setup input { width: 100%; padding: 10px; font: bold 22px monospace; letter-spacing: 6px; text-transform: uppercase; background: #111; color: #fff; border: 1px solid #555; border-radius: 6px; margin: 8px 0; }
 
-  /* board */
   #board { padding: 16px 20px 20px; }
   .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-  .title { font: bold clamp(26px, 3vw, 44px) monospace; color: #fff; text-shadow: 0 0 10px var(--gold), 0 0 26px var(--pink); }
+  .title { font: bold clamp(24px, 3vw, 42px) monospace; color: #fff; text-shadow: 0 0 10px var(--gold), 0 0 26px var(--pink); }
+  body.l3 .title { text-shadow: 0 0 10px var(--lab), 0 0 26px var(--cyan); }
+  .lvl { display: flex; gap: 6px; margin-top: 8px; }
+  .lvl .btn { padding: 5px 10px; font-size: 12px; }
   .join { text-align: right; }
   .join .lbl { color: #aaa; font-size: 14px; }
   .join .code { font: bold clamp(36px, 5vw, 70px) monospace; color: var(--gold); letter-spacing: 8px; text-shadow: 0 0 14px #f59e0b; line-height: 1; }
@@ -34,6 +37,7 @@
   .grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 16px; }
   .card { background: rgba(0,0,0,0.6); border: 1px solid #333; border-radius: 10px; padding: 12px 14px; }
   .card h2 { margin: 0 0 10px; font-size: 18px; letter-spacing: 3px; color: var(--cyan); }
+  body.l3 .card h2 { color: var(--lab); }
   table { width: 100%; border-collapse: collapse; }
   .lb td { padding: 6px 6px; font-size: clamp(16px, 1.6vw, 24px); border-bottom: 1px solid #222; }
   .lb td.r { width: 2.2em; color: #888; font-weight: bold; }
@@ -47,22 +51,30 @@
   .race .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .race .bar { height: 16px; background: #1a1a1a; border-radius: 8px; overflow: hidden; }
   .race .fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--pink)); border-radius: 8px; transition: width 0.8s ease; }
-  .race .fill.done { background: linear-gradient(90deg, var(--green), var(--gold)); }
+  body.l3 .race .fill { background: linear-gradient(90deg, var(--lab), var(--cyan)); }
+  .race .fill.done { background: linear-gradient(90deg, var(--green), var(--gold)) !important; }
   .race .v { text-align: right; color: #aaa; }
-  .race { max-height: 40vh; overflow-y: auto; }
+  .race { max-height: 46vh; overflow-y: auto; }
   .heat { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+  body.l3 .heat { grid-template-columns: repeat(8, 1fr); }
   .heat .cell { border-radius: 6px; padding: 8px 4px; text-align: center; font-weight: bold; color: #000; }
   .heat .cell .k { font-size: 12px; } .heat .cell .p { font-size: clamp(16px, 1.6vw, 24px); }
   .heat .cell.none { background: #222; color: #666; }
   .feed { font-size: 16px; line-height: 1.7; min-height: 6em; }
   .feed div { animation: slideIn 0.5s ease-out; }
   @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .mix { display: flex; flex-wrap: wrap; gap: 8px; font-size: 16px; }
+  .mix span { background: #111; border: 1px solid #333; border-radius: 6px; padding: 6px 10px; }
+  .mix b { color: var(--gold); }
+  .aim { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .aim .c { background: #111; border: 1px solid #333; border-radius: 6px; padding: 6px; text-align: center; font-size: 12px; }
+  .aim .bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; margin: 6px 0 4px; background: #222; }
+  .aim .bar .h { background: #93c5fd; } .aim .bar .vh { background: var(--gold); }
   .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; opacity: 0.55; }
   .controls:hover { opacity: 1; }
   .net { font-size: 13px; color: #888; }
   .net.off { color: var(--red); }
 
-  /* teacher view */
   #teacher { position: fixed; inset: 4vh 4vw; background: #0b0b0b; border: 2px solid var(--pink); border-radius: 10px; padding: 16px; overflow: auto; z-index: 10; }
   #teacher h2 { color: var(--pink); margin: 0 0 6px; }
   #teacher table td, #teacher table th { padding: 5px 6px; border-bottom: 1px solid #222; font-size: 13px; text-align: left; vertical-align: top; }
@@ -70,14 +82,17 @@
   .tavg { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin: 8px 0 14px; }
   .tavg div { background: #111; border: 1px solid #333; border-radius: 6px; padding: 6px; text-align: center; font-size: 13px; }
   .tavg b { display: block; color: var(--gold); font-size: 18px; }
-  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .heat { grid-template-columns: repeat(3, 1fr); } .tavg { grid-template-columns: repeat(4, 1fr); } }
+  .planbox { background: #071010; border: 1px solid #2f4f4f; border-radius: 6px; padding: 8px 10px; margin: 6px 0; font-size: 13px; line-height: 1.5; }
+  .planbox b { color: var(--lab); }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .heat, body.l3 .heat { grid-template-columns: repeat(3, 1fr); } .tavg, .aim { grid-template-columns: repeat(4, 1fr); } }
 </style>
 </head>
 <body>
 
 <div id="setup" class="hidden">
-  <h1>Rubric Heist – Live Dashboard</h1>
+  <h1>Live Dashboard</h1>
   <p>Start a session for this class. Students type the code when they sign in.</p>
+  <div class="lvl" id="setupLvl" style="margin-bottom:6px"></div>
   <input id="codeIn" maxlength="8" placeholder="SE12A" />
   <div style="display:flex; gap:8px; flex-wrap:wrap">
     <button class="btn main" id="startBtn">START SESSION</button>
@@ -89,7 +104,8 @@
 <div id="board" class="hidden">
   <div class="top">
     <div>
-      <div class="title">RUBRIC HEIST · LIVE</div>
+      <div class="title" id="title">RUBRIC HEIST · LIVE</div>
+      <div class="lvl" id="boardLvl"></div>
       <div class="net" id="net">connecting…</div>
     </div>
     <div class="join">
@@ -101,24 +117,31 @@
   <div class="stats">
     <span>Joined <b id="stJoined">0</b></span>
     <span>Finished <b id="stDone">0</b></span>
-    <span>Vaults cracked <b id="stVaults">0</b></span>
+    <span id="stVaultsWrap"><span id="stVaultsLbl">Vaults cracked</span> <b id="stVaults">0</b></span>
     <span>Session time <b id="stTime">0:00</b></span>
     <span>Level rating <b id="stRate">–</b></span>
   </div>
   <div class="grid">
-    <div class="card"><h2>🏆 LEADERBOARD</h2><table class="lb"><tbody id="lb"></tbody></table></div>
+    <div class="card" id="lbCard"><h2>🏆 LEADERBOARD</h2><table class="lb"><tbody id="lb"></tbody></table></div>
+    <div class="card hidden" id="raceBig"><h2>🧪 PLANS IN PROGRESS</h2><div class="race" id="raceL3"></div></div>
     <div>
-      <div class="card"><h2>🏁 THE RACE</h2><div class="race" id="race"></div></div>
-      <div class="card" style="margin-top:16px"><h2>📡 LIVE FEED</h2><div class="feed" id="feed"></div></div>
+      <div class="card" id="raceCard"><h2>🏁 THE RACE</h2><div class="race" id="race"></div></div>
+      <div class="card" id="feedCard" style="margin-top:16px"><h2>📡 LIVE FEED</h2><div class="feed" id="feed"></div></div>
     </div>
   </div>
   <div class="card" style="margin-top:16px">
-    <h2>🔥 CLASS HEATMAP – % correct first try</h2>
+    <h2 id="heatTitle">🔥 CLASS HEATMAP – % correct first try</h2>
     <div class="heat" id="heat"></div>
+  </div>
+  <div class="grid hidden" id="l3extra" style="margin-top:16px">
+    <div class="card"><h2>🧭 FORMAT MIX</h2><div class="mix" id="mix"></div></div>
+    <div class="card"><h2>🎯 AIMING FOR (counts only)</h2><div class="aim" id="aim"></div>
+      <div class="net" style="margin-top:6px"><span style="color:#93c5fd">■</span> High (7–8) &nbsp; <span style="color:var(--gold)">■</span> Very High (9–10)</div></div>
   </div>
   <div class="controls">
     <button class="btn" id="tBtn">TEACHER VIEW (T)</button>
     <button class="btn" id="fsBtn">FULL SCREEN (F)</button>
+    <button class="btn hidden" id="lbToggle">LEADERBOARD: OFF</button>
     <button class="btn" id="csvBtn">EXPORT CSV</button>
     <button class="btn" id="newBtn">NEW SESSION</button>
   </div>
@@ -129,10 +152,10 @@
     <h2>Teacher view (private – don't project)</h2>
     <button class="btn" id="tClose">CLOSE (T)</button>
   </div>
-  <div class="net">Average target band per criterion (from students who finished):</div>
+  <div class="net" id="tavgLbl">Average target band per criterion (from students who finished):</div>
   <div class="tavg" id="tavg"></div>
   <table>
-    <thead><tr><th>Name</th><th>Class</th><th>Points</th><th>Vault</th><th>Time</th><th>Wrong first try</th><th>Hints</th><th>Targets C1–C8</th><th>Rating</th><th></th></tr></thead>
+    <thead id="thead"></thead>
     <tbody id="tbody"></tbody>
   </table>
   <p class="net">"Hide" removes someone from this dashboard only (e.g. a test or joke entry). Rows stay in Supabase until you delete them there.</p>
@@ -143,44 +166,78 @@
   const SUPABASE_KEY = 'sb_publishable_wgUH3E8Nepy-6QC_dXpVtA_Uyszqkrm';
   const RANKS = [ { min: 125, name: 'Rubric Master' }, { min: 100, name: 'Criteria Cracker' }, { min: 60, name: 'Band Climber' }, { min: 0, name: 'Rubric Rookie' } ];
   const SHORT = ['', 'Investigating', 'Designing', 'Planning', 'Implementing', 'Realisation', 'Testing', 'Project mgmt', 'Evaluating', 'Final vault'];
+  const LEVELS = { 2: { name: 'RUBRIC HEIST', file: 'rubric-heist.html' }, 3: { name: '9–10 EVIDENCE LAB', file: 'evidence-lab.html' } };
+  const FORMAT_NAMES = { website: 'Website', slides: 'Slides', interactive: 'Interactive', video: 'Video', folio: 'Folio/document', other: 'Other' };
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = s => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
   const rankFor = p => RANKS.find(r => p >= r.min).name;
 
-  let session = '', events = [], lastId = 0, players = {}, hidden = new Set(), pollTimer = null, firstAt = null;
-  let prevScores = {};
+  let level = 2, session = '', events = [], lastId = 0, players = {}, hidden = new Set(), pollTimer = null, firstAt = null;
+  let prevScores = {}, liveFeed = [], showLB3 = false;
+  try { level = Number(localStorage.getItem('dashLevel')) || 2; showLB3 = localStorage.getItem('dashLB3') === '1'; } catch (e) {}
+
+  // ---------- level switch ----------
+  function renderLevelButtons() {
+    ['setupLvl', 'boardLvl'].forEach(id => {
+      $(id).innerHTML = Object.entries(LEVELS).map(([n, l]) => `<button class="btn ${Number(n) === level ? 'on' : ''}" data-lvl="${n}">LEVEL ${n}</button>`).join('');
+      $(id).querySelectorAll('[data-lvl]').forEach(b => b.addEventListener('click', () => setLevel(Number(b.dataset.lvl))));
+    });
+  }
+  function setLevel(n) {
+    level = n;
+    try { localStorage.setItem('dashLevel', String(n)); } catch (e) {}
+    document.body.classList.toggle('l3', level === 3);
+    renderLevelButtons();
+    if (session) startSession(session);
+  }
 
   // ---------- session ----------
   function gameUrl() {
     const base = location.href.replace(/[^/]*([?#].*)?$/, '');
-    return base + 'rubric-heist.html?session=' + session;
+    return base + LEVELS[level].file + '?session=' + session;
   }
   function startSession(code) {
     session = code;
     try { localStorage.setItem('rhDashSession', code); hidden = new Set(JSON.parse(localStorage.getItem('rhHidden:' + code) || '[]')); } catch (e) {}
-    history.replaceState(null, '', '?session=' + code);
-    events = []; lastId = 0; players = {}; firstAt = null; prevScores = {};
+    history.replaceState(null, '', '?session=' + code + '&level=' + level);
+    events = []; lastId = 0; players = {}; firstAt = null; prevScores = {}; liveFeed = [];
+    $('title').textContent = LEVELS[level].name + ' · LIVE';
+    document.title = LEVELS[level].name + ' – Live Dashboard';
     $('codeShow').textContent = code;
     $('urlShow').textContent = gameUrl().replace(/^https?:\/\//, '');
     $('setup').classList.add('hidden');
     $('board').classList.remove('hidden');
-    $('feed').innerHTML = '';
+    applyLayout();
+    render(); // clear numbers from any previous level/session straight away
     clearInterval(pollTimer);
     poll();
     pollTimer = setInterval(poll, 3000);
   }
+  function applyLayout() {
+    const l3 = level === 3;
+    $('lbToggle').classList.toggle('hidden', !l3);
+    $('lbToggle').textContent = 'LEADERBOARD: ' + (showLB3 ? 'ON' : 'OFF');
+    const lbVisible = !l3 || showLB3;
+    $('lbCard').classList.toggle('hidden', !lbVisible);
+    $('raceBig').classList.toggle('hidden', !l3 || showLB3);
+    $('raceCard').classList.toggle('hidden', l3 && !showLB3);
+    $('l3extra').classList.toggle('hidden', !l3);
+    $('stVaultsLbl').textContent = l3 ? 'Criteria planned' : 'Vaults cracked';
+    $('heatTitle').textContent = l3 ? '🔥 CLASS HEATMAP – Investigate + Interpret, % correct first try' : '🔥 CLASS HEATMAP – % correct first try';
+    $('tavgLbl').textContent = l3 ? 'Aiming for Very High (share of students who planned that criterion):' : 'Average target band per criterion (from students who finished):';
+  }
+  $('lbToggle').addEventListener('click', () => {
+    showLB3 = !showLB3;
+    try { localStorage.setItem('dashLB3', showLB3 ? '1' : '0'); } catch (e) {}
+    applyLayout(); render();
+  });
   function showSetup() {
     clearInterval(pollTimer);
-    $('board').classList.add('hidden');
-    $('teacher').classList.add('hidden');
-    $('setup').classList.remove('hidden');
+    $('board').classList.add('hidden'); $('teacher').classList.add('hidden'); $('setup').classList.remove('hidden');
     $('codeIn').focus();
   }
-  function randomCode() {
-    const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let s = ''; for (let i = 0; i < 5; i++) s += ch[Math.random() * ch.length | 0]; return s;
-  }
+  function randomCode() { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 5; i++) s += ch[Math.random() * ch.length | 0]; return s; }
   $('genBtn').addEventListener('click', () => { $('codeIn').value = randomCode(); });
   $('startBtn').addEventListener('click', () => {
     const c = $('codeIn').value.trim().toUpperCase();
@@ -192,131 +249,171 @@
 
   // ---------- data ----------
   async function poll() {
+    const myLevel = level, mySession = session;
     try {
-      const url = `${SUPABASE_URL}/rest/v1/rubric_events?session_code=eq.${encodeURIComponent(session)}&id=gt.${lastId}&order=id.asc&limit=1000`;
+      const url = `${SUPABASE_URL}/rest/v1/rubric_events?session_code=eq.${encodeURIComponent(session)}&level=eq.${level}&id=gt.${lastId}&order=id.asc&limit=1000`;
       const res = await fetch(url, { headers: { apikey: SUPABASE_KEY } });
       if (!res.ok) throw new Error(res.status);
       const rows = await res.json();
+      if (myLevel !== level || mySession !== session) return; // switched while loading
       $('net').textContent = '● live · updated ' + new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       $('net').className = 'net';
-      if (rows.length) {
-        rows.forEach(r => { events.push(r); lastId = Math.max(lastId, r.id); ingest(r, true); });
-        render();
-      } else {
-        renderClock();
-      }
+      if (rows.length) { rows.forEach(r => { events.push(r); lastId = Math.max(lastId, r.id); ingest(r); }); render(); }
+      else renderClock();
     } catch (e) {
-      $('net').textContent = '● connection problem – retrying…';
-      $('net').className = 'net off';
+      $('net').textContent = '● connection problem – retrying…'; $('net').className = 'net off';
     }
   }
-
   function P(r) {
-    if (!players[r.player_id]) players[r.player_id] = { id: r.player_id, name: r.name, cls: r.class, score: 0, vault: 0, done: false, time: 0, wrong: [], hints: 0, targets: null, rating: 0 };
+    if (!players[r.player_id]) players[r.player_id] = { id: r.player_id, name: r.name, cls: r.class, score: 0, vault: 0, done: false, time: 0,
+      wrong: [], hints: 0, targets: null, rating: 0, format: '', otherFmt: '', plans: {}, planned: 0, firstAction: 0 };
     return players[r.player_id];
   }
-  let liveFeed = [];
-  function ingest(r, live) {
+  function ingest(r) {
     const p = P(r);
     if (!firstAt || new Date(r.created_at) < firstAt) firstAt = new Date(r.created_at);
     p.time = Math.max(p.time, r.elapsed_s || 0);
-    if (r.event === 'answer') {
-      if (r.question_id && r.question_id.startsWith('TARGETS:')) {
-        p.targets = r.question_id.slice(8).split(',').map(Number);
-      } else if (r.question_id && r.question_id.startsWith('RATING:')) {
-        p.rating = Number(r.question_id.slice(7)); // latest answer wins
-      } else {
+    const qid = r.question_id || '';
+    const pl = r.payload || {};
+    if (r.event === 'join') {
+      if (pl.format) { p.format = pl.format; p.otherFmt = pl.other || ''; }
+      pushFeed(level === 3 ? `🧪 <b>${esc(p.name)}</b> entered the lab${p.format ? ' (' + esc(FORMAT_NAMES[p.format] || p.format) + ')' : ''}` : `👋 <b>${esc(p.name)}</b> joined the heist`);
+    } else if (r.event === 'answer') {
+      if (qid.startsWith('TARGETS:')) p.targets = qid.slice(8).split(',').map(Number);
+      else if (qid.startsWith('RATING:')) p.rating = Number(qid.slice(7));
+      else if (qid === 'FORMAT') { if (pl.format) { p.format = pl.format; p.otherFmt = pl.other || ''; } }
+      else if (qid === 'PLAN-UPDATE') { if (pl.format) p.format = pl.format; if (pl.firstAction) p.firstAction = pl.firstAction; }
+      else {
         p.score += r.score || 0;
-        if (r.question_id && r.question_id.endsWith('+hint')) p.hints++;
-        if (r.correct === false) p.wrong.push((r.question_id || '').replace('+hint', ''));
+        if (qid.endsWith('+hint')) p.hints++;
+        if (r.correct === false) p.wrong.push(qid.replace('+hint', '').replace('L3:', ''));
       }
     } else if (r.event === 'vault') {
-      p.vault = Math.max(p.vault, r.vault || 0);
-      if (live) pushFeed(`🔓 <b>${esc(p.name)}</b> cracked Vault ${r.vault}!`);
+      if (level === 3 && pl.criterion) {
+        const isNew = !p.plans[pl.criterion];
+        p.plans[pl.criterion] = pl;
+        p.planned = Object.keys(p.plans).length;
+        p.vault = Math.max(p.vault, p.planned);
+        if (typeof r.score === 'number') p.score = Math.max(p.score, r.score);
+        if (isNew) pushFeed(`📋 <b>${esc(p.name)}</b> planned Criterion ${pl.criterion}: aiming for ${pl.target === 'VH' ? 'Very High' : 'High'}`);
+      } else {
+        p.vault = Math.max(p.vault, r.vault || 0);
+        pushFeed(`🔓 <b>${esc(p.name)}</b> cracked Vault ${r.vault}!`);
+      }
     } else if (r.event === 'finish') {
-      p.vault = 9; p.done = true; p.time = r.elapsed_s || p.time;
-      if (live) pushFeed(`🏆 <b>${esc(p.name)}</b> finished: ${esc(rankFor(r.score || p.score))}!`);
-    } else if (r.event === 'join') {
-      if (live) pushFeed(`👋 <b>${esc(p.name)}</b> joined the heist`);
+      p.done = true; p.time = r.elapsed_s || p.time;
+      if (level === 3) {
+        if (pl.format) p.format = pl.format; if (pl.firstAction) p.firstAction = pl.firstAction;
+        p.vault = 8; pushFeed(`🏁 <b>${esc(p.name)}</b> finished their SAT evidence plan!`);
+      } else {
+        p.vault = 9; pushFeed(`🏆 <b>${esc(p.name)}</b> finished: ${esc(rankFor(r.score || p.score))}!`);
+      }
     }
   }
-  function pushFeed(html) {
-    liveFeed.unshift(html);
-    liveFeed = liveFeed.slice(0, 7);
-  }
+  function pushFeed(html) { liveFeed.unshift(html); liveFeed = liveFeed.slice(0, 7); }
   function visiblePlayers() { return Object.values(players).filter(p => !hidden.has(p.id)); }
 
   // ---------- render ----------
-  function renderClock() {
-    $('stTime').textContent = firstAt ? fmt((Date.now() - firstAt.getTime()) / 1000) : '0:00';
-  }
+  function renderClock() { $('stTime').textContent = firstAt ? fmt((Date.now() - firstAt.getTime()) / 1000) : '0:00'; }
   function render() {
-    const ps = visiblePlayers();
+    const ps = visiblePlayers(), l3 = level === 3, maxV = l3 ? 8 : 9;
     $('stJoined').textContent = ps.length;
     $('stDone').textContent = ps.filter(p => p.done).length;
-    $('stVaults').textContent = ps.reduce((t, p) => t + Math.min(p.vault, 8), 0);
+    $('stVaults').textContent = l3 ? ps.reduce((t, p) => t + p.planned, 0) : ps.reduce((t, p) => t + Math.min(p.vault, 8), 0);
     renderClock();
     const rc3 = [1, 2, 3].map(n => ps.filter(p => p.rating === n).length);
     $('stRate').innerHTML = rc3.some(Boolean) ? `😴 ${rc3[0]} &nbsp;🙂 ${rc3[1]} &nbsp;🔥 ${rc3[2]}` : '–';
 
-    // leaderboard: points, then time
+    // leaderboard
     const lb = ps.slice().sort((a, b) => b.score - a.score || (b.done - a.done) || a.time - b.time).slice(0, 10);
     $('lb').innerHTML = lb.map((p, i) => {
       const changed = prevScores[p.id] !== undefined && prevScores[p.id] !== p.score;
+      const where = p.done ? fmt(p.time) : l3 ? `${p.planned}/8` : (p.vault >= 8 ? 'Final' : 'Vault ' + (p.vault + 1));
       return `<tr class="${changed ? 'flash' : ''}"><td class="r">${i + 1}</td><td class="n">${esc(p.name)}${p.done ? ' ✓' : ''}</td>
-        <td class="s">${p.score}</td><td class="t">${p.done ? fmt(p.time) : (p.vault >= 8 ? 'Final' : 'Vault ' + (p.vault + 1))}</td></tr>`;
+        <td class="s">${p.score}</td><td class="t">${where}</td></tr>`;
     }).join('') || '<tr><td style="color:#777">Waiting for players… share the code!</td></tr>';
     ps.forEach(p => prevScores[p.id] = p.score);
 
     // race
     const rc = ps.slice().sort((a, b) => b.vault - a.vault || b.score - a.score);
-    $('race').innerHTML = rc.map(p => `<div class="row"><div class="name">${esc(p.name)}</div>
-      <div class="bar"><div class="fill ${p.done ? 'done' : ''}" style="width:${(p.vault / 9) * 100}%"></div></div>
-      <div class="v">${p.done ? '🏆' : p.vault + '/9'}</div></div>`).join('') || '<div style="color:#777">No one yet.</div>';
+    const raceHtml = rc.map(p => `<div class="row"><div class="name">${esc(p.name)}</div>
+      <div class="bar"><div class="fill ${p.done ? 'done' : ''}" style="width:${(p.vault / maxV) * 100}%"></div></div>
+      <div class="v">${p.done ? (l3 ? '✅' : '🏆') : p.vault + '/' + maxV}</div></div>`).join('') || '<div style="color:#777">No one yet.</div>';
+    $('race').innerHTML = raceHtml; $('raceL3').innerHTML = raceHtml;
 
     // heatmap
     const stats = {};
     events.forEach(r => {
-      if (r.event !== 'answer' || hidden.has(r.player_id) || !r.vault || /^(TARGETS|RATING):/.test(r.question_id || '')) return;
-      stats[r.vault] = stats[r.vault] || { n: 0, c: 0 };
-      stats[r.vault].n++; if (r.correct) stats[r.vault].c++;
+      if (r.event !== 'answer' || hidden.has(r.player_id) || !r.vault) return;
+      const q = r.question_id || '';
+      if (/^(TARGETS|RATING):/.test(q) || q === 'FORMAT' || q === 'PLAN-UPDATE') return;
+      stats[r.vault] = stats[r.vault] || { n: 0, c: 0 }; stats[r.vault].n++; if (r.correct) stats[r.vault].c++;
     });
     let h = '';
-    for (let v = 1; v <= 9; v++) {
-      const s = stats[v];
-      if (!s) { h += `<div class="cell none"><div class="k">${v === 9 ? 'FINAL' : 'C' + v}</div><div class="p">–</div><div class="k">${SHORT[v]}</div></div>`; continue; }
-      const pct = Math.round((s.c / s.n) * 100);
-      const hue = Math.round((pct / 100) * 120); // red → green
-      h += `<div class="cell" style="background:hsl(${hue},75%,55%)"><div class="k">${v === 9 ? 'FINAL' : 'C' + v}</div><div class="p">${pct}%</div><div class="k">${SHORT[v]}</div></div>`;
+    for (let v = 1; v <= maxV; v++) {
+      const s = stats[v], label = v === 9 ? 'FINAL' : 'C' + v;
+      if (!s) { h += `<div class="cell none"><div class="k">${label}</div><div class="p">–</div><div class="k">${SHORT[v]}</div></div>`; continue; }
+      const pct = Math.round((s.c / s.n) * 100), hue = Math.round((pct / 100) * 120);
+      h += `<div class="cell" style="background:hsl(${hue},75%,55%)"><div class="k">${label}</div><div class="p">${pct}%</div><div class="k">${SHORT[v]}</div></div>`;
     }
     $('heat').innerHTML = h;
-
     $('feed').innerHTML = liveFeed.map(f => `<div>${f}</div>`).join('') || '<div style="color:#777">Events will appear here.</div>';
+
+    if (l3) {
+      const mix = {}; ps.forEach(p => { if (p.format) mix[p.format] = (mix[p.format] || 0) + 1; });
+      $('mix').innerHTML = Object.entries(mix).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<span><b>${n}</b> ${esc(FORMAT_NAMES[k] || k)}</span>`).join('') || '<span style="color:#777">No formats chosen yet</span>';
+      let a = '';
+      for (let c = 1; c <= 8; c++) {
+        const H = ps.filter(p => p.plans[c] && p.plans[c].target === 'H').length, VH = ps.filter(p => p.plans[c] && p.plans[c].target === 'VH').length, tot = H + VH;
+        a += `<div class="c">C${c} ${SHORT[c]}<div class="bar">${tot ? `<div class="h" style="width:${H / tot * 100}%"></div><div class="vh" style="width:${VH / tot * 100}%"></div>` : ''}</div>${tot ? `${H} · ${VH}` : '–'}</div>`;
+      }
+      $('aim').innerHTML = a;
+    }
     renderTeacher();
   }
 
   function renderTeacher() {
-    const all = Object.values(players).sort((a, b) => b.score - a.score);
-    $('tbody').innerHTML = all.map(p => `<tr style="${hidden.has(p.id) ? 'opacity:.4' : ''}">
-      <td>${esc(p.name)}</td><td>${esc(p.cls)}</td><td>${p.score}</td><td>${p.done ? 'done' : p.vault + '/9'}</td><td>${fmt(p.time)}</td>
-      <td>${esc(p.wrong.join(', ')) || '–'}</td><td>${p.hints}</td>
-      <td>${p.targets ? p.targets.map(t => t + '–' + (t + 1)).join(' · ') : '–'}</td>
-      <td>${['–', '😴', '🙂', '🔥'][p.rating || 0]}</td>
-      <td><button class="btn" data-hide="${esc(p.id)}">${hidden.has(p.id) ? 'Unhide' : 'Hide'}</button></td></tr>`).join('');
+    const all = Object.values(players).sort((a, b) => level === 3 ? (b.planned - a.planned || a.name.localeCompare(b.name)) : b.score - a.score);
+    const hideBtn = p => `<button class="btn" data-hide="${esc(p.id)}">${hidden.has(p.id) ? 'Unhide' : 'Hide'}</button>`;
+    if (level === 3) {
+      $('thead').innerHTML = '<tr><th>Name</th><th>Class</th><th>Format</th><th>Planned</th><th>Points</th><th>Wrong first try</th><th>Rating</th><th>Plan</th><th></th></tr>';
+      $('tbody').innerHTML = all.map(p => {
+        const fmtTxt = p.format === 'other' ? 'Other: ' + p.otherFmt : (FORMAT_NAMES[p.format] || '–');
+        const plans = Object.keys(p.plans).sort((a, b) => a - b).map(c => { const x = p.plans[c];
+          return `<div class="planbox"><b>C${c} ${esc(SHORT[c])} · ${x.target === 'VH' ? 'Very High' : 'High'}${Number(c) === p.firstAction ? ' · ★ first action' : ''}</b><br>
+            Where: ${esc(x.where)}<br>Evidence: ${esc((x.evidence || []).join(' · '))}<br>How: ${esc(x.how)}<br>Next: ${esc(x.next)}</div>`; }).join('');
+        return `<tr style="${hidden.has(p.id) ? 'opacity:.4' : ''}"><td>${esc(p.name)}</td><td>${esc(p.cls)}</td><td>${esc(fmtTxt)}</td>
+          <td>${p.done ? '✅ 8/8' : p.planned + '/8'}</td><td>${p.score}</td><td>${esc(p.wrong.join(', ')) || '–'}</td><td>${['–', '😴', '🙂', '🔥'][p.rating || 0]}</td>
+          <td>${plans ? `<details><summary>View plan</summary>${plans}</details>` : '–'}</td><td>${hideBtn(p)}</td></tr>`;
+      }).join('');
+      const withPlans = all.filter(p => !hidden.has(p.id));
+      let t = '';
+      for (let c = 1; c <= 8; c++) {
+        const have = withPlans.filter(p => p.plans[c]); const vh = have.filter(p => p.plans[c].target === 'VH').length;
+        t += `<div>C${c}<b>${have.length ? Math.round(vh / have.length * 100) + '%' : '–'}</b>${SHORT[c]}</div>`;
+      }
+      $('tavg').innerHTML = t;
+    } else {
+      $('thead').innerHTML = '<tr><th>Name</th><th>Class</th><th>Points</th><th>Vault</th><th>Time</th><th>Wrong first try</th><th>Hints</th><th>Targets C1–C8</th><th>Rating</th><th></th></tr>';
+      $('tbody').innerHTML = all.map(p => `<tr style="${hidden.has(p.id) ? 'opacity:.4' : ''}">
+        <td>${esc(p.name)}</td><td>${esc(p.cls)}</td><td>${p.score}</td><td>${p.done ? 'done' : p.vault + '/9'}</td><td>${fmt(p.time)}</td>
+        <td>${esc(p.wrong.join(', ')) || '–'}</td><td>${p.hints}</td>
+        <td>${p.targets ? p.targets.map(t => t + '–' + (t + 1)).join(' · ') : '–'}</td>
+        <td>${['–', '😴', '🙂', '🔥'][p.rating || 0]}</td><td>${hideBtn(p)}</td></tr>`).join('');
+      const withT = all.filter(p => p.targets && !hidden.has(p.id));
+      let t = '';
+      for (let c = 0; c < 8; c++) {
+        if (!withT.length) { t += `<div>C${c + 1}<b>–</b></div>`; continue; }
+        const avg = withT.reduce((s, p) => s + p.targets[c], 0) / withT.length;
+        t += `<div>C${c + 1}<b>${avg.toFixed(1)}</b>${SHORT[c + 1]}</div>`;
+      }
+      $('tavg').innerHTML = t;
+    }
     $('tbody').querySelectorAll('[data-hide]').forEach(b => b.addEventListener('click', () => {
-      const id = b.dataset.hide;
-      hidden.has(id) ? hidden.delete(id) : hidden.add(id);
+      const id = b.dataset.hide; hidden.has(id) ? hidden.delete(id) : hidden.add(id);
       try { localStorage.setItem('rhHidden:' + session, JSON.stringify([...hidden])); } catch (e) {}
       render();
     }));
-    const withT = all.filter(p => p.targets && !hidden.has(p.id));
-    let t = '';
-    for (let c = 0; c < 8; c++) {
-      if (!withT.length) { t += `<div>C${c + 1}<b>–</b></div>`; continue; }
-      const avg = withT.reduce((s, p) => s + p.targets[c], 0) / withT.length;
-      t += `<div>C${c + 1}<b>${avg.toFixed(1)}</b>${SHORT[c + 1]}</div>`;
-    }
-    $('tavg').innerHTML = t;
   }
 
   // ---------- controls ----------
@@ -333,20 +430,38 @@
     if (e.key === 't' || e.key === 'T') toggleTeacher();
     if (e.key === 'f' || e.key === 'F') fullscreen();
   });
-  $('csvBtn').addEventListener('click', () => {
-    const rows = [['name', 'class', 'points', 'vault', 'finished', 'time_s', 'rating_1to3', 'wrong_first_try', 'hints', ...Array.from({ length: 8 }, (_, i) => 'target_C' + (i + 1))]];
-    Object.values(players).forEach(p => rows.push([p.name, p.cls, p.score, p.vault, p.done, p.time, p.rating || '', p.wrong.join(' '), p.hints, ...(p.targets ? p.targets.map(t => t + '-' + (t + 1)) : Array(8).fill(''))]));
+  function downloadCsv(rows, name) {
     const csv = rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = `rubric-heist-${session}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
+  }
+  $('csvBtn').addEventListener('click', () => {
+    const date = new Date().toISOString().slice(0, 10);
+    if (level === 3) {
+      const rows = [['name', 'class', 'format', 'criterion', 'aiming_for', 'where', 'evidence', 'how', 'next_action', 'first_action', 'points', 'rating_1to3']];
+      Object.values(players).forEach(p => {
+        const fmtTxt = p.format === 'other' ? 'Other: ' + p.otherFmt : (FORMAT_NAMES[p.format] || '');
+        const cs = Object.keys(p.plans).sort((a, b) => a - b);
+        if (!cs.length) rows.push([p.name, p.cls, fmtTxt, '', '', '', '', '', '', '', p.score, p.rating || '']);
+        cs.forEach(c => { const x = p.plans[c];
+          rows.push([p.name, p.cls, fmtTxt, c, x.target === 'VH' ? 'Very High (9-10)' : 'High (7-8)', x.where, (x.evidence || []).join('; '), x.how, x.next, Number(c) === p.firstAction ? 'yes' : '', p.score, p.rating || '']); });
+      });
+      downloadCsv(rows, `evidence-lab-plans-${session}-${date}.csv`);
+    } else {
+      const rows = [['name', 'class', 'points', 'vault', 'finished', 'time_s', 'rating_1to3', 'wrong_first_try', 'hints', ...Array.from({ length: 8 }, (_, i) => 'target_C' + (i + 1))]];
+      Object.values(players).forEach(p => rows.push([p.name, p.cls, p.score, p.vault, p.done, p.time, p.rating || '', p.wrong.join(' '), p.hints, ...(p.targets ? p.targets.map(t => t + '-' + (t + 1)) : Array(8).fill(''))]));
+      downloadCsv(rows, `rubric-heist-${session}-${date}.csv`);
+    }
   });
   setInterval(renderClock, 1000);
 
   // ---------- start ----------
   (function () {
-    const fromUrl = (new URLSearchParams(location.search).get('session') || '').toUpperCase();
+    const qs = new URLSearchParams(location.search);
+    const lv = Number(qs.get('level')); if (LEVELS[lv]) level = lv;
+    document.body.classList.toggle('l3', level === 3);
+    renderLevelButtons();
+    const fromUrl = (qs.get('session') || '').toUpperCase();
     if (/^[A-Z0-9]{4,8}$/.test(fromUrl)) startSession(fromUrl);
     else { $('codeIn').value = randomCode(); showSetup(); }
   })();
