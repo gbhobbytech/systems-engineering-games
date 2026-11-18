@@ -99,6 +99,15 @@
   .tavg { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin: 8px 0 14px; }
   .tavg div { background: #111; border: 1px solid #333; border-radius: 6px; padding: 6px; text-align: center; font-size: 13px; }
   .tavg b { display: block; color: var(--gold); font-size: 18px; }
+  #locks { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 20; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  #locks .box { width: 100%; max-width: 560px; background: #0b0b0b; border: 2px solid var(--gold); border-radius: 10px; padding: 18px; }
+  #locks h2 { color: var(--gold); margin: 0 0 4px; }
+  .lockrow { display: grid; grid-template-columns: 1fr 10em; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; font-size: 16px; }
+  .lockrow small { display: block; color: #888; font-size: 12px; }
+  .lkbtn { padding: 10px; border-radius: 6px; font: bold 14px monospace; cursor: pointer; border: 2px solid; }
+  .lkbtn.open { background: #052e16; color: var(--green); border-color: var(--green); }
+  .lkbtn.shut { background: #2b0b0b; color: var(--red); border-color: var(--red); }
+  .lkbtn:disabled { opacity: 0.5; cursor: wait; }
   .planbox { background: #071010; border: 1px solid #2f4f4f; border-radius: 6px; padding: 8px 10px; margin: 6px 0; font-size: 13px; line-height: 1.5; }
   .planbox b { color: var(--lab); }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .heat, body.l3 .heat { grid-template-columns: repeat(3, 1fr); } .tavg, .aim { grid-template-columns: repeat(4, 1fr); } }
@@ -128,6 +137,7 @@
     <button class="btn" id="genBtn">MAKE A RANDOM CODE</button>
   </div>
   <p class="net" id="setupMsg" style="margin-top:10px">4–8 letters or numbers. Reuse a code to reopen an earlier session.</p>
+  <p><button class="btn" id="locksBtnSetup">🔐 LEVEL LOCKS</button></p>
   <p class="net">Signed in as <span id="whoSetup"></span> · <a href="#" id="outSetup" style="color:#aaa">sign out</a></p>
 </div>
 
@@ -184,11 +194,28 @@
   </div>
   <div class="controls">
     <button class="btn" id="tBtn">TEACHER VIEW (T)</button>
+    <button class="btn" id="locksBtn">LEVEL LOCKS (L)</button>
     <button class="btn" id="fsBtn">FULL SCREEN (F)</button>
     <button class="btn hidden" id="lbToggle">LEADERBOARD: OFF</button>
     <button class="btn" id="csvBtn">EXPORT CSV</button>
     <button class="btn" id="newBtn">NEW SESSION</button>
     <button class="btn" id="outBtn">SIGN OUT</button>
+  </div>
+</div>
+
+<div id="locks" class="hidden">
+  <div class="box">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px">
+      <h2>🔐 Level locks</h2>
+      <button class="btn" id="locksClose">CLOSE (L)</button>
+    </div>
+    <div class="net">Locked levels show a 🔒 on the level select page and can't be started. Students already playing a level aren't interrupted. Changes reach students within about 20 seconds.</div>
+    <div id="lockRows" style="margin-top:8px"></div>
+    <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap">
+      <button class="btn" id="lockAll">LOCK ALL</button>
+      <button class="btn" id="unlockAll">UNLOCK ALL</button>
+    </div>
+    <p class="net" id="lockMsg" style="min-height:1.2em"></p>
   </div>
 </div>
 
@@ -253,7 +280,7 @@
   function authHeaders() { return { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + (auth ? auth.access : '') }; }
   function showLogin(msg) {
     clearInterval(pollTimer);
-    ['setup', 'board', 'teacher'].forEach(id => $(id).classList.add('hidden'));
+    ['setup', 'board', 'teacher', 'locks'].forEach(id => $(id).classList.add('hidden'));
     $('login').classList.remove('hidden');
     $('lMsg').textContent = msg || '';
     setTimeout(() => $('lEmail').focus(), 50);
@@ -605,6 +632,56 @@
     }));
   }
 
+  // ---------- level locks ----------
+  const LOCKABLE = [
+    { n: 1, name: 'Level 1 · Orientation' }, { n: 2, name: 'Level 2 · Rubric Heist' },
+    { n: 4, name: 'Checkpoint · Will It Fly?' }, { n: 3, name: 'Level 3 · 9–10 Evidence Lab' }
+  ];
+  let lockState = {};
+  async function loadLocks() {
+    $('lockMsg').textContent = 'Loading…';
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/level_locks?select=level,locked`, { headers: authHeaders(), cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      lockState = {}; (await r.json()).forEach(x => { lockState[x.level] = !!x.locked; });
+      $('lockMsg').textContent = '';
+    } catch (e) { $('lockMsg').textContent = 'Couldn\'t load the locks. Check your connection.'; }
+    renderLocks();
+  }
+  function renderLocks() {
+    $('lockRows').innerHTML = LOCKABLE.map(l => { const on = !!lockState[l.n];
+      return `<div class="lockrow"><div>${esc(l.name)}<small>${on ? 'Students can\'t start this level' : 'Open to students'}</small></div>
+        <button class="lkbtn ${on ? 'shut' : 'open'}" data-lk="${l.n}">${on ? '🔒 LOCKED' : '🔓 UNLOCKED'}</button></div>`; }).join('');
+    $('lockRows').querySelectorAll('[data-lk]').forEach(b => b.addEventListener('click', () => setLocks([Number(b.dataset.lk)], !lockState[b.dataset.lk])));
+  }
+  async function setLocks(levels, locked) {
+    document.querySelectorAll('.lkbtn, #lockAll, #unlockAll').forEach(b => b.disabled = true);
+    $('lockMsg').textContent = 'Saving…';
+    try {
+      if (auth && Date.now() > auth.expiresAt - 60000) await refreshAuth();
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/level_locks?level=in.(${levels.join(',')})`, {
+        method: 'PATCH', headers: Object.assign(authHeaders(), { 'Content-Type': 'application/json', Prefer: 'return=representation' }),
+        body: JSON.stringify({ locked, updated_at: new Date().toISOString() }) });
+      if (r.status === 401) { showLogin('Your sign-in expired. Please sign in again.'); return; }
+      if (!r.ok) throw new Error(r.status);
+      const rows = await r.json();
+      if (rows.length !== levels.length) throw new Error('not allowed');
+      rows.forEach(x => { lockState[x.level] = !!x.locked; });
+      $('lockMsg').textContent = (locked ? '🔒 Locked: ' : '🔓 Unlocked: ') + rows.map(x => LOCKABLE.find(l => l.n === x.level).name).join(', ');
+    } catch (e) {
+      $('lockMsg').textContent = e.message === 'not allowed' ? 'Not saved: only the teacher account can change locks.' : 'Not saved: connection problem. Try again.';
+    }
+    document.querySelectorAll('.lkbtn, #lockAll, #unlockAll').forEach(b => b.disabled = false);
+    renderLocks();
+  }
+  function toggleLocks() { const h = $('locks').classList.toggle('hidden'); if (!h) loadLocks(); }
+  $('locksBtn').addEventListener('click', toggleLocks);
+  $('locksBtnSetup').addEventListener('click', toggleLocks);
+  $('locksClose').addEventListener('click', toggleLocks);
+  $('locks').addEventListener('click', e => { if (e.target.id === 'locks') toggleLocks(); });
+  $('lockAll').addEventListener('click', () => setLocks(LOCKABLE.map(l => l.n), true));
+  $('unlockAll').addEventListener('click', () => setLocks(LOCKABLE.map(l => l.n), false));
+
   // ---------- controls ----------
   function toggleTeacher() { $('teacher').classList.toggle('hidden'); renderTeacher(); }
   $('tBtn').addEventListener('click', toggleTeacher);
@@ -618,6 +695,7 @@
     if (e.target.tagName === 'INPUT') return;
     if (!auth) return;
     if (e.key === 't' || e.key === 'T') toggleTeacher();
+    if (e.key === 'l' || e.key === 'L') toggleLocks();
     if (e.key === 'f' || e.key === 'F') fullscreen();
   });
   function downloadCsv(rows, name) {

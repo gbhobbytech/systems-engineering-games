@@ -56,6 +56,10 @@
   .lc h2 { color: #fb923c; }
   .lc .btn { background: linear-gradient(90deg, #fb923c, var(--gold)); color: #000; }
   .done { color: var(--green); font-size: 13px; }
+  .lvl.locked { border-color: #444 !important; box-shadow: none !important; filter: grayscale(0.85); opacity: 0.6; }
+  .lvl.locked .btn { background: #222 !important; color: #999 !important; border: 1px solid #444 !important; pointer-events: none; }
+  .lvl .lockmsg { display: none; color: #f87171; font-size: 13px; }
+  .lvl.locked .lockmsg { display: block; }
   footer { margin-top: 40px; font-size: 12px; color: #777; }
   footer a { color: #888; }
   @media (max-width: 760px) { .levels { grid-template-columns: 1fr; } .l2 { transform: none; } }
@@ -69,37 +73,41 @@
   <div class="sub">LEVEL SELECT</div>
 
   <div class="levels">
-    <div class="lvl l1">
+    <div class="lvl l1" data-lock="1">
       <div class="n">LEVEL 1</div>
       <h2>Orientation</h2>
       <p>Explore the campus and learn how the subject works and how you're assessed.<br><br>
       <b>Already played it in class?</b> You don't need to replay it, but you can if you want a better rank.</p>
       <div class="done" id="l1done"></div>
+      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
       <a class="btn" href="orientation.html">PLAY LEVEL 1</a>
     </div>
 
-    <div class="lvl l2">
+    <div class="lvl l2" data-lock="2">
       <div class="n">LEVEL 2</div>
       <h2>Rubric Heist</h2>
       <p>Crack 8 vaults, one for each SAT criterion, using your printed rubric. Live leaderboard: get your session code from the board at the front.</p>
       <div class="done" id="l2done"></div>
+      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
       <a class="btn" href="rubric-heist.html">PLAY LEVEL 2 ▶</a>
     </div>
 
-    <div class="lvl lc">
+    <div class="lvl lc" data-lock="4">
       <div class="badge">NEW</div>
       <div class="n">CHECKPOINT · BEFORE LEVEL 3</div>
       <h2>Will It Fly?</h2>
       <p>Lock in your project. Run your idea through six checks: integrated system, power, size and storage, making it, budget and time. No idea yet? The idea explorer helps you find one.</p>
       <div class="done" id="lcdone"></div>
+      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
       <a class="btn" href="will-it-fly.html">CHECK MY IDEA ▶</a>
     </div>
 
-    <div class="lvl l3">
+    <div class="lvl l3" data-lock="3">
       <div class="n">LEVEL 3</div>
       <h2>The 9–10 Evidence Lab</h2>
       <p>Compare evidence against the High and Very High descriptors for all eight criteria, then plan your own SAT evidence: what goes where in your chosen format, and what you'll do next.</p>
       <div class="done" id="l3done"></div>
+      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
       <a class="btn" href="evidence-lab.html">PLAY LEVEL 3 ▶</a>
     </div>
   </div>
@@ -109,7 +117,22 @@
 
 
 </main>
+<script src="lock.js"></script>
 <script>
+  // teacher locks
+  const btnText = {};
+  document.querySelectorAll('[data-lock]').forEach(c => { const a = c.querySelector('a.btn'); btnText[c.dataset.lock] = a.textContent; });
+  function applyLocks(locks) {
+    document.querySelectorAll('[data-lock]').forEach(c => {
+      const n = c.dataset.lock, on = !!locks[n], a = c.querySelector('a.btn');
+      c.classList.toggle('locked', on);
+      a.textContent = on ? '🔒 LOCKED' : btnText[n];
+      a.setAttribute('aria-disabled', on ? 'true' : 'false');
+      if (on) a.setAttribute('tabindex', '-1'); else a.removeAttribute('tabindex');
+    });
+  }
+  function refreshLocks() { SELocks.fetch().then(applyLocks).catch(() => {}); }
+  refreshLocks(); setInterval(refreshLocks, SELocks.RECHECK_MS);
   try {
     const p = JSON.parse(localStorage.getItem('rubricHeistProgress') || 'null');
     if (p && p.done) document.getElementById('l2done').textContent = '✓ Cleared on this device';
