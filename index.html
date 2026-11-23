@@ -59,6 +59,9 @@
   .lsu { border-color: #fb923c; box-shadow: 0 0 26px rgba(34,211,238,0.3); }
   .lsu h2 { color: var(--cyan); }
   .lsu .btn { background: linear-gradient(90deg, var(--cyan), #fb923c); color: #000; }
+  .lcc { border-color: #a78bfa; box-shadow: 0 0 26px rgba(167,139,250,0.3); }
+  .lcc h2 { color: #c4b5fd; }
+  .lcc .btn { background: linear-gradient(90deg, #a78bfa, var(--cyan)); color: #000; }
   .lvl.locked { border-color: #444 !important; box-shadow: none !important; filter: grayscale(0.85); opacity: 0.6; }
   .lvl.locked .btn { background: #222 !important; color: #999 !important; border: 1px solid #444 !important; pointer-events: none; }
   .lvl .lockmsg { display: none; color: #f87171; font-size: 13px; }
@@ -74,7 +77,7 @@
   <div class="kicker">VCE · UNITS 3 &amp; 4</div>
   <h1>SYSTEMS ENGINEERING</h1>
   <div class="sub">LEVEL SELECT</div>
-  <div style="margin-top:10px;font-size:14px"><a href="#stepup" style="color:var(--cyan)">Year 11 Step Up? Your Units 1 &amp; 2 game is below ↓</a></div>
+  <div style="margin-top:10px;font-size:14px"><a href="#stepup" style="color:var(--cyan)">Year 11 Step Up? Your Units 1 &amp; 2 game is below ↓</a> · <a href="#research" style="color:#c4b5fd">Research missions ↓</a></div>
 
   <div class="levels">
     <div class="lvl l1" data-lock="1">
@@ -135,6 +138,22 @@
     </div>
   </div>
 
+  <!-- Research missions: reusable activities, separate from the SAT level numbering, with their own progress -->
+  <div id="research" style="margin-top:44px">
+    <div class="kicker">SYSTEMS ENGINEERING · RESEARCH MISSIONS</div>
+    <div style="font:bold clamp(24px,5vw,40px) monospace;color:#fff;text-shadow:0 0 3px #000,0 0 12px #a78bfa,0 0 26px var(--pink);margin:6px 0 4px">RESEARCH MISSIONS</div>
+    <div class="levels" style="grid-template-columns:1fr;max-width:620px;margin:18px auto 0">
+      <div class="lvl lcc" data-lock="6">
+        <div class="badge">NEW</div>
+        <div class="n">RESEARCH MISSION · WITH WORKSHEET</div>
+        <h2>The Controller Challenge</h2>
+        <p>Investigate seven microcontroller boards, chips and computers, from the Arduino UNO and micro:bit to PICAXE and Raspberry Pi 5. Make real compatibility calls, then choose the right controller for a client. Have your research worksheet open.</p>
+        <div class="done" id="ccdone"></div>
+        <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+        <a class="btn" href="controller-challenge.html">START MISSION ▶</a>
+      </div>
+    </div>
+  </div>
 
 </main>
 <script src="lock.js"></script>
@@ -168,6 +187,11 @@
     const su = JSON.parse(localStorage.getItem('seStepUpProgress') || 'null');
     if (su && su.done) document.getElementById('sudone').textContent = '✓ Passport made on this device';
     else if (su && su.started) document.getElementById('sudone').textContent = '▶ In progress on this device';
+  } catch (e) {}
+  try {
+    const cc = JSON.parse(localStorage.getItem('seControllerChallengeProgress') || 'null');
+    if (cc && cc.done) document.getElementById('ccdone').textContent = '✓ All four missions complete on this device';
+    else if (cc && cc.started) document.getElementById('ccdone').textContent = '▶ In progress on this device';
   } catch (e) {}
 </script>
 </body>

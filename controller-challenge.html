@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Controller Challenge – Systems Engineering Research Mission</title>
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --red: #f87171; --amber: #fbbf24;
+    --violet: #a78bfa; --lime: #a3e635; --bg: #07020f; --panel: rgba(4,2,12,0.9); --line: #3b2d5c;
+  }
+  html, body { margin: 0; }
+  html { background: #000; }
+  body {
+    min-height: 100vh; color: #eee; font-family: monospace; font-size: 16px; line-height: 1.5;
+    background: radial-gradient(ellipse at 50% 0%, #1d0b3d 0%, #090316 55%, #000 100%); background-attachment: fixed;
+  }
+  a { color: var(--cyan); }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .grid-floor {
+    position: fixed; left: -50%; right: -50%; top: 62%; bottom: -30%; z-index: 0; pointer-events: none;
+    background-image: linear-gradient(var(--violet) 2px, transparent 2px), linear-gradient(90deg, var(--violet) 2px, transparent 2px);
+    background-size: 60px 60px; transform: perspective(260px) rotateX(62deg); transform-origin: center top; opacity: 0.18;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 40%); mask-image: linear-gradient(to bottom, transparent 0%, #000 40%);
+  }
+  .screen { display: none; position: relative; z-index: 1; min-height: 100vh; padding: 16px 14px 60px; }
+  .screen.on { display: block; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  h1, h2, h3, h4 { margin: 0; line-height: 1.25; }
+
+  /* buttons */
+  .btn { display: inline-block; padding: 11px 16px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none;
+    background: linear-gradient(90deg, var(--violet), var(--cyan)); color: #000; font: bold 15px monospace; letter-spacing: 1px; }
+  .btn.ghost { background: #111; color: #eee; border: 1px solid #666; }
+  .btn.warn { background: #2b0b0b; color: #fecaca; border: 1px solid var(--red); }
+  .btn.small { padding: 7px 11px; font-size: 13px; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn:not(:disabled):hover { filter: brightness(1.15); }
+
+  /* top bar */
+  .hud { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #0b0814; border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
+  .hud .t { font-weight: bold; color: var(--violet); letter-spacing: 1px; }
+  .hud .grow { flex: 1; min-width: 140px; }
+  .bar { height: 10px; background: #1b1530; border-radius: 6px; overflow: hidden; border: 1px solid #2c2347; }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--violet), var(--cyan)); transition: width 0.4s; }
+  .hud .pct { font-size: 12px; color: #bbb; }
+  .iconbtn { background: #120d20; border: 1px solid #4b3d72; color: #eee; border-radius: 6px; padding: 6px 10px; font: 14px monospace; cursor: pointer; }
+  .iconbtn:hover { border-color: var(--violet); }
+
+  .panel { background: var(--panel); border: 2px solid var(--violet); border-radius: 10px; padding: 16px 18px;
+    box-shadow: 0 0 22px rgba(167,139,250,0.18); margin-bottom: 14px; }
+  .panel.cy { border-color: var(--cyan); box-shadow: 0 0 22px rgba(34,211,238,0.15); }
+  .kicker { color: var(--cyan); letter-spacing: 5px; font-weight: bold; font-size: 13px; text-shadow: 0 0 8px rgba(34,211,238,0.7); }
+  .mtitle { font: bold clamp(24px, 5vw, 36px) monospace; color: #fff; text-shadow: 0 0 3px #000, 0 0 12px var(--violet), 0 0 26px var(--pink); margin: 4px 0 6px; }
+  .lead { color: #ddd; margin: 6px 0 0; }
+  .muted { color: #aaa; font-size: 14px; }
+
+  /* worksheet + research callouts */
+  .ws { border-left: 4px solid var(--gold); background: #1a1505; padding: 10px 12px; border-radius: 0 6px 6px 0; margin: 12px 0; font-size: 14px; color: #f5ecc8; }
+  .ws b.h { color: var(--gold); display: block; letter-spacing: 1px; margin-bottom: 3px; }
+  .ws ul { margin: 6px 0 0; padding-left: 20px; }
+  .research { border-left: 4px solid var(--cyan); background: #04171c; padding: 10px 12px; border-radius: 0 6px 6px 0; margin: 12px 0; font-size: 14px; }
+  .research b.h { color: var(--cyan); display: block; letter-spacing: 1px; margin-bottom: 3px; }
+  .research a { display: inline-block; margin: 3px 10px 3px 0; }
+  .concept { background: #110b22; border: 1px solid #3d2f66; border-radius: 8px; padding: 10px 12px; font-size: 14px; margin: 10px 0; }
+  .concept b.h { color: var(--violet); }
+
+  /* splash */
+  #splash.on { display: flex; align-items: center; justify-content: center; text-align: center; }
+  .title { font: bold clamp(34px, 8.5vw, 78px) monospace; color: #fff; letter-spacing: 2px; margin: 6px 0;
+    text-shadow: 0 0 3px #000, 0 0 14px var(--violet), 0 0 34px var(--pink); }
+  .sub { color: var(--green); letter-spacing: 6px; font-weight: bold; text-shadow: 0 0 10px #22c55e; }
+  .chipline { margin: 22px auto 0; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 26px; }
+  .chipline span { animation: pulse 2.4s ease-in-out infinite; }
+  .chipline span:nth-child(2) { animation-delay: 0.3s; } .chipline span:nth-child(3) { animation-delay: 0.6s; }
+  .chipline span:nth-child(4) { animation-delay: 0.9s; } .chipline span:nth-child(5) { animation-delay: 1.2s; }
+  @keyframes pulse { 50% { opacity: 0.45; } }
+  .intro { max-width: 640px; margin: 22px auto 0; text-align: left; }
+  .intro li { margin: 4px 0; }
+  .startrow { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+
+  /* hub */
+  .missions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+  .mcard { position: relative; text-align: left; background: #0d0918; border: 2px solid #3a3054; border-radius: 10px; padding: 14px; color: #eee;
+    font: 14px monospace; cursor: pointer; display: flex; flex-direction: column; gap: 6px; min-height: 190px; }
+  .mcard .num { font-size: 12px; letter-spacing: 3px; color: #aaa; }
+  .mcard .nm { font: bold 18px monospace; color: #fff; }
+  .mcard .ic { font-size: 32px; }
+  .mcard .st { margin-top: auto; font-weight: bold; }
+  .mcard.open { border-color: var(--cyan); box-shadow: 0 0 16px rgba(34,211,238,0.3); }
+  .mcard.done { border-color: var(--green); } .mcard.done .st { color: var(--green); }
+  .mcard.locked { opacity: 0.55; cursor: not-allowed; filter: grayscale(0.7); }
+  .mcard:not(.locked):hover { transform: translateY(-2px); }
+
+  /* mission 1 exhibits */
+  .exhibits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .exh { background: #0b0816; border: 2px solid #3a3054; border-radius: 10px; padding: 10px; color: #eee; font: 13px monospace; cursor: pointer; text-align: center; }
+  .exh svg { width: 100%; height: auto; display: block; margin-bottom: 6px; }
+  .exh b { display: block; font-size: 14px; }
+  .exh.done { border-color: var(--green); }
+  .exh.done::after { content: '✓ IDENTIFIED'; display: block; color: var(--green); font-weight: bold; margin-top: 4px; }
+  .exh:hover { border-color: var(--violet); }
+  .station { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 16px; align-items: start; }
+  .figure { position: relative; background: #05030b; border: 1px solid #2c2347; border-radius: 8px; padding: 8px; }
+  .figure svg { width: 100%; height: auto; display: block; }
+  .ch .figure { max-width: 560px; margin: 0 auto; }
+  .figure .cap { font-size: 12px; color: #999; margin-top: 4px; text-align: center; }
+  .spec-list { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+
+  /* hotspots */
+  .hs { position: absolute; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--gold);
+    background: rgba(250,204,21,0.18); color: #fff; font: bold 14px monospace; cursor: pointer; box-shadow: 0 0 10px rgba(250,204,21,0.6); }
+  .hs:hover, .hs:focus-visible { background: rgba(250,204,21,0.5); }
+  .hs.right { border-color: var(--green); background: rgba(74,222,128,0.55); }
+  .hs.wrong { border-color: var(--red); background: rgba(248,113,113,0.4); }
+  .hslegend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .hslegend button { font-size: 13px; }
+
+  /* challenge widgets */
+  .ch { background: #0c0a17; border: 1px solid #3d2f66; border-radius: 10px; padding: 14px; margin-top: 12px; }
+  .ch .q { font-weight: bold; color: #fff; margin-bottom: 8px; font-size: 15px; }
+  .ch .tag { display: inline-block; font-size: 11px; letter-spacing: 2px; color: #000; background: var(--violet); border-radius: 4px; padding: 2px 6px; margin-bottom: 6px; font-weight: bold; }
+  .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .opts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .opt { text-align: left; padding: 10px 12px; border-radius: 8px; border: 2px solid #3a3054; background: #120e1f; color: #eee; font: 14px monospace; cursor: pointer; line-height: 1.4; }
+  .opt small { display: block; color: #aaa; font-size: 12px; margin-top: 2px; }
+  .opt:hover { border-color: var(--violet); }
+  .opt.sel { border-color: var(--cyan); background: #08222a; }
+  .opt.right { border-color: var(--green); background: #052e16; }
+  .opt.wrong { border-color: var(--red); background: #2b0b0b; }
+  .opt.okish { border-color: var(--amber); background: #2a1f05; }
+  .opt[aria-pressed="true"]::before { content: '☑ '; color: var(--cyan); }
+  .opt.chk[aria-pressed="false"]::before { content: '☐ '; color: #888; }
+  .meter { display: flex; gap: 6px; flex-wrap: wrap; }
+  .meter .opt { flex: 1; min-width: 120px; text-align: center; font-size: 16px; font-weight: bold; }
+  .rows { display: flex; flex-direction: column; gap: 8px; }
+  .srow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #2f2650; border-radius: 8px; background: #0f0b1c; }
+  .srow .it { font-size: 14px; }
+  .srow .it small { display: block; color: #aaa; font-size: 12px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+  .seg button { padding: 6px 9px; border-radius: 5px; border: 1px solid #4b3d72; background: #151027; color: #ddd; font: 12px monospace; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--violet); color: #000; border-color: var(--violet); font-weight: bold; }
+  .srow.right { border-color: var(--green); } .srow.wrong { border-color: var(--red); } .srow.okish { border-color: var(--amber); }
+  .srow .why { grid-column: 1 / -1; font-size: 13px; color: #ddd; display: none; }
+  .srow.right .why, .srow.wrong .why, .srow.okish .why { display: block; }
+  .srow.right .why::before { content: '✓ '; color: var(--green); } .srow.wrong .why::before { content: '✗ '; color: var(--red); } .srow.okish .why::before { content: '≈ '; color: var(--amber); }
+  .orow { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid #2f2650; border-radius: 8px; background: #0f0b1c; }
+  .orow .rk { font: bold 18px monospace; color: var(--violet); width: 1.6em; }
+  .orow .it { flex: 1; font-size: 14px; }
+  .orow.right { border-color: var(--green); } .orow.wrong { border-color: var(--red); }
+  .numrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .numrow input, textarea, input[type=text] { background: #111; color: #eee; border: 1px solid #666; border-radius: 6px; padding: 9px 10px; font: 16px monospace; }
+  .numrow input { width: 120px; }
+  textarea { width: 100%; min-height: 70px; resize: vertical; font-size: 15px; }
+  input[type=text] { width: 100%; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+  .fb { margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 14px; display: none; line-height: 1.5; }
+  .fb.show { display: block; }
+  .fb.good { background: #052e16; border: 1px solid var(--green); }
+  .fb.bad { background: #2b0b0b; border: 1px solid var(--red); }
+  .fb.mid { background: #2a1f05; border: 1px solid var(--amber); }
+  .fb.info { background: #0b1830; border: 1px solid var(--cyan); }
+  .hint { margin-top: 8px; font-size: 13px; color: #fde68a; background: #1f1a07; border: 1px dashed #8a7414; border-radius: 6px; padding: 8px 10px; display: none; }
+  .hint.show { display: block; }
+  .done-stamp { color: var(--green); font-weight: bold; }
+
+  /* mission 2/3 step lists */
+  .steps { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; }
+  .steps button { padding: 6px 10px; border-radius: 16px; border: 1px solid #4b3d72; background: #120d20; color: #ccc; font: 12px monospace; cursor: pointer; }
+  .steps button.cur { border-color: var(--cyan); color: #fff; box-shadow: 0 0 8px rgba(34,211,238,0.4); }
+  .steps button.ok { border-color: var(--green); color: var(--green); }
+  .steps button:disabled { opacity: 0.45; cursor: default; }
+  .devpick { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .devpick .opt { text-align: center; }
+  .devpick svg { width: 100%; height: auto; display: block; }
+  .trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+  .trio .dc { border: 1px solid #3a3054; border-radius: 8px; padding: 8px; background: #0e0a1a; font-size: 13px; text-align: center; }
+  .trio .dc svg { width: 100%; height: auto; max-height: 90px; }
+  .scen { background: #0b1522; border: 1px solid #1f4a5e; border-radius: 8px; padding: 10px 12px; margin: 8px 0; font-size: 14px; }
+  .scen b.h { color: var(--cyan); }
+  .overkill { margin-top: 8px; }
+  .overkill .bar > i { background: linear-gradient(90deg, var(--green), var(--gold), var(--red)); }
+
+  /* mission 4 */
+  .briefs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .briefs .opt { min-height: 150px; }
+  .briefs .opt .bi { font-size: 30px; }
+  .briefs .opt b { display: block; font-size: 16px; margin: 4px 0; }
+  .eval { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .eval th, .eval td { border-bottom: 1px solid #2c2347; padding: 7px 6px; text-align: left; vertical-align: top; }
+  .eval th { color: var(--violet); }
+  .r-strong { color: var(--green); font-weight: bold; } .r-ok { color: var(--amber); font-weight: bold; } .r-weak { color: var(--red); font-weight: bold; }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+  .pill.strong { background: #052e16; color: var(--green); border: 1px solid var(--green); }
+  .pill.ok { background: #2a1f05; color: var(--amber); border: 1px solid var(--amber); }
+  .pill.weak { background: #2b0b0b; color: var(--red); border: 1px solid var(--red); }
+
+  /* summary */
+  .sumcard { background: #fff; color: #111; border-radius: 8px; padding: 18px 20px; font: 14px/1.5 monospace; }
+  .sumcard h3 { font-size: 18px; margin-bottom: 4px; }
+  .sumcard h4 { margin: 12px 0 2px; font-size: 14px; border-bottom: 1px solid #ccc; }
+  .sumcard ul { margin: 4px 0; padding-left: 20px; }
+  .sumcard .nb { font-size: 12px; color: #555; }
+
+  .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #052e16; border: 1px solid var(--green); color: #fff;
+    padding: 10px 16px; border-radius: 8px; z-index: 50; font-weight: bold; display: none; max-width: calc(100vw - 24px); }
+  .toast.show { display: block; animation: pop 0.3s ease-out both; }
+  @keyframes pop { 0% { transform: translateX(-50%) scale(0.85); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 40; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal.show { display: flex; }
+  .modal .box { max-width: 520px; background: #0d0918; border: 2px solid var(--red); border-radius: 10px; padding: 18px; }
+
+  @media (max-width: 900px) {
+    .missions { grid-template-columns: repeat(2, 1fr); }
+    .exhibits { grid-template-columns: repeat(3, 1fr); }
+    .devpick { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 700px) {
+    .station { grid-template-columns: 1fr; }
+    .exhibits { grid-template-columns: repeat(2, 1fr); }
+    .opts, .opts.three, .briefs, .trio { grid-template-columns: 1fr; }
+    .srow { grid-template-columns: 1fr; }
+    .seg { justify-content: flex-start; }
+    .devpick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 420px) { .missions { grid-template-columns: 1fr; } .exhibits { grid-template-columns: 1fr 1fr; } .screen { padding: 10px 8px 50px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    body { background: #fff !important; color: #000; }
+    .grid-floor, .hud, .noprint, .toast { display: none !important; }
+    .screen { display: none !important; padding: 0; }
+    #summary.on { display: block !important; }
+    .sumcard { border: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-floor" aria-hidden="true"></div>
+<div id="live" class="sr" aria-live="polite"></div>
+
+<!-- SPLASH -->
+<section class="screen on" id="splash" aria-labelledby="splashTitle">
+  <div class="wrap">
+    <div class="kicker">SYSTEMS ENGINEERING · RESEARCH MISSION</div>
+    <h1 class="title" id="splashTitle">THE CONTROLLER CHALLENGE</h1>
+    <div class="sub">CHOOSE THE RIGHT BRAIN</div>
+    <div class="chipline" aria-hidden="true"><span>🔌</span><span>📟</span><span>📡</span><span>🧠</span><span>🖥️</span></div>
+    <div class="panel intro">
+      <p style="margin-top:0">You've been hired by an electronics design studio. Before the studio trusts you with a client's project, you need to prove you can <b>research</b>, <b>compare</b> and <b>choose</b> an electronic controller.</p>
+      <ul>
+        <li><b>Mission 1</b> · The Discovery Lab: investigate seven controllers</li>
+        <li><b>Mission 2</b> · Specification Detective: dig into the technical specs</li>
+        <li><b>Mission 3</b> · The Compatibility Workshop: make real wiring and selection calls</li>
+        <li><b>Mission 4</b> · The Engineering Commission: choose a controller for a client</li>
+      </ul>
+      <div class="ws"><b class="h">📝 HAVE YOUR WORKSHEET OPEN</b>This game guides your research. Your screenshots, findings and full justifications go in your Word worksheet. Nothing you do here is uploaded anywhere: progress is saved only in this browser.</div>
+      <p class="muted" style="margin-bottom:0">About 45–60 minutes. You can stop and come back on the same device.</p>
+    </div>
+    <div class="startrow">
+      <button class="btn" id="startBtn">START ▶</button>
+      <a class="btn ghost" href="index.html">◀ LEVEL SELECT</a>
+    </div>
+  </div>
+</section>
+
+<!-- HUB -->
+<section class="screen" id="hub" aria-labelledby="hubTitle">
+  <div class="wrap">
+    <div class="hud" data-hud></div>
+    <div class="panel">
+      <div class="kicker">MISSION CONTROL</div>
+      <h2 class="mtitle" id="hubTitle">The Controller Challenge</h2>
+      <p class="lead">Complete the missions in order. Each one unlocks the next.</p>
+      <div class="missions" id="missionCards"></div>
+    </div>
+    <div class="actions noprint">
+      <a class="btn ghost small" href="index.html">◀ LEVEL SELECT</a>
+      <button class="btn ghost small" id="hubSummary">📋 MY SUMMARY SO FAR</button>
+      <button class="btn warn small" id="resetBtn">↺ RESTART THIS ACTIVITY</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="m1"><div class="wrap"><div class="hud" data-hud></div><div id="m1body"></div></div></section>
+<section class="screen" id="m2"><div class="wrap"><div class="hud" data-hud></div><div id="m2body"></div></div></section>
+<section class="screen" id="m3"><div class="wrap"><div class="hud" data-hud></div><div id="m3body"></div></div></section>
+<section class="screen" id="m4"><div class="wrap"><div class="hud" data-hud></div><div id="m4body"></div></div></section>
+<section class="screen" id="summary"><div class="wrap"><div class="hud" data-hud></div><div id="sumbody"></div></div></section>
+
+<div class="modal" id="resetModal" role="dialog" aria-modal="true" aria-labelledby="resetH">
+  <div class="box">
+    <h3 id="resetH" style="color:var(--red)">Restart The Controller Challenge?</h3>
+    <p>This clears your progress for this activity on this device only. Other games and your worksheet are not affected.</p>
+    <div class="actions"><button class="btn warn" id="resetYes">YES, RESTART</button><button class="btn ghost" id="resetNo">CANCEL</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  'use strict';
+  // ======================================================================
+  //  THE CONTROLLER CHALLENGE · a Systems Engineering research mission
+  //  Progress lives in localStorage under STORE_KEY only (this device).
+  //  Nothing is sent anywhere: the only network call is the shared teacher-lock check in lock.js.
+  // ======================================================================
+  const STORE_KEY = 'seControllerChallengeProgress';
+  const SET_KEY = 'seControllerChallengeSettings';
+  const LOCK_LEVEL = 6; // teacher lock id (see dashboard.html); stays open if no lock row exists
+  window.CC_LOCK_LEVEL = LOCK_LEVEL;
+
+  // Worksheet section names (must match the Word worksheet headings exactly)
+  const WS = {
+    m1: 'Mission 1 - Discover the controllers',
+    m2: 'Mission 2 - Investigate the specifications',
+    m3: 'Mission 3 - Understanding the differences',
+    m4: 'Mission 4 - Engineering selection'
+  };
+
+  // ---------------------------------------------------------------- SVG art
+  // Original, simplified illustrations (not manufacturer artwork). Students find the real images via the links.
+  function dots(x, y, n, dx, dy, r, fill) { let s = ''; for (let i = 0; i < n; i++) s += `<circle cx="${x + i * dx}" cy="${y + i * dy}" r="${r}" fill="${fill}"/>`; return s; }
+  function dip(x, y, w, h, n, label) {
+    const step = w / (n + 1); let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#151515" stroke="#666"/>`;
+    for (let i = 1; i <= n; i++) { s += `<rect x="${x + i * step - 2}" y="${y - 5}" width="4" height="5" fill="#bbb"/><rect x="${x + i * step - 2}" y="${y + h}" width="4" height="5" fill="#bbb"/>`; }
+    s += `<circle cx="${x + 6}" cy="${y + h / 2}" r="3" fill="#333"/>`;
+    if (label) s += `<text x="${x + w / 2}" y="${y + h / 2 + 4}" fill="#9ca3af" font-size="10" font-family="monospace" text-anchor="middle">${label}</text>`;
+    return s;
+  }
+  const ART = {
+    uno3: (lbl) => `<svg viewBox="0 0 320 200" role="img" aria-label="Simplified drawing of an Arduino UNO R3 style board">
+      <rect x="12" y="18" width="298" height="168" rx="8" fill="#0f6e78" stroke="#5eead4" stroke-width="2"/>
+      <rect x="112" y="24" width="190" height="12" fill="#111"/>${dots(118, 30, 18, 10.4, 0, 2.2, '#666')}
+      <rect x="132" y="168" width="160" height="12" fill="#111"/>${dots(138, 174, 15, 10.4, 0, 2.2, '#666')}
+      <rect x="0" y="38" width="56" height="46" rx="3" fill="#c7cbd1" stroke="#8a8f96"/><rect x="12" y="50" width="32" height="22" fill="#8a8f96"/>
+      <rect x="0" y="122" width="60" height="42" rx="4" fill="#1d1d1d" stroke="#555"/><circle cx="26" cy="143" r="9" fill="#444"/>
+      <rect x="70" y="128" width="24" height="18" fill="#2a2a2a" stroke="#666"/><rect x="74" y="146" width="4" height="7" fill="#bbb"/><rect x="80" y="146" width="4" height="7" fill="#bbb"/><rect x="86" y="146" width="4" height="7" fill="#bbb"/>
+      <rect x="84" y="58" width="24" height="24" fill="#1b1b1b" stroke="#777" transform="rotate(45 96 70)"/>
+      ${dip(150, 116, 136, 30, 14, lbl ? 'MCU' : '')}
+      <rect x="250" y="60" width="18" height="10" rx="2" fill="#16a34a"/><text x="160" y="96" fill="#99f6e4" font-size="12" font-family="monospace">UNO-style · R3</text>
+    </svg>`,
+    unor4: () => `<svg viewBox="0 0 320 200" role="img" aria-label="Simplified drawing of an Arduino UNO R4 WiFi style board">
+      <rect x="12" y="18" width="298" height="168" rx="8" fill="#00878f" stroke="#67e8f9" stroke-width="2"/>
+      <rect x="112" y="24" width="190" height="12" fill="#111"/>${dots(118, 30, 18, 10.4, 0, 2.2, '#666')}
+      <rect x="132" y="168" width="160" height="12" fill="#111"/>${dots(138, 174, 15, 10.4, 0, 2.2, '#666')}
+      <rect x="0" y="50" width="30" height="20" rx="5" fill="#c7cbd1" stroke="#8a8f96"/>
+      <rect x="0" y="122" width="60" height="42" rx="4" fill="#1d1d1d" stroke="#555"/><circle cx="26" cy="143" r="9" fill="#444"/>
+      <rect x="112" y="58" width="100" height="70" rx="3" fill="#06363a"/>
+      ${Array.from({ length: 8 }, (_, r) => dots(119, 64 + r * 8.2, 12, 7.9, 0, 2, '#f87171')).join('')}
+      <rect x="232" y="46" width="64" height="52" rx="3" fill="#d1d5db" stroke="#9ca3af"/><rect x="232" y="98" width="64" height="16" fill="#0b3b3f"/>
+      <path d="M238 104 h8 v6 h8 v-6 h8 v6 h8 v-6 h8 v6 h8" stroke="#fbbf24" fill="none" stroke-width="1.5"/>
+      <rect x="66" y="90" width="34" height="34" fill="#151515" stroke="#777"/>${dots(70, 88, 6, 5.5, 0, 1, '#bbb')}${dots(70, 126, 6, 5.5, 0, 1, '#bbb')}
+      <text x="150" y="150" fill="#a5f3fc" font-size="12" font-family="monospace">UNO-style · R4 WiFi</text>
+    </svg>`,
+    microbit: () => `<svg viewBox="0 0 320 220" role="img" aria-label="Simplified drawing of a BBC micro:bit V2 style board">
+      <rect x="30" y="14" width="260" height="196" rx="16" fill="#1f1f1f" stroke="#a3a3a3" stroke-width="2"/>
+      <ellipse cx="160" cy="34" rx="18" ry="9" fill="none" stroke="#facc15" stroke-width="3"/>
+      ${Array.from({ length: 5 }, (_, r) => dots(124, 64 + r * 18, 5, 18, 0, 4, '#ef4444')).join('')}
+      <circle cx="66" cy="100" r="15" fill="#111" stroke="#d4d4d4" stroke-width="2"/><text x="66" y="134" fill="#ddd" font-size="12" text-anchor="middle" font-family="monospace">A</text>
+      <circle cx="254" cy="100" r="15" fill="#111" stroke="#d4d4d4" stroke-width="2"/><text x="254" y="134" fill="#ddd" font-size="12" text-anchor="middle" font-family="monospace">B</text>
+      <rect x="30" y="160" width="260" height="50" fill="#facc15" opacity="0.9"/>
+      ${Array.from({ length: 23 }, (_, i) => `<rect x="${38 + i * 11}" y="196" width="6" height="14" fill="#b45309"/>`).join('')}
+      ${[['0', 58], ['1', 112], ['2', 166], ['3V', 220], ['GND', 270]].map(([t, x]) => `<circle cx="${x}" cy="180" r="12" fill="#1f1f1f" stroke="#78350f" stroke-width="3"/><text x="${x}" y="${x > 250 ? 160 : 160}" fill="#111" font-size="11" text-anchor="middle" font-weight="bold" font-family="monospace">${t}</text>`).join('')}
+    </svg>`,
+    esp32: () => `<svg viewBox="0 0 320 140" role="img" aria-label="Simplified drawing of an ESP32-DevKitC V4 style board">
+      <rect x="10" y="28" width="300" height="84" rx="4" fill="#1b1b1b" stroke="#888" stroke-width="2"/>
+      ${dots(28, 36, 19, 13.2, 0, 2.4, '#d4af37')}${dots(28, 104, 19, 13.2, 0, 2.4, '#d4af37')}
+      <rect x="196" y="44" width="88" height="54" rx="2" fill="#d1d5db" stroke="#9ca3af"/><rect x="284" y="44" width="22" height="54" fill="#1e3a8a"/>
+      <path d="M290 50 h10 v8 h-10 v8 h10 v8 h-10 v8 h10" stroke="#fbbf24" fill="none" stroke-width="1.6"/>
+      <rect x="0" y="58" width="24" height="24" rx="3" fill="#c7cbd1" stroke="#8a8f96"/>
+      <rect x="46" y="48" width="14" height="10" rx="2" fill="#333" stroke="#999"/><rect x="46" y="82" width="14" height="10" rx="2" fill="#333" stroke="#999"/>
+      <rect x="92" y="58" width="26" height="24" fill="#111" stroke="#666"/><rect x="138" y="62" width="20" height="16" fill="#111" stroke="#666"/>
+    </svg>`,
+    pico2w: () => `<svg viewBox="0 0 320 140" role="img" aria-label="Simplified drawing of a Raspberry Pi Pico 2 W style board">
+      <rect x="22" y="32" width="276" height="76" rx="4" fill="#166534" stroke="#86efac" stroke-width="2"/>
+      ${dots(34, 36, 20, 13.5, 0, 3, '#e5e7eb')}${dots(34, 104, 20, 13.5, 0, 3, '#e5e7eb')}
+      ${dots(34, 36, 20, 13.5, 0, 1.4, '#166534')}${dots(34, 104, 20, 13.5, 0, 1.4, '#166534')}
+      <rect x="8" y="56" width="28" height="28" rx="3" fill="#c7cbd1" stroke="#8a8f96"/>
+      <rect x="54" y="52" width="16" height="12" rx="2" fill="#f5f5f5"/>
+      <rect x="98" y="52" width="38" height="38" fill="#151515" stroke="#777"/>
+      <rect x="168" y="48" width="64" height="44" rx="2" fill="#d1d5db" stroke="#9ca3af"/>
+      <rect x="246" y="48" width="40" height="44" fill="#14532d" stroke="#4ade80" stroke-dasharray="3 2"/>
+      <path d="M252 56 h28 v8 h-28 v8 h28 v8 h-28" stroke="#fbbf24" fill="none" stroke-width="1.5"/>
+    </svg>`,
+    picaxe: () => `<svg viewBox="0 0 320 200" role="img" aria-label="Simplified drawing of a PICAXE-20M2 chip fitted to an AXE118 project board">
+      <rect x="10" y="18" width="300" height="170" rx="6" fill="#1e3a5f" stroke="#93c5fd" stroke-width="2"/>
+      <rect x="16" y="54" width="44" height="40" rx="4" fill="#111" stroke="#666"/><circle cx="38" cy="74" r="10" fill="#333" stroke="#999"/>
+      <rect x="98" y="62" width="120" height="44" rx="3" fill="#2b2b2b" stroke="#777"/>
+      ${dip(104, 68, 108, 32, 10, '20M2')}
+      ${dip(236, 78, 62, 24, 9, '')}
+      ${dots(110, 148, 10, 18, 0, 5, '#cbd5e1')}${dots(110, 148, 10, 18, 0, 2, '#1e3a5f')}
+      <path d="M40 188 v-16 h18" stroke="#ef4444" stroke-width="4" fill="none"/><path d="M28 188 v-22 h30" stroke="#111" stroke-width="4" fill="none"/>
+      <rect x="20" y="118" width="40" height="16" fill="#1d4ed8" stroke="#93c5fd"/>
+      <text x="160" y="40" fill="#bfdbfe" font-size="11" font-family="monospace" text-anchor="middle">chip in a socket on a project board</text>
+    </svg>`,
+    pi5: () => `<svg viewBox="0 0 320 210" role="img" aria-label="Simplified drawing of a Raspberry Pi 5 style single-board computer">
+      <rect x="10" y="20" width="270" height="176" rx="8" fill="#166534" stroke="#86efac" stroke-width="2"/>
+      <rect x="32" y="26" width="206" height="20" fill="#111"/>${dots(38, 31, 20, 10.3, 0, 2.2, '#d4af37')}${dots(38, 41, 20, 10.3, 0, 2.2, '#d4af37')}
+      <rect x="262" y="54" width="54" height="34" fill="#c7cbd1" stroke="#8a8f96"/><rect x="262" y="94" width="54" height="34" fill="#c7cbd1" stroke="#8a8f96"/>
+      <rect x="262" y="138" width="54" height="44" fill="#d1d5db" stroke="#8a8f96"/><rect x="276" y="150" width="26" height="20" fill="#555"/>
+      <rect x="96" y="80" width="64" height="64" rx="4" fill="#cbd5e1" stroke="#64748b"/><rect x="104" y="88" width="48" height="48" fill="#94a3b8"/>
+      <rect x="196" y="104" width="30" height="30" fill="#151515" stroke="#777"/>
+      <rect x="40" y="70" width="20" height="40" fill="#111" stroke="#666"/>
+      <rect x="150" y="160" width="40" height="8" fill="#f5f5f5"/><rect x="198" y="160" width="40" height="8" fill="#f5f5f5"/>
+      <rect x="28" y="186" width="20" height="14" rx="3" fill="#c7cbd1"/><rect x="66" y="186" width="18" height="12" rx="2" fill="#c7cbd1"/><rect x="96" y="186" width="18" height="12" rx="2" fill="#c7cbd1"/>
+      <rect x="20" y="150" width="10" height="10" rx="5" fill="#333" stroke="#999"/>
+    </svg>`
+  };
+
+  // ---------------------------------------------------------------- DEVICES
+  // Specifications checked against manufacturer documentation (November 2026). Keep facts here so they can be updated in one place.
+  const DEV = {
+    uno3: {
+      name: 'Arduino UNO R3', short: 'UNO R3', maker: 'Arduino', type: 'mcuboard',
+      intro: 'The classic beginner microcontroller board. An 8-bit ATmega328P runs one program (a "sketch") as soon as it is powered. It has no operating system and no wireless.',
+      links: [['Arduino docs: UNO R3', 'https://docs.arduino.cc/hardware/uno-rev3/']],
+      facts: ['ATmega328P, 8-bit AVR at 16 MHz', '32 KB flash · 2 KB SRAM · 1 KB EEPROM', '5 V logic', '14 digital I/O (6 PWM) · 6 analogue inputs (10-bit)', 'Barrel jack / VIN: 7–12 V recommended · USB-B', 'No built-in wireless', 'Arduino IDE (C/C++)'],
+      logic: '5', gpio: 'D0–D13 plus A0–A5 (A0–A5 can also be digital)', wireless: [], adc: true,
+      soft: ['arduino'], speed: 1,
+      ws: 'Record the name of the main microcontroller chip and the manufacturer of the board.'
+    },
+    unor4: {
+      name: 'Arduino UNO R4 WiFi', short: 'UNO R4 WiFi', maker: 'Arduino', type: 'mcuboard',
+      intro: 'Same UNO shape and 5 V operating voltage as the R3, but with a 32-bit Renesas RA4M1 main microcontroller, a 12×8 LED matrix and an ESP32-S3 module that adds Wi-Fi and Bluetooth.',
+      links: [['Arduino docs: UNO R4 WiFi', 'https://docs.arduino.cc/hardware/uno-r4-wifi/']],
+      facts: ['Renesas RA4M1 (Arm Cortex-M4) at 48 MHz', '256 KB flash · 32 KB SRAM', '5 V logic on the main MCU (the ESP32-S3 runs at 3.3 V behind a level translator)', '14 digital I/O · 6 analogue inputs', 'VIN 6–24 V · USB-C', 'Only about 8 mA per I/O pin', 'Wi-Fi 4 (2.4 GHz) + Bluetooth LE via ESP32-S3', 'Arduino IDE / Arduino Cloud'],
+      logic: '5', wireless: ['wifi', 'bt'], adc: true, soft: ['arduino'], speed: 2,
+      ws: 'What does the R4 WiFi add compared with the R3? Name the two microcontroller chips on the board.'
+    },
+    microbit: {
+      name: 'BBC micro:bit V2', short: 'micro:bit V2', maker: 'Micro:bit Educational Foundation', type: 'mcuboard',
+      intro: 'A pocket-sized microcontroller board designed for schools. Lots of input and output devices are already built in, and the edge connector has large rings for crocodile clips.',
+      links: [['micro:bit hardware (tech.microbit.org)', 'https://tech.microbit.org/hardware/'], ['microbit.org', 'https://microbit.org/']],
+      facts: ['Nordic nRF52833 (Arm Cortex-M4F) at 64 MHz', '512 KB flash · 128 KB RAM', '3 V-class logic', '25-pin edge connector · 3 large I/O rings (0, 1, 2) + 3V and GND rings', 'Built in: 5×5 LED display, buttons A/B, touch logo, accelerometer + compass, microphone, speaker', 'Bluetooth LE + micro:bit radio (no Wi-Fi)', 'Power: USB, 2×AAA battery pack, or 3 V via the edge connector', 'MakeCode (blocks/JavaScript) or Python'],
+      logic: '3.3', wireless: ['bt', 'radio'], adc: true, soft: ['makecode', 'micropython'], speed: 2,
+      ws: 'List three built-in input devices and two built-in output devices.'
+    },
+    esp32: {
+      name: 'ESP32-DevKitC V4', short: 'ESP32-DevKitC', maker: 'Espressif Systems', type: 'mcuboard',
+      intro: 'A small Espressif development board built around an ESP32 module (usually the ESP32-WROOM-32E). Wi-Fi and Bluetooth are inside the ESP32 chip itself. Most pins are broken out for breadboards.',
+      links: [['Espressif ESP32-DevKitC V4 user guide', 'https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-devkitc/user_guide.html']],
+      facts: ['ESP32 dual-core Xtensa processor, up to 240 MHz (module-dependent)', '3.3 V logic: the 5V pin is a power input, not a signal level', 'Many GPIO with ADC, touch, PWM, DAC, I2C, SPI', 'GPIO6–11 connect to the module\'s flash memory: avoid them', 'ADC2 channels can\'t be used while Wi-Fi is on', 'Wi-Fi (2.4 GHz 802.11 b/g/n) + Bluetooth', 'Micro-USB, or 5V/GND or 3V3/GND pins (use only one power source)', 'ESP-IDF, Arduino IDE (ESP32 core) or MicroPython'],
+      logic: '3.3', wireless: ['wifi', 'bt'], adc: true, soft: ['arduino', 'espidf', 'micropython'], speed: 3,
+      ws: 'Record which ESP32 module is fitted to the DevKitC V4 version you researched, and one pin you should avoid.'
+    },
+    pico2w: {
+      name: 'Raspberry Pi Pico 2 W', short: 'Pico 2 W', maker: 'Raspberry Pi Ltd', type: 'mcuboard',
+      intro: 'A low-cost microcontroller board built around Raspberry Pi\'s RP2350 chip. The "W" version adds 2.4 GHz Wi-Fi and Bluetooth. It is a microcontroller board, not a Linux computer.',
+      links: [['Raspberry Pi Pico 2 / Pico 2 W product page', 'https://www.raspberrypi.com/products/raspberry-pi-pico-2/'], ['Pico 2 W datasheet (PDF)', 'https://pip-assets.raspberrypi.com/categories/1088-raspberry-pi-pico-2-w/documents/RP-008304-DS-2-pico-2-w-datasheet.pdf']],
+      facts: ['RP2350: dual Arm Cortex-M33 or dual Hazard3 RISC-V cores at 150 MHz', '520 KB SRAM · 4 MB flash', '3.3 V logic', '26 multi-function GPIO, 3 usable as 12-bit ADC inputs', 'VSYS input about 1.8–5.5 V · Micro-USB', '2.4 GHz 802.11n Wi-Fi + Bluetooth 5.2', 'MicroPython, C/C++ SDK; drag-and-drop programming over USB'],
+      logic: '3.3', wireless: ['wifi', 'bt'], adc: true, soft: ['micropython', 'picosdk', 'arduino'], speed: 3,
+      ws: 'What does the "W" stand for, and which chip is at its centre?'
+    },
+    picaxe: {
+      name: 'PICAXE-20M2 + AXE118', short: 'PICAXE-20M2', maker: 'Revolution Education', type: 'chip',
+      intro: 'Two separate things: the PICAXE-20M2 is a 20-pin microcontroller chip (the "brain"). The AXE118 PICAXE-20 project board is a self-assembly PCB the chip plugs into. It adds the download socket, power connection, I/O connection points and a ULN2803A Darlington driver for higher-current outputs.',
+      links: [['PICAXE-20M2 (picaxe.com)', 'https://picaxe.com/hardware/picaxe-chips/picaxe-20m2-microcontroller/'], ['PICAXE datasheets list (AXE118)', 'https://www.picaxe.com/datasheets']],
+      facts: ['20-pin chip · up to 18 I/O pins · 11 analogue/touch channels', 'Runs from 1.8–5.5 V, so its logic level matches its supply (often 4.5–5 V on a project board)', '4 MHz by default, up to 32 MHz', '2048 bytes program memory · 512 bytes RAM', 'No built-in Wi-Fi/Bluetooth (can use add-on RF or infrared modules)', 'Programmed in BASIC, flowcharts or Blockly with the free PICAXE Editor', 'AXE118: use 4.5 V (3×AA) or a regulated 5 V supply, not a 9 V PP3'],
+      logic: 'supply', wireless: [], adc: true, soft: ['picaxe'], speed: 0,
+      ws: 'This entry names two products. In your notes, say what the PICAXE-20M2 chip does and what the AXE118 project board adds.'
+    },
+    pi5: {
+      name: 'Raspberry Pi 5', short: 'Raspberry Pi 5', maker: 'Raspberry Pi Ltd', type: 'sbc',
+      intro: 'A Linux-capable single-board computer. It boots an operating system (usually Raspberry Pi OS) from a microSD card or SSD, can drive two 4K displays and run many programs at once. Its 40-pin header gives it GPIO, but it is a computer, not a microcontroller board.',
+      links: [['Raspberry Pi 5 product page', 'https://www.raspberrypi.com/products/raspberry-pi-5/']],
+      facts: ['Broadcom BCM2712 quad-core 64-bit Arm Cortex-A76 at 2.4 GHz', 'RAM measured in gigabytes (several variants)', 'Runs Linux (Raspberry Pi OS)', '40-pin header: 28 GPIO, the rest power and ground · 3.3 V logic', 'No built-in analogue inputs (use an ADC chip or a digital sensor)', 'Dual-band 802.11ac Wi-Fi, Bluetooth 5.0, Gigabit Ethernet', '2 × 4Kp60 HDMI · 2 × MIPI camera/display connectors · PCIe 2.0 x1', '5 V / 5 A via USB-C with Power Delivery'],
+      logic: '3.3', wireless: ['wifi', 'bt'], adc: false, soft: ['pythonos'], speed: 5,
+      ws: 'Decide its category, and note how its role differs from a microcontroller development board (hint: what does it boot?).'
+    }
+  };
+  const ORDER = ['uno3', 'unor4', 'microbit', 'esp32', 'pico2w', 'picaxe', 'pi5'];
+  const THIRD = ['uno3', 'unor4', 'microbit', 'esp32', 'pico2w'];
+  const SOFT = {
+    arduino: 'Arduino IDE (C/C++)', micropython: 'MicroPython (e.g. Thonny or the micro:bit Python Editor)', makecode: 'Microsoft MakeCode (blocks / JavaScript)',
+    picaxe: 'PICAXE Editor (BASIC / flowchart / Blockly)', espidf: 'ESP-IDF (Espressif\'s C framework)', picosdk: 'Pico C/C++ SDK',
+    pythonos: 'Python and other languages on Raspberry Pi OS (e.g. Thonny, gpiozero)'
+  };
+
+  // ================================================================ MISSION 1 · DISCOVERY LAB
+  // Each exhibit has one identification challenge. Device types use the worksheet's three categories.
+  const TYPES = { chip: 'Microcontroller chip', devboard: 'Development board', sbc: 'Single-board computer' };
+  const M1 = {
+    uno3: { type: 'hotspot', tag: 'FIND THE BRAIN', q: 'Which marked part is the main microcontroller: the chip that actually runs your sketch?', art: 'uno3',
+      hint: 'The main microcontroller on the R3 is a long rectangular chip with legs down both sides (a DIP package), and it can be pulled out of its socket.',
+      spots: [
+        { id: 'A', x: 8.8, y: 30.5, fb: 'That\'s the USB-B socket. It carries power and your uploaded program, but it doesn\'t do any processing.' },
+        { id: 'B', x: 30, y: 35, fb: 'That\'s the ATmega16U2. It converts USB to serial so your computer can upload code. It doesn\'t run your sketch.' },
+        { id: 'C', x: 25.6, y: 68, fb: 'That\'s the voltage regulator. It turns the 7–12 V from the barrel jack into a steady 5 V.' },
+        { id: 'D', x: 68, y: 65.5, ok: true, fb: 'Yes: the ATmega328P, an 8-bit AVR microcontroller running at 16 MHz with 32 KB of flash. On the R3 it sits in a socket.' }
+      ] },
+    unor4: { type: 'hotspot', tag: 'FIND THE RADIO', q: 'Which marked part gives the UNO R4 WiFi its Wi-Fi and Bluetooth?', art: 'unor4',
+      hint: 'Radio modules usually sit under a metal shield with a printed antenna next to them.',
+      spots: [
+        { id: 'A', x: 4.7, y: 30, fb: 'That\'s the USB-C connector, used for power and programming.' },
+        { id: 'B', x: 50.6, y: 46.5, fb: 'That\'s the 12×8 LED matrix, an output you can draw on. No radio here.' },
+        { id: 'C', x: 82.5, y: 40, ok: true, fb: 'Yes: the ESP32-S3 module. It\'s a second microcontroller that handles Wi-Fi 4 (2.4 GHz) and Bluetooth LE and talks to the main chip through a logic-level translator.' },
+        { id: 'D', x: 26, y: 53.5, fb: 'That\'s the Renesas RA4M1, the main 32-bit microcontroller that runs your sketch. It has no radio of its own.' }
+      ] },
+    microbit: { type: 'multi', tag: 'BUILT-IN OR NOT?', q: 'Select every feature that is built into the micro:bit V2 itself (no add-ons).',
+      hint: 'Check the "Hardware" overview on tech.microbit.org. The micro:bit has a radio, but which kind?',
+      opts: [
+        { t: '5×5 LED display', ok: true, fb: 'Built in: 25 individually controllable LEDs.' },
+        { t: 'Buttons A and B', ok: true, fb: 'Built in, plus a touch-sensitive logo on V2.' },
+        { t: 'Accelerometer and compass', ok: true, fb: 'Built in: a motion sensor and a magnetometer.' },
+        { t: 'Microphone and speaker', ok: true, fb: 'Both are new on V2.' },
+        { t: 'Wi-Fi', ok: false, fb: 'No Wi-Fi. The micro:bit has Bluetooth LE and its own micro:bit radio for messages between micro:bits.' },
+        { t: 'Camera', ok: false, fb: 'No camera. Image capture needs very different hardware.' },
+        { t: 'HDMI video output', ok: false, fb: 'No video output. It\'s a microcontroller board, not a computer with a display.' }
+      ] },
+    esp32: { type: 'pick', meter: true, tag: 'SET THE LOGIC LEVEL', q: 'Set the meter to the logic voltage of the ESP32\'s GPIO pins.',
+      hint: 'The ESP32 module runs from a 3.3 V regulator on the DevKitC. The "5V" pin on the header is only for powering the board.',
+      opts: [
+        { t: '1.8 V', r: 'wrong', fb: 'Too low. Some processors use 1.8 V I/O, but the ESP32\'s GPIO here works at 3.3 V.' },
+        { t: '3.3 V', r: 'right', fb: 'Correct. The ESP32 uses 3.3 V logic. A 5 V signal on a GPIO pin can damage it, so 5 V sensors need level shifting.' },
+        { t: '5 V', r: 'wrong', fb: 'That\'s the "5V" power pin, an input for powering the board through its regulator. The GPIO signals are 3.3 V.' },
+        { t: '12 V', r: 'wrong', fb: 'Far too high. 12 V on an ESP32 pin would destroy it.' }
+      ] },
+    pico2w: { type: 'sort', tag: 'DECODE THE NAME', q: 'Decode "Raspberry Pi Pico 2 W". Match each part of the name to its meaning.',
+      hint: 'Compare the Pico 2 and Pico 2 W on the product page. What does the W version add?',
+      bins: [{ id: 'fam', t: 'A family of microcontroller boards' }, { id: 'gen', t: 'Second generation (RP2350 chip)' }, { id: 'w', t: 'Wireless: Wi-Fi + Bluetooth' }, { id: 'lin', t: 'Runs Linux' }],
+      items: [
+        { t: '"Pico"', ok: ['fam'], fb: 'Pico is Raspberry Pi\'s range of microcontroller boards. They don\'t run an operating system.' },
+        { t: '"2"', ok: ['gen'], fb: 'Pico 2 boards use the RP2350 chip (the original Pico used the RP2040).' },
+        { t: '"W"', ok: ['w'], fb: 'W = wireless: 2.4 GHz 802.11n Wi-Fi and Bluetooth 5.2 on board.' }
+      ], extra: 'None of the name parts means "runs Linux". That\'s the Raspberry Pi 5 and other single-board computers, not the Pico.' },
+    picaxe: { type: 'sort', tag: 'CHIP OR BOARD?', q: 'The PICAXE entry is two products. Does each feature belong to the PICAXE-20M2 chip or to the AXE118 project board?',
+      hint: 'The chip is the "brain" that stores the program. The board is the support circuitry around it.',
+      bins: [{ id: 'chip', t: 'PICAXE-20M2 chip' }, { id: 'board', t: 'AXE118 project board' }],
+      items: [
+        { t: 'Stores and runs your BASIC or flowchart program', ok: ['chip'], fb: 'The program lives in the chip\'s memory (2048 bytes) and stays there when power is removed.' },
+        { t: 'Download socket for the USB programming cable', ok: ['board'], fb: 'The board provides the download circuit and socket. The chip has the serial-in/serial-out pins that use it.' },
+        { t: 'ULN2803A Darlington driver for motors, relays and buzzers', ok: ['board'], fb: 'The project board adds this driver chip so higher-current outputs don\'t load the microcontroller pins directly.' },
+        { t: '11 analogue/touch input channels', ok: ['chip'], fb: 'Analogue-to-digital conversion happens inside the 20M2 chip.' },
+        { t: 'Self-assembly PCB with power connection and I/O connection points', ok: ['board'], fb: 'The AXE118 is a kit you solder. Some suppliers now list it as discontinued.' },
+        { t: 'Bought separately and pushed into the IC socket', ok: ['chip'], fb: 'The board is sold without a chip. You fit a 20M2 (or 20X2) into its socket.' }
+      ] },
+    pi5: { type: 'multi', tag: 'COMPUTER OR CONTROLLER?', q: 'Which clues show that the Raspberry Pi 5 is a single-board computer rather than a microcontroller board? Select every clue that actually tells them apart.',
+      hint: 'A clue only counts if the microcontroller boards in this lab DON\'T also have it.',
+      opts: [
+        { t: 'It boots an operating system (Raspberry Pi OS, a Linux distribution)', ok: true, fb: 'Key clue: an OS manages hardware and runs many programs at once.' },
+        { t: 'It can drive two 4K HDMI displays with a keyboard and mouse, like a desktop', ok: true, fb: 'Microcontroller boards don\'t have video outputs like this.' },
+        { t: 'Its RAM is measured in gigabytes', ok: true, fb: 'Compare 2 KB (UNO R3) or 520 KB (Pico 2 W) with gigabytes on the Pi 5.' },
+        { t: 'It has GPIO pins', ok: false, fb: 'Every device in this lab has GPIO, so it doesn\'t tell them apart.' },
+        { t: 'It has a USB port', ok: false, fb: 'Most of the microcontroller boards have USB too.' },
+        { t: 'It can be programmed in Python', ok: false, fb: 'The micro:bit, Pico 2 W and ESP32 can all run MicroPython, so Python doesn\'t prove it\'s a computer.' }
+      ] }
+  };
+  const LABSORT = { type: 'sort', tag: 'LAB SORT', q: 'Final check: tick the best device-type description for each, the same three types your worksheet uses.',
+    hint: 'Which entry is a chip rather than a complete board? Which device can run a desktop-style operating system?',
+    bins: [{ id: 'chip', t: TYPES.chip }, { id: 'devboard', t: TYPES.devboard }, { id: 'sbc', t: TYPES.sbc }],
+    items: [
+      { t: 'Arduino UNO R3', ok: ['devboard'], fb: 'A development board built around the ATmega328P chip.' },
+      { t: 'Arduino UNO R4 WiFi', ok: ['devboard'], fb: 'A development board with two microcontrollers (RA4M1 + ESP32-S3).' },
+      { t: 'BBC micro:bit V2', ok: ['devboard'], fb: 'A development board. It\'s sometimes called a "pocket-sized computer", but it runs one program directly, with no operating system.' },
+      { t: 'ESP32-DevKitC V4', ok: ['devboard'], fb: 'Espressif\'s development board for an ESP32 module.' },
+      { t: 'Raspberry Pi Pico 2 W', ok: ['devboard'], fb: 'A microcontroller development board. Despite the "Raspberry Pi" name, it doesn\'t run Linux.' },
+      { t: 'PICAXE-20M2 + AXE118', ok: ['chip', 'devboard'], best: 'chip', fb: 'The PICAXE-20M2 is the microcontroller chip. The AXE118 is the project board it sits on. Tick "chip" and explain the board in your notes.' },
+      { t: 'Raspberry Pi 5', ok: ['sbc'], fb: 'A Linux-capable single-board computer.' }
+    ] };
+
+  // ================================================================ MISSION 2 · SPECIFICATION DETECTIVE
+  // Cards follow the rows of the worksheet comparison table. Each challenge is built for the student's trio.
+  const CHIPNAME = {
+    picaxe: 'PICAXE-20M2: a PIC microcontroller pre-loaded with PICAXE firmware',
+    pi5: 'Broadcom BCM2712: quad-core 64-bit Arm Cortex-A76',
+    uno3: 'Microchip ATmega328P: 8-bit AVR', unor4: 'Renesas RA4M1 (Arm Cortex-M4), plus an ESP32-S3 for wireless',
+    microbit: 'Nordic nRF52833: Arm Cortex-M4F', esp32: 'Espressif ESP32: dual-core Xtensa, inside a WROOM module', pico2w: 'Raspberry Pi RP2350: dual Cortex-M33 or RISC-V cores'
+  };
+  const POWERTXT = {
+    picaxe: '4.5 V (3×AA) or a regulated 5 V supply into the project board', pi5: '5 V / 5 A through USB-C with Power Delivery (27 W supply)',
+    uno3: 'USB 5 V, or 7–12 V into the barrel jack / VIN', unor4: 'USB-C 5 V, or 6–24 V into the barrel jack / VIN',
+    microbit: 'USB 5 V, or a 2×AAA (3 V) battery pack', esp32: 'Micro-USB 5 V, the 5V pin or the 3V3 pin (only one source at a time)',
+    pico2w: 'Micro-USB 5 V, or about 1.8–5.5 V on the VSYS pin'
+  };
+  const IOTXT = {
+    picaxe: 'Up to 18 I/O pins, 11 of them analogue/touch', pi5: '28 GPIO on a 40-pin header, no analogue inputs',
+    uno3: '14 digital I/O (6 PWM) + 6 analogue inputs', unor4: '14 digital I/O + 6 analogue inputs, about 8 mA per pin',
+    microbit: '25-pin edge connector, 3 large I/O rings (all analogue-capable)', esp32: 'Many GPIO with 12-bit ADC (ADC2 unavailable with Wi-Fi on)',
+    pico2w: '26 GPIO, 3 of them 12-bit ADC'
+  };
+  const WIREBIN = d => (DEV[d].wireless.includes('wifi') ? 'wb' : DEV[d].wireless.length ? 'br' : 'none');
+  const LOGICBIN = d => (DEV[d].logic === 'supply' ? 'sup' : DEV[d].logic === '5' ? 'v5' : 'v33');
+  const others = (T) => THIRD.filter(d => d !== T[2]);
+
+  const M2 = [
+    { id: 'proc', title: 'Processor', row: 'Microcontroller chip or processor',
+      concept: '<b class="h">Microcontroller vs processor.</b> A <b>microcontroller</b> puts the processor, memory and I/O on one chip and runs a single control program. A <b>single-board computer</b> uses a much more powerful processor with separate gigabytes of RAM, managed by an operating system.',
+      chals: T => [{ type: 'sort', tag: 'NAME THE BRAIN', q: 'Match each of your devices to the chip that does its processing. One chip on the list belongs to none of your devices.',
+        hint: 'Look for "microcontroller", "processor" or "SoC" in each manufacturer\'s specification list.',
+        bins: [...T.map(d => ({ id: d, t: CHIPNAME[d] })), { id: 'x', t: CHIPNAME[others(T)[0]] }].sort((a, b) => a.t.localeCompare(b.t)),
+        items: T.map(d => ({ t: DEV[d].name, ok: [d], fb: CHIPNAME[d] + '.' })) }] },
+    { id: 'power', title: 'Power supply', row: 'Power supply requirements',
+      concept: '<b class="h">Power supply vs logic level.</b> The power supply is what you connect to run the whole board. A board\'s regulator may accept a wide range, but the chip and its pins run at a fixed voltage. Always check the allowed input range.',
+      chals: T => [
+        { type: 'sort', tag: 'POWER UP', q: 'Match each device to its manufacturer-recommended power options.', hint: 'Check each device\'s "Power" section. The PICAXE answer is in the project-board datasheet.',
+          bins: [...T.map(d => ({ id: d, t: POWERTXT[d] })), { id: 'x', t: 'A 9 V PP3 battery connected straight to the I/O pins' }],
+          items: T.map(d => ({ t: DEV[d].name, ok: [d], fb: POWERTXT[d] + '.' })) },
+        { type: 'pick', tag: 'WHY NOT 9 V?', q: 'The PICAXE manual says not to run the project board from a 9 V PP3 battery. Why?',
+          hint: 'Look up the PICAXE-20M2 operating voltage range.',
+          opts: [
+            { t: 'The PICAXE-20M2 only runs from 1.8–5.5 V, so 9 V exceeds its maximum', r: 'right', fb: 'Correct. Without a regulator, 9 V would exceed the chip\'s supply limit and could destroy it. Use 3×AA (4.5 V) or a regulated 5 V supply.' },
+            { t: '9 V batteries are too heavy', r: 'wrong', fb: 'Weight isn\'t the issue. Compare 9 V with the chip\'s operating voltage range.' },
+            { t: 'The chip needs at least 12 V', r: 'wrong', fb: 'The opposite: 9 V is already too high for the 20M2.' },
+            { t: 'PP3 batteries can\'t supply any current', r: 'wrong', fb: 'They can, though not much. The real problem is the voltage.' }
+          ] }] },
+    { id: 'logic', title: 'Logic voltage', row: 'Logic operating voltage',
+      concept: '<b class="h">Logic operating voltage</b> is the voltage range a device\'s input/output pins treat as logic levels. It is different from the voltage used to power the whole board.',
+      chals: T => [{ type: 'sort', tag: 'SET THE METERS', q: 'Set the logic-level meter for each device.', hint: 'Look for "operating voltage", "I/O voltage" or "logic level". The PICAXE chip has no regulator of its own.',
+        bins: [{ id: 'v33', t: '3.3 V' }, { id: 'v5', t: '5 V' }, { id: 'sup', t: 'Matches its supply (1.8–5.5 V)' }, { id: 'v12', t: '12 V' }],
+        items: T.map(d => ({ t: DEV[d].name, ok: [LOGICBIN(d)], fb: ({ v33: d === 'microbit' ? 'The micro:bit is a 3 V-class device (about 3–3.3 V). Treat its pins as 3.3 V logic.' : '3.3 V logic: 5 V signals need level shifting.', v5: '5 V logic, compatible with classic 5 V modules and shields.', sup: 'The 20M2\'s pins swing between 0 V and its supply voltage, usually 4.5–5 V on a project board.' })[LOGICBIN(d)] })) }] },
+    { id: 'io', title: 'Digital & analogue I/O', row: 'Digital and analogue input/output capability',
+      concept: '<b class="h">GPIO</b> = general-purpose input/output: pins that software can set to read signals or control devices. A <b>digital</b> signal is on/off. An <b>analogue</b> input measures a changing voltage as a number. Not every board has analogue inputs.',
+      chals: T => [
+        { type: 'sort', tag: 'SIGNAL SORT', q: 'Is each signal digital (on/off) or analogue (a changing voltage)?', hint: 'Ask yourself: could the value be "a bit more" or "a bit less"? If so, it\'s analogue.',
+          bins: [{ id: 'd', t: 'Digital' }, { id: 'a', t: 'Analogue' }],
+          items: [
+            { t: 'Push button', ok: ['d'], fb: 'Pressed or not pressed: digital.' },
+            { t: 'Thermistor in a voltage divider', ok: ['a'], fb: 'Voltage changes smoothly with temperature: analogue.' },
+            { t: 'Light-dependent resistor (LDR) in a divider', ok: ['a'], fb: 'Voltage varies with light level: analogue.' },
+            { t: 'Reed switch on a door', ok: ['d'], fb: 'Magnet near or not: digital.' },
+            { t: 'Potentiometer (dial)', ok: ['a'], fb: 'Any position between the ends: analogue.' },
+            { t: 'PIR motion sensor output', ok: ['d'], fb: 'A PIR module outputs HIGH when it detects motion: digital.' }
+          ] },
+        { type: 'sort', tag: 'COUNT THE PINS', q: 'Match each device to its I/O capability. One description is a decoy.', hint: 'On the Pi 5, not all 40 header pins are GPIO: some are 5 V, 3.3 V and ground.',
+          bins: [...T.map(d => ({ id: d, t: IOTXT[d] })), { id: 'x', t: '40 GPIO and 8 analogue inputs' }].sort((a, b) => a.t.localeCompare(b.t)),
+          items: T.map(d => ({ t: DEV[d].name, ok: [d], fb: IOTXT[d] + '.' })) },
+        { type: 'pick', multiRight: true, tag: 'FIX IT', q: 'A Raspberry Pi 5 project needs to read a thermistor (an analogue sensor). Which approaches work? Find every workable one.',
+          hint: 'The Pi 5 has no analogue inputs. You can convert the signal to digital, or use a sensor that is already digital.',
+          opts: [
+            { t: 'Add an ADC chip (connected by SPI or I2C)', r: 'right', fb: 'Works: the ADC measures the voltage and sends the Pi a number.' },
+            { t: 'Swap to a digital temperature sensor (e.g. a 1-Wire or I2C sensor)', r: 'right', fb: 'Works: the sensor does the conversion itself and talks digitally to the Pi.' },
+            { t: 'Wire the thermistor divider straight to a GPIO pin', r: 'wrong', fb: 'A GPIO pin only reads HIGH or LOW, so you\'d lose the temperature information.' },
+            { t: 'Run the GPIO at 5 V so it can read analogue', r: 'wrong', fb: 'The Pi 5 GPIO are 3.3 V only. 5 V can damage them, and a higher voltage doesn\'t add analogue reading anyway.' }
+          ] }] },
+    { id: 'wireless', title: 'Wireless', row: 'Wireless connectivity',
+      concept: '<b class="h">Wireless connectivity.</b> Wi-Fi joins a network or the internet. Bluetooth (LE) links to nearby phones and devices. Some boards have no radio at all and need an add-on module.',
+      chals: T => [{ type: 'sort', tag: 'RADIO CHECK', q: 'What wireless does each device have built in?', hint: 'Check for "Wi-Fi", "802.11", "Bluetooth" or "radio" in each specification.',
+        bins: [{ id: 'wb', t: 'Wi-Fi + Bluetooth' }, { id: 'br', t: 'Bluetooth LE + micro:bit radio only' }, { id: 'none', t: 'None built in (needs an add-on)' }],
+        items: T.map(d => ({ t: DEV[d].name, ok: [WIREBIN(d)], fb: ({ picaxe: 'No built-in radio. Add-on RF or infrared modules can be used.', pi5: 'Dual-band 802.11ac Wi-Fi, Bluetooth 5.0 and Gigabit Ethernet.', uno3: 'No wireless. It needs an add-on module or shield.', unor4: 'Wi-Fi 4 (2.4 GHz) + Bluetooth LE, through its ESP32-S3 module.', microbit: 'Bluetooth LE and micro:bit radio, but no Wi-Fi.', esp32: '2.4 GHz Wi-Fi and Bluetooth, built into the ESP32 chip.', pico2w: '2.4 GHz 802.11n Wi-Fi and Bluetooth 5.2.' })[d] })) }] },
+    { id: 'soft', title: 'Programming', row: 'Programming software and language',
+      concept: '<b class="h">Programming software.</b> Most microcontrollers are programmed on a computer, and the program is then uploaded. A single-board computer can usually run the programming tools itself.',
+      chals: T => [{ type: 'sort', tag: 'TOOLKIT', q: 'Which programming software and language would you use for each device? Any officially supported option counts.', hint: 'Look for "Getting started" or "Software" on each manufacturer page.',
+        bins: Object.keys(SOFT).map(k => ({ id: k, t: SOFT[k] })),
+        items: T.map(d => ({ t: DEV[d].name, ok: DEV[d].soft, fb: 'Supported: ' + DEV[d].soft.map(k => SOFT[k]).join(' · ') + '.' })) }] },
+    { id: 'os', title: 'Operating system', row: 'Is an operating system required?',
+      concept: '<b class="h">Operating system:</b> software that manages a computer\'s hardware and lets other programs run. Many microcontrollers run one control program directly instead.',
+      chals: T => [
+        { type: 'sort', tag: 'OS OR NOT?', q: 'Does each device need an operating system to run your control program?', hint: 'Which one boots from a microSD card?',
+          bins: [{ id: 'y', t: 'Yes: it boots an OS first' }, { id: 'n', t: 'No: it runs the program directly' }],
+          items: T.map(d => ({ t: DEV[d].name, ok: [d === 'pi5' ? 'y' : 'n'], fb: d === 'pi5' ? 'Raspberry Pi OS (Linux) boots first, then runs your program as one of many processes.' : 'Your program starts within moments of power-up, with no OS.' })) },
+        { type: 'order', tag: 'POWER RANKING', q: 'Rank your devices by processing capability, least to most.', hint: 'Compare processor type, clock speed and memory, not just the name.',
+          items: T.map(d => ({ t: DEV[d].name, rank: DEV[d].speed, sub: CHIPNAME[d] })),
+          done: 'More processing power means more cost, more electrical power, and often more complexity. For a simple alarm, the least capable device here may be the best choice. You\'ll use this idea in Mission 3.' }] },
+    { id: 'apps', title: 'Applications', row: 'Examples of suitable applications',
+      concept: '<b class="h">Suitable applications.</b> Match the controller to the job. Several devices can often do the same task, so decide which is the sensible fit.',
+      chals: T => [{ type: 'sort', tag: 'BEST FIT', q: 'Which of your devices is a sensible fit for each application? Some have more than one good answer.',
+        hint: 'Think about power source, wireless needs and processing load.',
+        bins: T.map(d => ({ id: d, t: DEV[d].short })),
+        items: [
+          { t: 'Battery-powered alarm that beeps when a door opens', ok: ['picaxe', T[2]], fb: 'A microcontroller is ideal: low power and instant start-up. A Pi 5 would be overkill.' },
+          { t: 'Museum kiosk showing a web dashboard on an HDMI screen', ok: ['pi5'], fb: 'Needs an OS, a browser and video output: the Pi 5.' },
+          { t: 'Camera that recognises objects', ok: ['pi5'], fb: 'Image processing needs the Pi 5\'s processor, RAM and camera connectors.' },
+          { t: 'Traffic-light sequence for a model intersection', ok: ['picaxe', T[2], 'pi5'], best: ['picaxe', T[2]], fb: 'Any of them can do it. A simple microcontroller is the lean choice, and a Pi 5 works but is more than needed.' },
+          { t: 'Sensor that sends readings to a phone or dashboard', ok: ['pi5'].concat(DEV[T[2]].wireless.length ? [T[2]] : []), fb: DEV[T[2]].wireless.length ? DEV[T[2]].name + ' and the Pi 5 both have built-in wireless. The PICAXE would need add-on modules.' : 'Only the Pi 5 of your three has built-in wireless. The others would need add-on modules.' }
+        ] }] }
+  ];
+
+  // ================================================================ MISSION 3 · COMPATIBILITY WORKSHOP
+  const M3 = [
+    { id: 'volt', title: 'Logic voltage', q: 3, icon: '⚡',
+      scen: 'A distance-sensor module is powered from 5 V, and its output signal swings between 0 V and 5 V. Your team wants to connect it to different controllers.',
+      chals: [
+        { type: 'sort', tag: 'SAFE TO CONNECT?', q: 'For each controller, can the 5 V output go straight to a GPIO pin?', hint: 'Compare the sensor\'s 5 V signal with each controller\'s logic voltage from Mission 2.',
+          bins: [{ id: 'direct', t: 'Connect directly' }, { id: 'shift', t: 'Add level shifting (divider or level-shifter)' }],
+          items: [
+            { t: 'Arduino UNO R3', ok: ['direct'], fb: '5 V logic: a 5 V signal is fine.' },
+            { t: 'Arduino UNO R4 WiFi', ok: ['direct'], fb: 'The RA4M1 runs at 5 V, so the UNO header pins accept 5 V signals.' },
+            { t: 'ESP32-DevKitC V4', ok: ['shift'], fb: '3.3 V logic: drop the signal with a resistor divider or level shifter first.' },
+            { t: 'Raspberry Pi Pico 2 W', ok: ['shift'], fb: '3.3 V logic: level-shift the 5 V signal.' },
+            { t: 'BBC micro:bit V2', ok: ['shift'], fb: '3 V-class pins: level-shift the signal.' },
+            { t: 'Raspberry Pi 5', ok: ['shift'], fb: '3.3 V GPIO with no 5 V tolerance: level-shift to protect the Pi.' }
+          ] },
+        { type: 'pick', tag: 'THE REVERSE CASE', q: 'Now the reverse: a 3.3 V sensor output goes into an UNO R3 input running at 5 V. What happens?',
+          hint: 'Look up the ATmega328P datasheet: what is the minimum voltage it reads as HIGH (VIH) at 5 V?',
+          opts: [
+            { t: 'It usually reads as HIGH, but with little margin, so check the datasheet threshold', r: 'right', fb: 'Right. At 5 V the ATmega328P reads HIGH from about 0.6 × VCC = 3.0 V. 3.3 V is just over, which often works but leaves little noise margin. A level shifter makes it reliable.' },
+            { t: 'It will damage the UNO', r: 'wrong', fb: 'A lower voltage won\'t damage a 5 V input. The risk is an unreliable reading.' },
+            { t: 'It can never be read', r: 'wrong', fb: 'Too absolute. It usually works, but only just. Check the input threshold in the datasheet.' },
+            { t: 'The sensor needs 12 V to talk to an UNO', r: 'wrong', fb: '12 V would damage both devices.' }
+          ] }] },
+    { id: 'gpio', title: 'Sensors & actuators', q: 2, icon: '🔌',
+      scen: 'You are wiring inputs and outputs to a microcontroller\'s GPIO pins. A pin can only supply a small current (about 20 mA recommended on an UNO R3, only about 8 mA on an UNO R4 WiFi).',
+      chals: [{ type: 'sort', tag: 'WIRE IT UP', q: 'How should each component connect to the controller?', hint: 'Anything with a coil or motor draws far more current than a pin can supply. Resistive sensors need a voltage divider.',
+        bins: [{ id: 'direct', t: 'Direct to a GPIO pin' }, { id: 'res', t: 'Through a series resistor' }, { id: 'drv', t: 'Through a driver (transistor, MOSFET, Darlington, motor driver)' }, { id: 'div', t: 'Voltage divider into an analogue input' }],
+        items: [
+          { t: 'Push button', sub: 'with a pull-up or pull-down resistor', ok: ['direct'], fb: 'A digital input. Use a pull-up or pull-down (many chips have one built in) so the pin never floats.' },
+          { t: 'Single LED', ok: ['res'], fb: 'A series resistor limits the current to a safe level for the LED and the pin.' },
+          { t: 'Small DC motor', ok: ['drv'], fb: 'Motors need far more current than a pin can supply and create voltage spikes. Use a driver (the AXE118\'s ULN2803A is one) with protection diodes.' },
+          { t: 'Relay coil', ok: ['drv'], fb: 'A coil needs a driver and a flyback diode (built into Darlington arrays like the ULN2803A).' },
+          { t: 'Thermistor', ok: ['div'], fb: 'Its resistance changes with temperature, so pair it with a fixed resistor and read the voltage on an analogue input.' },
+          { t: 'LDR', ok: ['div'], fb: 'Same as the thermistor: a voltage divider into an analogue input.' },
+          { t: 'Hobby servo (signal wire)', ok: ['direct'], fb: 'The signal wire connects directly, but power the servo from a supply that can deliver its current and connect the grounds together.' },
+          { t: 'Solenoid lock', ok: ['drv'], fb: 'A high-current coil: use a driver and a flyback diode.' }
+        ] }] },
+    { id: 'wifi', title: 'Wireless', q: 4, icon: '📡',
+      scen: 'A school greenhouse needs temperature readings sent to a web dashboard over the school Wi-Fi every 10 minutes.',
+      chals: [{ type: 'sort', tag: 'RADIO TEST', q: 'Rate each controller for this job. Some can do it with extra hardware, so more than one answer can be reasonable.', hint: 'The requirement is specifically Wi-Fi to reach a web dashboard.',
+        bins: [{ id: 'good', t: 'Good fit' }, { id: 'extra', t: 'Possible with extra hardware or a workaround' }, { id: 'no', t: 'Not a sensible choice' }],
+        items: [
+          { t: 'Arduino UNO R4 WiFi', ok: ['good'], fb: 'Built-in Wi-Fi through the ESP32-S3, plus Arduino Cloud support.' },
+          { t: 'ESP32-DevKitC V4', ok: ['good'], fb: 'Wi-Fi is built into the ESP32 chip. A very common IoT choice.' },
+          { t: 'Raspberry Pi Pico 2 W', ok: ['good'], fb: '2.4 GHz Wi-Fi on board, programmed in MicroPython or C/C++.' },
+          { t: 'Raspberry Pi 5', ok: ['good', 'extra'], best: ['good'], fb: 'Wi-Fi built in, and it could host the dashboard itself, but it needs mains-level power and is far more than needed for one sensor.' },
+          { t: 'BBC micro:bit V2', ok: ['extra'], fb: 'No Wi-Fi. It could send readings by radio or Bluetooth to another device that forwards them: a workaround.' },
+          { t: 'Arduino UNO R3', ok: ['extra'], fb: 'Needs an add-on Wi-Fi module or shield. Possible, but then you\'re rebuilding what the R4 WiFi already has.' },
+          { t: 'PICAXE-20M2 + AXE118', ok: ['extra', 'no'], fb: 'No Wi-Fi. RF modules can link two PICAXE circuits, but reaching a web dashboard needs extra hardware beyond that.' }
+        ] }] },
+    { id: 'os', title: 'Microcontroller or OS?', q: 1, icon: '🧠',
+      scen: 'Your studio gets seven jobs. For each one, decide whether it suits a microcontroller board running one program, or a computer running an operating system.',
+      chals: [{ type: 'sort', tag: 'TWO KINDS OF BRAIN', q: 'Sort each job. Choose "either" when both are genuinely defensible.', hint: 'Microcontrollers: instant start, low power, precise timing. OS computers: cameras, screens, databases, many programs at once.',
+        bins: [{ id: 'mcu', t: 'Microcontroller board' }, { id: 'either', t: 'Either could be justified' }, { id: 'os', t: 'Computer with an OS' }],
+        items: [
+          { t: 'Switch a fan on when a room passes 30 °C', ok: ['mcu', 'either'], best: ['mcu'], fb: 'A microcontroller does this cheaply and reliably. A Pi could, but it\'s more than needed.' },
+          { t: 'Stop a motor within milliseconds when a limit switch is hit', ok: ['mcu'], fb: 'A microcontroller responds directly and predictably. An OS can delay a program while it does other work.' },
+          { t: 'Recognise objects in a live camera feed', ok: ['os'], fb: 'Image processing needs the processor, RAM and software libraries of an OS computer.' },
+          { t: 'Host a web dashboard and log a year of readings to a database', ok: ['os', 'either'], best: ['os'], fb: 'An OS computer is the natural fit. A Wi-Fi microcontroller could send data to a cloud service instead, so "either" is defensible.' },
+          { t: 'Play a video on an HDMI screen in a museum display', ok: ['os'], fb: 'Video output and playback software: an OS computer.' },
+          { t: 'Send a soil-moisture reading over Wi-Fi every 10 minutes', ok: ['mcu', 'either'], best: ['mcu'], fb: 'A Wi-Fi microcontroller (ESP32, Pico 2 W, UNO R4 WiFi) is the lean choice.' },
+          { t: 'Run from small batteries for months', ok: ['mcu'], fb: 'Microcontrollers can sleep at very low current. A Pi 5 needs a 5 V / 5 A supply.' }
+        ] }] },
+    { id: 'cost', title: 'Overkill check', q: 5, icon: '💸',
+      scen: 'A client wants a battery-powered night-light: an LED turns on when it gets dark. Cheap, simple and long battery life.',
+      chals: [{ type: 'pick', explore: true, tag: 'OVERKILL METER', q: 'Choose a controller (or none!). Then try other options to compare them on the overkill meter.', hint: 'The most powerful option is rarely the best for a simple job. Is a controller even needed?',
+        opts: [
+          { t: 'No microcontroller: an LDR and transistor circuit', r: 'right', k: 5, fb: 'Defensible and the cheapest. The trade-off is flexibility: adding delays, fades or timers means redesigning the circuit.' },
+          { t: 'PICAXE-20M2 + AXE118', r: 'right', k: 15, fb: 'A good fit: simple program logic, an analogue input for the LDR, runs from 3×AA.' },
+          { t: 'BBC micro:bit V2', r: 'right', k: 25, fb: 'Works well. It can even sense light with its LED display. It runs from 2×AAA.' },
+          { t: 'Arduino UNO R3', r: 'ok', k: 40, fb: 'Works, but the board\'s regulator, USB chip and power LED drain batteries faster than a bare chip.' },
+          { t: 'Raspberry Pi Pico 2 W', r: 'ok', k: 45, fb: 'Works and is low cost, but the wireless is unused. A Pico 2 (no W) would be leaner.' },
+          { t: 'ESP32-DevKitC V4', r: 'ok', k: 55, fb: 'Works, but Wi-Fi and Bluetooth are wasted, and the board draws more current unless you use sleep modes.' },
+          { t: 'Arduino UNO R4 WiFi', r: 'ok', k: 60, fb: 'Works, but you\'re paying for Wi-Fi and an LED matrix you don\'t need.' },
+          { t: 'Raspberry Pi 5', r: 'wrong', k: 100, fb: 'Overkill: it needs a 5 V / 5 A supply, boots an OS, has no analogue input for the LDR, and an SD card can be corrupted when the batteries die.' }
+        ] }] }
+  ];
+
+  // ================================================================ MISSION 4 · ENGINEERING COMMISSION
+  const BRIEFS = {
+    A: { icon: '🔔', name: 'Battery Temperature Alarm', ws: 'A battery-powered temperature monitoring system with an audible warning.', detail: 'A simple battery-powered monitoring system that activates a warning when a temperature threshold is exceeded.' },
+    B: { icon: '📡', name: 'Remote Temperature Monitor', ws: 'A remotely monitored temperature alarm requiring wireless connectivity.', detail: 'An electronic system that measures temperature and transmits monitoring information wirelessly.' },
+    C: { icon: '📷', name: 'Camera-Based Recognition System', ws: 'A camera-based object recognition system requiring image processing.', detail: 'An electrotechnology system that captures camera images and processes them to recognise or track objects.' }
+  };
+  const IOREQ = {
+    A: [
+      { t: 'Temperature sensor (thermistor or digital sensor)', ok: ['need'], fb: 'Essential: it\'s a temperature alarm.' },
+      { t: 'Buzzer or piezo sounder', ok: ['need'], fb: 'Essential: the brief asks for an audible warning.' },
+      { t: 'Warning LED', ok: ['opt', 'need'], fb: 'A useful extra visual warning.' },
+      { t: 'Potentiometer to adjust the threshold', ok: ['opt'], fb: 'Optional: the threshold could also be set in code.' },
+      { t: 'Wi-Fi link to a dashboard', ok: ['no'], fb: 'Not part of this brief. That\'s Brief B.' },
+      { t: 'Camera module', ok: ['no'], fb: 'Not needed for temperature.' }
+    ],
+    B: [
+      { t: 'Temperature sensor', ok: ['need'], fb: 'Essential.' },
+      { t: 'Wireless link (Wi-Fi, Bluetooth or radio)', ok: ['need'], fb: 'Essential: the brief requires wireless connectivity.' },
+      { t: 'Receiving device or dashboard (phone, computer or cloud)', ok: ['need', 'opt'], fb: 'Remote monitoring needs something at the other end to receive the data.' },
+      { t: 'Local buzzer or LED alarm', ok: ['opt'], fb: 'A sensible backup if the wireless link drops.' },
+      { t: 'Camera module', ok: ['no'], fb: 'Not needed for temperature.' },
+      { t: 'DC motor', ok: ['no'], fb: 'Nothing in the brief needs movement.' }
+    ],
+    C: [
+      { t: 'Camera module', ok: ['need'], fb: 'Essential: the system captures images.' },
+      { t: 'Processor capable of image processing', ok: ['need'], fb: 'Essential: recognition is computationally heavy.' },
+      { t: 'Display or network connection to show results', ok: ['opt', 'need'], fb: 'Results have to go somewhere, either to a screen or over the network.' },
+      { t: 'Pan/tilt servos to follow an object', ok: ['opt'], fb: 'Optional: useful for tracking.' },
+      { t: 'Thermistor', ok: ['no'], fb: 'Not relevant to object recognition.' },
+      { t: 'Buzzer', ok: ['opt', 'no'], fb: 'Only if the client wants an audible alert.' }
+    ]
+  };
+  // Overall fit of each controller for each brief: strong / ok / weak (weak = the client rejects it)
+  const FIT = {
+    A: {
+      picaxe: ['strong', 'Simple, low-power and cheap. Its analogue input reads a thermistor and the AXE118\'s Darlington driver can sound a buzzer. Runs from 3×AA.'],
+      microbit: ['strong', 'Runs from 2×AAA and has a speaker and LEDs built in. Its built-in temperature reading is only approximate, so add an external sensor on a ring for accuracy.'],
+      pico2w: ['ok', 'Runs from batteries on VSYS and has an ADC for a thermistor. The wireless isn\'t needed (a Pico 2 without W would be leaner).'],
+      uno3: ['ok', 'Easy to program, with analogue inputs. The board\'s regulator and USB chip draw battery current all the time, which shortens battery life.'],
+      unor4: ['ok', 'Works, but the Wi-Fi module and LED matrix are unused: extra cost and current.'],
+      esp32: ['ok', 'Can do it, especially with deep sleep, but Wi-Fi is unused and it needs 3.3 V sensors.'],
+      pi5: ['weak', 'Rejected: it needs a 5 V / 5 A supply, so batteries drain fast. It also boots an OS, has no analogue input, and is overkill for a threshold alarm.']
+    },
+    B: {
+      esp32: ['strong', 'Wi-Fi and Bluetooth are built into the ESP32, with ADC inputs for a sensor. A popular low-cost IoT choice.'],
+      pico2w: ['strong', 'Built-in 2.4 GHz Wi-Fi and Bluetooth, an ADC for a thermistor and MicroPython support.'],
+      unor4: ['strong', 'Built-in Wi-Fi/Bluetooth with the familiar UNO ecosystem and Arduino Cloud dashboards.'],
+      pi5: ['ok', 'Wi-Fi, Ethernet and an OS make dashboards and logging easy, but it needs mains-level power and a digital sensor or an ADC.'],
+      microbit: ['ok', 'Bluetooth LE or micro:bit radio can send readings to a second micro:bit or phone nearby. No Wi-Fi, so range and internet access are limited.'],
+      uno3: ['weak', 'Rejected as-is: no wireless. An add-on module would work, but it adds cost and complexity the R4 WiFi avoids.'],
+      picaxe: ['weak', 'Rejected as-is: no built-in wireless or internet path. Add-on RF modules only reach another nearby circuit.']
+    },
+    C: {
+      pi5: ['strong', 'Quad-core 2.4 GHz processor, gigabytes of RAM, two MIPI camera connectors, and Linux libraries for image processing.'],
+      esp32: ['weak', 'Rejected: the DevKitC V4 has no camera connector, and its memory is tiny compared with an SBC. Some specialised camera boards exist, but they\'re very limited.'],
+      pico2w: ['weak', 'Rejected: no camera interface and far too little memory for image recognition.'],
+      unor4: ['weak', 'Rejected: no camera interface, and 32 KB of RAM can\'t hold even one camera frame.'],
+      uno3: ['weak', 'Rejected: 2 KB of RAM and no camera interface.'],
+      microbit: ['weak', 'Rejected: no camera interface and nowhere near enough processing for images.'],
+      picaxe: ['weak', 'Rejected: 2048 bytes of program memory and no camera interface.']
+    }
+  };
+  const SUPPLIES = { aaa2: '2 × AAA (3 V)', aa3: '3 × AA (4.5 V)', aa6: '6 × AA (9 V)', pp3: '9 V PP3 battery', bank: 'USB power bank (5 V)', usbwall: 'USB wall adapter (5 V, mains)', psu27: '5 V / 5 A USB-C PD mains supply (27 W)' };
+  const PWR = {
+    picaxe: { aa3: ['strong', 'Recommended for the project board: 4.5 V sits inside the 1.8–5.5 V range.'], aaa2: ['ok', 'The chip runs at 3 V, but there\'s less voltage for buzzers and outputs, and the brownout detector trips near 1.9 V.'], bank: ['ok', '5 V is fine, but some power banks switch off when the current draw is very low.'], usbwall: ['ok', 'A regulated 5 V is allowed. Check the connector.'], psu27: ['ok', 'The 5 V works, but this supply is far bigger than needed.'], aa6: ['weak', '9 V exceeds the 20M2\'s 5.5 V maximum unless you add a regulator.'], pp3: ['weak', 'The PICAXE manual says not to use a 9 V PP3: it exceeds 5.5 V.'] },
+    microbit: { aaa2: ['strong', 'The official battery pack: 2×AAA through the JST connector.'], bank: ['ok', 'Works through USB, but it\'s bulkier and may auto-switch off at low current.'], usbwall: ['ok', 'Fine for fixed installations.'], psu27: ['ok', 'Works through USB, but it\'s far bigger than needed.'], aa3: ['weak', '4.5 V is too high for the battery connector, which is designed for 2×AAA (3 V).'], aa6: ['weak', 'Far too high for the battery connector.'], pp3: ['weak', 'Far too high for the battery connector.'] },
+    uno3: { aa6: ['strong', '9 V into the barrel jack is within the 7–12 V recommended range.'], pp3: ['ok', 'Within range, but a PP3 has little capacity, so expect a short battery life.'], bank: ['ok', 'Powers it through USB at 5 V. Some banks auto-switch off at low current.'], usbwall: ['ok', 'Fine through USB.'], psu27: ['ok', 'Works through USB, but it\'s more than needed.'], aa3: ['weak', '4.5 V is below the 7 V needed on the barrel jack for the regulator to give 5 V.'], aaa2: ['weak', '3 V is too low for this board.'] },
+    unor4: { aa6: ['strong', '9 V is inside the 6–24 V VIN range.'], pp3: ['ok', 'Within range, but the short battery life is made worse by the Wi-Fi.'], bank: ['ok', 'Powers it through USB-C.'], usbwall: ['strong', 'Reliable for a fixed indoor monitor.'], psu27: ['ok', 'Works through USB-C, but it\'s more than needed.'], aa3: ['weak', '4.5 V is below the 6 V VIN minimum.'], aaa2: ['weak', 'Too low.'] },
+    esp32: { bank: ['strong', 'Micro-USB 5 V: simple and portable.'], usbwall: ['strong', 'Reliable for a fixed monitor.'], psu27: ['ok', 'Works, but it\'s more than needed.'], aa3: ['ok', 'Into the 5V pin it feeds the 3.3 V regulator, but there\'s little headroom as the cells drain. Check the regulator\'s dropout.'], aaa2: ['weak', '3 V is below the board\'s 3.3 V rail.'], aa6: ['weak', 'The 5V pin isn\'t designed for 9 V.'], pp3: ['weak', 'The 5V pin isn\'t designed for 9 V.'] },
+    pico2w: { aa3: ['strong', '4.5 V on VSYS is within about 1.8–5.5 V.'], aaa2: ['ok', '3 V is within the VSYS range. Monitor the battery voltage as it drops.'], bank: ['strong', 'Micro-USB 5 V: simple.'], usbwall: ['strong', 'Reliable for a fixed monitor.'], psu27: ['ok', 'Works, but it\'s more than needed.'], aa6: ['weak', '9 V exceeds the VSYS maximum.'], pp3: ['weak', '9 V exceeds the VSYS maximum.'] },
+    pi5: { psu27: ['strong', 'The recommended 27 W supply gives full performance and USB current.'], usbwall: ['ok', 'A good 5 V / 3 A supply runs it, but USB peripheral current is limited and you may see undervoltage warnings.'], bank: ['ok', 'Only if it can deliver enough current. Camera and processing loads can trigger undervoltage.'], aa3: ['weak', 'Far too little voltage and current.'], aaa2: ['weak', 'Far too little voltage and current.'], aa6: ['weak', 'Wrong voltage. The Pi 5 needs a regulated 5 V USB-C supply.'], pp3: ['weak', 'Wrong voltage, and nowhere near enough current.'] }
+  };
+  function powerRating(brief, dev, sup) {
+    if (brief === 'A' && (sup === 'usbwall' || sup === 'psu27')) return ['weak', 'The brief requires a battery-powered system, so a mains supply doesn\'t meet it.'];
+    return PWR[dev][sup];
+  }
+  const CRIT = { io: 'Inputs & outputs', power: 'Power', proc: 'Processing', comms: 'Communication', prog: 'Programming' };
+  function engRating(b, d, c) {
+    const D = DEV[d];
+    if (c === 'io') {
+      if (b === 'C') return d === 'pi5' ? ['strong', 'Two MIPI camera connectors and GPIO for servos.'] : ['weak', 'No camera interface.'];
+      if (d === 'pi5') return ['ok', 'No analogue inputs: use a digital temperature sensor or an ADC.'];
+      if (d === 'microbit') return ['strong', 'Speaker, LEDs and analogue rings built in.'];
+      if (d === 'picaxe') return ['strong', '11 analogue/touch channels. The Darlington driver handles a buzzer.'];
+      return ['strong', 'Analogue inputs for a thermistor, and digital outputs for a buzzer or LED.'];
+    }
+    if (c === 'power') {
+      if (b === 'A') return ({ picaxe: ['strong', 'Very low current from 3×AA.'], microbit: ['strong', 'Designed for 2×AAA.'], pico2w: ['strong', 'Wide VSYS range for batteries.'], esp32: ['ok', 'Needs sleep modes for good battery life.'], uno3: ['ok', 'Board overhead drains batteries.'], unor4: ['ok', 'Board overhead and an idle Wi-Fi module.'], pi5: ['weak', '5 V / 5 A: impractical on small batteries.'] })[d];
+      if (b === 'B') return d === 'pi5' ? ['ok', 'Needs a mains-level 5 V / 5 A supply.'] : ['strong', 'A USB supply or batteries both work for a monitor.'];
+      return d === 'pi5' ? ['strong', 'Mains power suits a camera system.'] : ['ok', 'Easy to power, but it can\'t do the job.'];
+    }
+    if (c === 'proc') {
+      if (b === 'C') return d === 'pi5' ? ['strong', 'Quad-core 2.4 GHz with gigabytes of RAM.'] : ['weak', 'Far too little processing and memory for images.'];
+      return d === 'pi5' ? ['strong', 'Far more than needed. That\'s a cost, not a benefit.'] : ['strong', 'Plenty for reading a sensor and comparing it with a threshold.'];
+    }
+    if (c === 'comms') {
+      if (b === 'A') return ['strong', 'No communication needed.' + (D.wireless.length ? ' The built-in wireless goes unused.' : '')];
+      const w = D.wireless;
+      if (w.includes('wifi')) return ['strong', 'Built-in Wi-Fi' + (w.includes('bt') ? ' and Bluetooth.' : '.')];
+      if (w.length) return ['ok', 'Bluetooth LE and radio only: short range, no direct internet.'];
+      return ['weak', 'No built-in wireless.'];
+    }
+    // prog
+    if (d === 'pi5') return b === 'C' ? ['strong', 'Python on Linux, with image-processing libraries such as OpenCV.'] : ['ok', 'Python works well, but you have to set up and maintain an OS.'];
+    return ({ picaxe: ['strong', 'BASIC or flowcharts in the free PICAXE Editor.'], microbit: ['strong', 'MakeCode blocks or Python in a browser.'], uno3: ['strong', 'Arduino IDE with huge community support.'], unor4: ['strong', 'Arduino IDE and Arduino Cloud.'], esp32: ['ok', 'Arduino IDE, ESP-IDF or MicroPython. Setup takes a little more work.'], pico2w: ['strong', 'MicroPython drag-and-drop, or the C/C++ SDK.'] })[d];
+  }
+  const TRADE = {
+    uno3: { t: ['Only 2 KB of RAM limits complex programs', 'No built-in wireless, so remote monitoring needs an add-on module', 'The board\'s regulator, USB chip and power LED use more battery current than a bare chip'], m: ['It can only be programmed with an internet connection', 'Its I/O pins run at 12 V'] },
+    unor4: { t: ['Each I/O pin supplies only about 8 mA, so loads need careful design or a driver', 'It costs more than an UNO R3 or a PICAXE, and the wireless is wasted if it isn\'t needed', 'Two microcontrollers (5 V and 3.3 V) add complexity'], m: ['It can\'t use UNO shields', 'It has no USB port'] },
+    microbit: { t: ['No Wi-Fi: remote monitoring relies on Bluetooth or radio to a nearby device', 'Only three large I/O rings are easy to use; more pins need an edge-connector breakout', 'The built-in temperature reading measures the processor, so it\'s only approximate'], m: ['It must run Linux to work', 'It needs a 9 V battery'] },
+    esp32: { t: ['3.3 V logic: 5 V sensors need level shifting', 'Wi-Fi increases power use, so battery designs need sleep modes', 'Some pins are restricted (GPIO6–11 are used by the flash; ADC2 is unavailable with Wi-Fi on)'], m: ['It has no wireless', 'It can only be programmed in BASIC'] },
+    pico2w: { t: ['3.3 V logic: 5 V signals need level shifting', 'Only three ADC inputs are available', 'The standard version comes without header pins, so you need to solder them for a breadboard'], m: ['It runs Raspberry Pi OS like a Pi 5', 'It has no analogue inputs'] },
+    picaxe: { t: ['No built-in wireless', 'Small program memory (2048 bytes) and slower BASIC limit complex tasks', 'The AXE118 is a self-assembly board (soldering time), and some suppliers list it as discontinued'], m: ['It needs an operating system', 'It can only run from 12 V'] },
+    pi5: { t: ['It needs a 5 V / 5 A supply: impractical from small batteries', 'It boots an OS and should be shut down properly to avoid SD-card corruption', 'No built-in analogue inputs: it needs an ADC or digital sensors', 'It costs far more than a microcontroller board'], m: ['It can\'t run Python', 'It has no GPIO pins'] }
+  };
+
+  const M3Q = {
+    1: 'Explain the difference between a microcontroller and a single-board computer. Give one example of each from this investigation.',
+    2: 'What does GPIO stand for, and how can GPIO pins be used in an electrotechnology system?',
+    3: 'Why does the logic operating voltage matter when connecting a sensor, LED module or other external component?',
+    4: 'Give one situation where wireless connectivity would be useful in a control system. What information might the system send or receive?',
+    5: 'Why is the most powerful controller not always the most appropriate engineering choice? Consider the needs and constraints of the system.'
+  };
+
+  // ================================================================ STATE
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const h = (tag, attrs, html) => { const e = document.createElement(tag); if (attrs) Object.entries(attrs).forEach(([k, v]) => { if (k === 'class') e.className = v; else e.setAttribute(k, v); }); if (html != null) e.innerHTML = html; return e; };
+  function fresh() { return { v: 1, started: Date.now(), pass: {}, tries: {}, revealed: {}, hints: {}, ans: {}, third: null, m4: { brief: null, dev: null, sup: null, soft: null, self: {}, selfDone: false, cons: [], trade: null, just: '' }, done: false, finishedAt: null }; }
+  function load() { try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); return s && s.v === 1 ? s : null; } catch (e) { return null; } }
+  let S = load() || fresh();
+  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+  let settings = { muted: false };
+  try { settings = Object.assign(settings, JSON.parse(localStorage.getItem(SET_KEY) || '{}')); } catch (e) {}
+  const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) {} };
+  const ui = { station: null, m2: 0, m3: 0, m4: 0 };
+
+  // progress keys
+  const KEYS = {
+    1: ORDER.map(d => 'm1.' + d).concat(['m1.lab']),
+    2: [].concat(...M2.map(c => (S.third ? c.chals(trio()) : c.chals(['picaxe', 'pi5', 'uno3'])).map((_, i) => `m2.${c.id}.${i}`))),
+    3: [].concat(...M3.map(sc => sc.chals.map((_, i) => `m3.${sc.id}.${i}`))),
+    4: ['m4.brief', 'm4.io', 'm4.dev', 'm4.pwr', 'm4.self', 'm4.soft', 'm4.final']
+  };
+  function trio() { return ['picaxe', 'pi5', S.third || 'uno3']; }
+  const mDone = n => KEYS[n].every(k => S.pass[k]);
+  const mOpen = n => n === 1 || mDone(n - 1);
+  function pct() { const all = [].concat(KEYS[1], KEYS[2], KEYS[3], KEYS[4]); return Math.round(100 * all.filter(k => S.pass[k]).length / all.length); }
+
+  // ================================================================ SOUND
+  let actx = null;
+  function initAudio() { if (!actx && (window.AudioContext || window.webkitAudioContext)) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (actx && actx.state === 'suspended') actx.resume(); }
+  function beep(f, d, type = 'square', v = 0.045) { if (!actx || settings.muted) return; const o = actx.createOscillator(), g = actx.createGain(); o.type = type; o.frequency.value = f; g.gain.value = v; o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d / 1000); }
+  const sfx = {
+    good: () => { beep(660, 80); setTimeout(() => beep(880, 100), 80); },
+    mid: () => { beep(520, 90, 'triangle'); setTimeout(() => beep(620, 90, 'triangle'), 110); },
+    bad: () => beep(170, 200, 'sawtooth', 0.05),
+    click: () => beep(720, 25, 'square', 0.025),
+    win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => beep(f, 150, 'triangle', 0.06), i * 130))
+  };
+  document.addEventListener('pointerdown', initAudio, { once: false });
+  document.addEventListener('keydown', initAudio);
+
+  function say(t) { const l = $('live'); l.textContent = ''; setTimeout(() => { l.textContent = t.replace(/<[^>]+>/g, ''); }, 30); }
+  let toastT = null;
+  function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('show'), 2200); }
+
+  // ================================================================ NAV / HUD
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('on')); $(id).classList.add('on');
+    window.scrollTo(0, 0); renderHud();
+    const hd = $(id).querySelector('h2, h3'); if (hd) { hd.setAttribute('tabindex', '-1'); hd.focus({ preventScroll: true }); }
+  }
+  function renderHud() {
+    const p = pct();
+    document.querySelectorAll('[data-hud]').forEach(el => {
+      el.innerHTML = `<span class="t">⚡ CONTROLLER CHALLENGE</span>
+        <div class="grow"><div class="bar" role="progressbar" aria-label="Overall progress" aria-valuenow="${p}" aria-valuemin="0" aria-valuemax="100"><i style="width:${p}%"></i></div><div class="pct">${p}% complete · saved on this device</div></div>
+        <button class="iconbtn" data-go="hub">🗺 MISSIONS</button>
+        <button class="iconbtn" data-mute aria-pressed="${settings.muted}">${settings.muted ? '🔇 SOUND OFF' : '🔊 SOUND ON'}</button>`;
+    });
+  }
+  document.addEventListener('click', e => {
+    const g = e.target.closest('[data-go]'); if (g) { goHub(); return; }
+    const m = e.target.closest('[data-mute]'); if (m) { settings.muted = !settings.muted; saveSettings(); renderHud(); if (!settings.muted) sfx.click(); }
+  });
+  function goHub() { renderHub(); show('hub'); }
+
+  const MINFO = [
+    null,
+    { ic: '🔬', nm: 'The Discovery Lab', d: 'Investigate seven controllers and identify each one.' },
+    { ic: '🕵️', nm: 'Specification Detective', d: 'PICAXE-20M2, Raspberry Pi 5 and a board of your choice.' },
+    { ic: '🛠️', nm: 'The Compatibility Workshop', d: 'Voltage, wiring, wireless and "is it overkill?" decisions.' },
+    { ic: '📜', nm: 'The Engineering Commission', d: 'Choose a client brief, select a controller and evaluate it.' }
+  ];
+  function renderHub() {
+    $('missionCards').innerHTML = [1, 2, 3, 4].map(n => {
+      const done = mDone(n), open = mOpen(n), k = KEYS[n], got = k.filter(x => S.pass[x]).length;
+      const st = done ? '✓ COMPLETE' : open ? (got ? `▶ CONTINUE (${got}/${k.length})` : '▶ START') : '🔒 LOCKED';
+      return `<button class="mcard ${done ? 'done' : open ? 'open' : 'locked'}" data-m="${n}" ${open ? '' : 'aria-disabled="true"'}>
+        <span class="num">MISSION ${n}</span><span class="ic" aria-hidden="true">${MINFO[n].ic}</span><span class="nm">${MINFO[n].nm}</span><span>${MINFO[n].d}</span><span class="st">${st}</span></button>`;
+    }).join('');
+    $('missionCards').querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => {
+      const n = +b.dataset.m; if (!mOpen(n)) { sfx.bad(); toast('Finish Mission ' + (n - 1) + ' first'); return; }
+      sfx.click(); openMission(n);
+    }));
+    $('hubSummary').textContent = S.done ? '📋 MY COMPLETION SUMMARY' : '📋 MY SUMMARY SO FAR';
+  }
+  function openMission(n) { ({ 1: renderM1, 2: renderM2, 3: renderM3, 4: renderM4 })[n](); show('m' + n); }
+
+  // ================================================================ CHALLENGE WIDGETS
+  // spec types: pick | multi | sort | order | hotspot.  key = progress key.  after() is called once when first solved.
+  function rerenderKeepScroll(fn) { const y = window.scrollY; fn(); window.scrollTo(0, y); renderHud(); }
+  function chal(spec, key, after) {
+    const solved = !!S.pass[key];
+    const box = h('div', { class: 'ch' });
+    box.innerHTML = `<span class="tag">${esc(spec.tag || 'CHALLENGE')}</span>${solved ? ' <span class="done-stamp">✓ SOLVED' + (S.revealed[key] ? ' (answer shown)' : '') + '</span>' : ''}<div class="q">${spec.q}</div>`;
+    const body = h('div'); box.appendChild(body);
+    const acts = h('div', { class: 'actions' });
+    const fb = h('div', { class: 'fb', role: 'status' });
+    const hint = h('div', { class: 'hint' }, '💡 ' + spec.hint);
+    const tries = () => S.tries[key] || 0;
+    const setFb = (cls, html) => { fb.className = 'fb show ' + cls; fb.innerHTML = html; say(html); };
+    const miss = (msg) => { S.tries[key] = tries() + 1; save(); sfx.bad(); if (tries() >= 2 && spec.hint) hint.classList.add('show'); if (tries() >= 3) revealBtn.style.display = ''; setFb('bad', msg); };
+    const win = (html, mid) => {
+      (mid ? sfx.mid : sfx.good)(); setFb(mid ? 'mid' : 'good', html);
+      if (!S.pass[key]) { S.pass[key] = true; save(); setTimeout(() => { toast('✓ Challenge solved'); after && after(); }, 900); }
+    };
+    const hintBtn = h('button', { class: 'btn ghost small', type: 'button' }, '💡 HINT');
+    hintBtn.addEventListener('click', () => { hint.classList.toggle('show'); S.hints[key] = true; save(); });
+    const revealBtn = h('button', { class: 'btn ghost small', type: 'button', style: 'display:none' }, '👁 SHOW ME THE ANSWER');
+    let checkBtn = null;
+
+    if (spec.type === 'pick') {
+      const grid = h('div', { class: spec.meter ? 'meter' : 'opts' + (spec.opts.length > 6 ? '' : '') });
+      const found = new Set(S.ans[key + ':found'] || []);
+      const need = spec.opts.filter(o => o.r === 'right').length;
+      let meter = null;
+      if (spec.explore) { meter = h('div', { class: 'overkill' }, '<div class="muted">Overkill meter</div><div class="bar"><i></i></div>'); }
+      spec.opts.forEach((o, i) => {
+        const b = h('button', { class: 'opt', type: 'button' }, esc(o.t) + (o.sub ? `<small>${esc(o.sub)}</small>` : ''));
+        const mark = () => { b.classList.remove('right', 'wrong', 'okish'); b.classList.add(o.r === 'right' ? 'right' : o.r === 'ok' ? 'okish' : 'wrong'); };
+        if (solved && (spec.multiRight ? o.r === 'right' : S.ans[key] === i)) mark();
+        b.addEventListener('click', () => {
+          mark(); if (meter) meter.querySelector('i').style.width = o.k + '%';
+          if (spec.onChoose && o.r !== 'wrong') { if (spec.onChoose(i)) return; }
+          if (o.r === 'wrong') { if (S.pass[key]) { sfx.bad(); setFb('bad', o.fb); } else miss(o.fb); return; }
+          if (spec.multiRight) {
+            found.add(i); S.ans[key + ':found'] = [...found]; save();
+            if (found.size < need) { sfx.mid(); setFb('mid', o.fb + `<br><b>${need - found.size} more workable approach${need - found.size > 1 ? 'es' : ''} to find.</b>`); return; }
+            win(o.fb + (spec.done ? '<br><br>' + spec.done : '')); return;
+          }
+          S.ans[key] = i; save();
+          win(o.fb + (spec.done ? '<br><br>' + spec.done : ''), o.r === 'ok');
+        });
+        grid.appendChild(b);
+      });
+      body.appendChild(grid); if (meter) body.appendChild(meter);
+      if (solved) {
+        const o = spec.multiRight ? null : spec.opts[S.ans[key]];
+        if (o) { fb.className = 'fb show ' + (o.r === 'ok' ? 'mid' : 'good'); fb.innerHTML = o.fb + (spec.done ? '<br><br>' + spec.done : ''); if (meter) meter.querySelector('i').style.width = o.k + '%'; }
+        else if (spec.multiRight) { fb.className = 'fb show good'; fb.innerHTML = spec.opts.filter(x => x.r === 'right').map(x => '✓ ' + x.fb).join('<br>'); }
+        if (spec.explore) fb.innerHTML += '<br><span class="muted">Try the other options to compare them.</span>';
+      }
+      revealBtn.addEventListener('click', () => { S.revealed[key] = true; const ri = spec.opts.findIndex(x => x.r === 'right'); S.ans[key] = ri; S.ans[key + ':found'] = spec.opts.map((x, j) => x.r === 'right' ? j : -1).filter(j => j >= 0); S.pass[key] = true; save(); after && after(); });
+    }
+
+    if (spec.type === 'multi') {
+      const grid = h('div', { class: 'opts' }); const sel = new Set(solved ? spec.opts.map((o, i) => o.ok ? i : -1).filter(i => i >= 0) : []);
+      const btns = spec.opts.map((o, i) => {
+        const b = h('button', { class: 'opt chk', type: 'button', 'aria-pressed': String(sel.has(i)) }, esc(o.t));
+        b.addEventListener('click', () => { sfx.click(); sel.has(i) ? sel.delete(i) : sel.add(i); b.setAttribute('aria-pressed', String(sel.has(i))); btns.forEach(x => x.classList.remove('right', 'wrong')); });
+        grid.appendChild(b); return b;
+      });
+      body.appendChild(grid);
+      const all = () => spec.opts.map((o, i) => (o.ok ? '✓ ' : '✗ ') + '<b>' + esc(o.t) + '</b>: ' + o.fb).join('<br>');
+      checkBtn = h('button', { class: 'btn small', type: 'button' }, 'CHECK ▶');
+      checkBtn.addEventListener('click', () => {
+        if (!sel.size) { setFb('info', 'Select at least one feature first.'); return; }
+        const wrongSel = spec.opts.map((o, i) => (sel.has(i) && !o.ok) ? i : -1).filter(i => i >= 0);
+        const missed = spec.opts.filter((o, i) => o.ok && !sel.has(i)).length;
+        btns.forEach((b, i) => { b.classList.remove('right', 'wrong'); if (sel.has(i)) b.classList.add(spec.opts[i].ok ? 'right' : 'wrong'); });
+        if (!wrongSel.length && !missed) { win(all()); return; }
+        miss((wrongSel.length ? wrongSel.map(i => '✗ <b>' + esc(spec.opts[i].t) + '</b>: ' + spec.opts[i].fb).join('<br>') + '<br>' : '') + (missed ? `<b>You've missed ${missed} correct ${missed > 1 ? 'clues' : 'clue'}.</b>` : ''));
+      });
+      if (solved) { btns.forEach((b, i) => spec.opts[i].ok && b.classList.add('right')); fb.className = 'fb show good'; fb.innerHTML = all(); }
+      revealBtn.addEventListener('click', () => { S.revealed[key] = true; S.pass[key] = true; save(); after && after(); });
+    }
+
+    if (spec.type === 'sort') {
+      const rows = h('div', { class: 'rows' });
+      const isBest = (it, v) => !it.best || (Array.isArray(it.best) ? it.best.includes(v) : it.best === v);
+      const firstBest = it => it.best ? (Array.isArray(it.best) ? it.best[0] : it.best) : it.ok[0];
+      const choice = spec.items.map(it => solved ? (S.ans[key] && S.ans[key][spec.items.indexOf(it)]) || firstBest(it) : null);
+      const rowEls = spec.items.map((it, i) => {
+        const r = h('div', { class: 'srow' });
+        r.innerHTML = `<div class="it">${esc(it.t)}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</div>`;
+        const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Choose for ' + it.t });
+        spec.bins.forEach(bn => {
+          const b = h('button', { type: 'button', 'aria-pressed': String(choice[i] === bn.id) }, esc(bn.t));
+          b.addEventListener('click', () => { sfx.click(); choice[i] = bn.id; seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); r.classList.remove('right', 'wrong', 'okish'); });
+          seg.appendChild(b);
+        });
+        r.appendChild(seg); const why = h('div', { class: 'why' }); r.appendChild(why); rows.appendChild(r); return r;
+      });
+      const grade = (showAll) => {
+        let wrong = 0, ok = 0;
+        rowEls.forEach((r, i) => {
+          const it = spec.items[i], v = choice[i]; r.classList.remove('right', 'wrong', 'okish');
+          if (it.ok.includes(v)) { const best = isBest(it, v); r.classList.add(best ? 'right' : 'okish'); if (!best) ok++; r.querySelector('.why').innerHTML = (best ? '' : 'Defensible. ') + it.fb; }
+          else { wrong++; r.classList.add('wrong'); r.querySelector('.why').innerHTML = showAll ? it.fb : 'Not this one. Check your research and try again.'; }
+        });
+        return { wrong, ok };
+      };
+      body.appendChild(rows);
+      checkBtn = h('button', { class: 'btn small', type: 'button' }, 'CHECK ▶');
+      checkBtn.addEventListener('click', () => {
+        if (choice.some(c => !c)) { setFb('info', 'Make a choice for every row first.'); return; }
+        const g = grade(false);
+        if (g.wrong) { miss(`${spec.items.length - g.wrong} of ${spec.items.length} right. The ✗ rows need another look.`); return; }
+        S.ans[key] = choice.slice(); save();
+        win((g.ok ? 'All workable. The amber rows are defensible, but read why another option is the stronger choice. ' : 'All correct! ') + (spec.extra ? '<br>' + spec.extra : '') + (spec.done ? '<br>' + spec.done : ''), g.ok > 0);
+      });
+      if (solved) { grade(true); fb.className = 'fb show good'; fb.innerHTML = 'Solved. Read each explanation.' + (spec.extra ? '<br>' + spec.extra : '') + (spec.done ? '<br>' + spec.done : ''); }
+      revealBtn.addEventListener('click', () => { S.revealed[key] = true; S.ans[key] = spec.items.map(firstBest); S.pass[key] = true; save(); after && after(); });
+    }
+
+    if (spec.type === 'order') {
+      let order = solved ? spec.items.map((_, i) => i).sort((a, b) => spec.items[a].rank - spec.items[b].rank) : spec.items.map((_, i) => i).sort((a, b) => (spec.items[a].t > spec.items[b].t ? 1 : -1));
+      const list = h('div', { class: 'rows' });
+      const draw = (marks) => {
+        list.innerHTML = '';
+        order.forEach((ix, pos) => {
+          const it = spec.items[ix];
+          const r = h('div', { class: 'orow' + (marks ? (marks[pos] ? ' right' : ' wrong') : '') }, `<span class="rk">${pos + 1}</span><span class="it">${esc(it.t)}${solved || marks ? `<br><small class="muted">${esc(it.sub || '')}</small>` : ''}</span>`);
+          const up = h('button', { class: 'iconbtn', type: 'button', 'aria-label': 'Move ' + it.t + ' up' }, '▲'); const dn = h('button', { class: 'iconbtn', type: 'button', 'aria-label': 'Move ' + it.t + ' down' }, '▼');
+          up.disabled = pos === 0; dn.disabled = pos === order.length - 1;
+          up.addEventListener('click', () => { sfx.click(); [order[pos - 1], order[pos]] = [order[pos], order[pos - 1]]; draw(); list.querySelectorAll('.orow')[pos - 1].querySelector('button').focus(); });
+          dn.addEventListener('click', () => { sfx.click(); [order[pos + 1], order[pos]] = [order[pos], order[pos + 1]]; draw(); const b = list.querySelectorAll('.orow')[pos + 1].querySelectorAll('button')[1]; b && b.focus(); });
+          r.appendChild(up); r.appendChild(dn); list.appendChild(r);
+        });
+      };
+      draw(solved ? order.map(() => true) : null); body.appendChild(list);
+      checkBtn = h('button', { class: 'btn small', type: 'button' }, 'CHECK ▶');
+      checkBtn.addEventListener('click', () => {
+        const sorted = order.map(i => spec.items[i].rank).slice().sort((a, b) => a - b);
+        const marks = order.map((ix, pos) => spec.items[ix].rank === sorted[pos]);
+        draw(marks);
+        if (marks.every(Boolean)) win(spec.done || 'Correct order.'); else miss('Not quite. The ✗ positions are out of order. Compare clock speed, processor type and memory.');
+      });
+      if (solved) { fb.className = 'fb show good'; fb.innerHTML = spec.done || 'Correct order.'; }
+      revealBtn.addEventListener('click', () => { S.revealed[key] = true; S.pass[key] = true; save(); after && after(); });
+    }
+
+    if (spec.type === 'hotspot') {
+      const fig = h('div', { class: 'figure' }); const stage = h('div', { style: 'position:relative' }, ART[spec.art]());
+      spec.spots.forEach(sp => {
+        const b = h('button', { class: 'hs' + (solved && sp.ok ? ' right' : ''), type: 'button', style: `left:${sp.x}%;top:${sp.y}%`, 'aria-label': 'Part ' + sp.id }, sp.id);
+        b.addEventListener('click', () => { stage.querySelectorAll('.hs').forEach(x => x.classList.remove('wrong')); if (sp.ok) { b.classList.add('right'); win(sp.fb); } else { b.classList.add('wrong'); if (S.pass[key]) setFb('bad', sp.fb); else miss(sp.fb); } });
+        stage.appendChild(b);
+      });
+      fig.appendChild(stage); fig.appendChild(h('div', { class: 'cap' }, 'Select a lettered marker. (Original simplified illustration, not to scale.)'));
+      body.appendChild(fig);
+      if (solved) { fb.className = 'fb show good'; fb.innerHTML = spec.spots.find(s => s.ok).fb; }
+      revealBtn.addEventListener('click', () => { S.revealed[key] = true; S.pass[key] = true; save(); after && after(); });
+    }
+
+    if (checkBtn && !solved) acts.appendChild(checkBtn);
+    if (!solved) { if (spec.hint) acts.appendChild(hintBtn); acts.appendChild(revealBtn); if (tries() >= 3) revealBtn.style.display = ''; if (tries() >= 2) hint.classList.add('show'); }
+    else if (checkBtn && spec.type === 'sort') { /* solved sorts stay viewable */ }
+    box.appendChild(acts); box.appendChild(hint); box.appendChild(fb);
+    return box;
+  }
+
+  const wsBox = (sec, html) => `<div class="ws"><b class="h">📝 WORKSHEET · ${esc(sec)}</b>${html}</div>`;
+  const resBox = (links, lead) => `<div class="research"><b class="h">🔎 RESEARCH FIRST${lead ? ' · ' + esc(lead) : ''}</b>${links.map(([t, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(t)} ↗</a>`).join('')}</div>`;
+  function steps(list, cur, okFn, openFn, onGo) {
+    const w = h('div', { class: 'steps', role: 'tablist' });
+    list.forEach((t, i) => { const b = h('button', { type: 'button', class: (i === cur ? 'cur ' : '') + (okFn(i) ? 'ok' : '') }, (okFn(i) ? '✓ ' : (i + 1) + '. ') + esc(t)); b.disabled = !openFn(i); if (i === cur) b.setAttribute('aria-current', 'step'); b.addEventListener('click', () => { sfx.click(); onGo(i); }); w.appendChild(b); });
+    return w;
+  }
+  function missionHead(n, lead) { return `<div class="panel"><div class="kicker">MISSION ${n}</div><h2 class="mtitle">${MINFO[n].nm}</h2><p class="lead">${lead}</p></div>`; }
+  function completePanel(n, html) {
+    const p = h('div', { class: 'panel', style: 'border-color:var(--green)' }, `<h3 style="color:var(--green)">✓ MISSION ${n} COMPLETE</h3>${html}`);
+    const a = h('div', { class: 'actions' });
+    const b = h('button', { class: 'btn', type: 'button' }, n < 4 ? `ON TO MISSION ${n + 1} ▶` : 'SEE MY COMPLETION SUMMARY ▶');
+    b.addEventListener('click', () => { if (n < 4) openMission(n + 1); else { renderSummary(); show('summary'); } });
+    const hb = h('button', { class: 'btn ghost', type: 'button' }, '🗺 MISSIONS'); hb.addEventListener('click', goHub);
+    a.appendChild(b); a.appendChild(hb); p.appendChild(a); return p;
+  }
+
+  // ================================================================ MISSION 1 RENDER
+  function renderM1() {
+    const root = $('m1body'); root.innerHTML = '';
+    const solvedN = ORDER.filter(d => S.pass['m1.' + d]).length;
+    if (!ui.station) {
+      root.insertAdjacentHTML('beforeend', missionHead(1, 'Seven controllers are on display. Visit every exhibit, research it on the manufacturer\'s site and pass its identification challenge. Then sort the whole lab.') +
+        wsBox(WS.m1, 'For <b>each</b> device, complete its box in your worksheet:<ul><li>Paste an <b>official product image or screenshot</b> from the manufacturer\'s page (use the link at each exhibit, not a random image search).</li><li>Device name · tick the device type · a primary purpose or possible application · the official source URL.</li></ul>'));
+      const p = h('div', { class: 'panel cy' }, `<div class="muted" style="margin-bottom:8px">Exhibits identified: <b style="color:#fff">${solvedN} / 7</b></div>`);
+      const g = h('div', { class: 'exhibits' });
+      ORDER.forEach((d, i) => {
+        const b = h('button', { class: 'exh' + (S.pass['m1.' + d] ? ' done' : ''), type: 'button' }, ART[d]() + `<b>${String(i + 1).padStart(2, '0')} · ${esc(DEV[d].name)}</b>`);
+        b.addEventListener('click', () => { sfx.click(); ui.station = d; rerenderKeepScroll(renderM1); window.scrollTo(0, 0); });
+        g.appendChild(b);
+      });
+      const lab = h('button', { class: 'exh' + (S.pass['m1.lab'] ? ' done' : ''), type: 'button' }, `<div style="font-size:46px;padding:18px 0">${solvedN === 7 ? '🗂️' : '🔒'}</div><b>LAB SORT</b><span class="muted">${solvedN === 7 ? 'Classify all seven' : 'Unlocks after all 7 exhibits'}</span>`);
+      lab.addEventListener('click', () => { if (solvedN < 7) { sfx.bad(); toast('Identify all seven exhibits first'); return; } sfx.click(); ui.station = 'lab'; renderM1(); window.scrollTo(0, 0); });
+      g.appendChild(lab); p.appendChild(g); root.appendChild(p);
+      if (mDone(1)) root.appendChild(completePanel(1, `<p>You've identified all seven controllers and sorted them into device types.</p>` + wsBox(WS.m1, 'Check that all seven boxes have an official image, a ticked device type, a purpose and a source URL. Then answer <b>"Check your classification"</b>: which entry is a chip rather than a complete board, and which device can run a desktop-style operating system?')));
+      const back = h('div', { class: 'actions' }); const hb = h('button', { class: 'btn ghost small', type: 'button' }, '🗺 MISSIONS'); hb.addEventListener('click', goHub); back.appendChild(hb); root.appendChild(back);
+      return;
+    }
+    const backBtn = h('button', { class: 'btn ghost small', type: 'button' }, '◀ BACK TO THE LAB'); backBtn.addEventListener('click', () => { ui.station = null; renderM1(); window.scrollTo(0, 0); });
+    if (ui.station === 'lab') {
+      root.appendChild(backBtn);
+      const p = h('div', { class: 'panel', style: 'margin-top:10px' }, `<div class="kicker">MISSION 1 · LAB SORT</div><h2 class="mtitle">Classify the controllers</h2>` +
+        `<div class="concept"><b class="h">Three device types.</b> A <b>microcontroller chip</b> is the control chip on its own. A <b>development board</b> puts a microcontroller on a PCB with power, USB and connection points. A <b>single-board computer</b> is a complete computer that runs an operating system.</div>`);
+      p.appendChild(chal(LABSORT, 'm1.lab', () => rerenderKeepScroll(renderM1)));
+      if (S.pass['m1.lab']) p.insertAdjacentHTML('beforeend', wsBox(WS.m1, 'Make sure your worksheet ticks match, then complete <b>"Check your classification"</b>.'));
+      root.appendChild(p);
+      if (mDone(1)) root.appendChild(completePanel(1, '<p>The Discovery Lab is complete.</p>'));
+      return;
+    }
+    const d = ui.station, D = DEV[d], i = ORDER.indexOf(d);
+    root.appendChild(backBtn);
+    const p = h('div', { class: 'panel', style: 'margin-top:10px' });
+    p.innerHTML = `<div class="kicker">EXHIBIT ${String(i + 1).padStart(2, '0')} OF 07</div><h2 class="mtitle">${esc(D.name)}</h2><div class="muted">Manufacturer: ${esc(D.maker)}</div>`;
+    const st = h('div', { class: 'station', style: 'margin-top:10px' });
+    const left = h('div', null, `<div class="figure">${ART[d]()}<div class="cap">Original simplified illustration, not the real product photo. Find the official image using the link.</div></div>`);
+    const right = h('div', null, `<p style="margin-top:0">${esc(D.intro)}</p>` + resBox(D.links, 'manufacturer information') +
+      wsBox(WS.m1, `Box ${String(i + 1).padStart(2, '0')} · ${esc(D.name)}:<ul><li>Paste the <b>official product image or screenshot</b>.</li><li>Fill in the device name, device type, a primary purpose or application, and the official source URL.</li><li>${esc(D.ws)}</li></ul>`));
+    st.appendChild(left); st.appendChild(right); p.appendChild(st);
+    p.appendChild(chal(M1[d], 'm1.' + d, () => rerenderKeepScroll(renderM1)));
+    const nav = h('div', { class: 'actions' });
+    if (i > 0) { const pb = h('button', { class: 'btn ghost small', type: 'button' }, '◀ ' + esc(DEV[ORDER[i - 1]].short)); pb.addEventListener('click', () => { ui.station = ORDER[i - 1]; renderM1(); window.scrollTo(0, 0); }); nav.appendChild(pb); }
+    if (i < 6) { const nb = h('button', { class: 'btn' + (S.pass['m1.' + d] ? '' : ' ghost') + ' small', type: 'button' }, 'NEXT EXHIBIT: ' + esc(DEV[ORDER[i + 1]].short) + ' ▶'); nb.addEventListener('click', () => { ui.station = ORDER[i + 1]; renderM1(); window.scrollTo(0, 0); }); nav.appendChild(nb); }
+    else { const lb = h('button', { class: 'btn small', type: 'button' }, 'LAB SORT ▶'); lb.addEventListener('click', () => { ui.station = ORDER.every(x => S.pass['m1.' + x]) ? 'lab' : null; renderM1(); window.scrollTo(0, 0); }); nav.appendChild(lb); }
+    p.appendChild(nav); root.appendChild(p);
+  }
+
+  // ================================================================ MISSION 2 RENDER
+  function m2CardDone(ci) { const T = trio(); return M2[ci].chals(T).every((_, j) => S.pass[`m2.${M2[ci].id}.${j}`]); }
+  function renderM2() {
+    const root = $('m2body'); root.innerHTML = '';
+    root.insertAdjacentHTML('beforeend', missionHead(2, 'Investigate three devices in detail: the <b>PICAXE-20M2 with AXE118</b>, the <b>Raspberry Pi 5</b>, and <b>one microcontroller development board of your choice</b>. Each case file matches a row of your worksheet\'s comparison table.'));
+    if (!S.third) {
+      const p = h('div', { class: 'panel cy' }, '<h3>Choose your third device</h3><p class="muted">Pick the development board you\'ll research alongside the PICAXE and the Pi 5. You can change it later, but that resets your Mission 2 answers.</p>');
+      const g = h('div', { class: 'devpick' });
+      THIRD.forEach(d => { const b = h('button', { class: 'opt', type: 'button' }, ART[d]() + `<b>${esc(DEV[d].name)}</b>`); b.addEventListener('click', () => { sfx.good(); S.third = d; save(); ui.m2 = 0; renderM2(); }); g.appendChild(b); });
+      p.appendChild(g); root.appendChild(p); return;
+    }
+    const T = trio();
+    const tp = h('div', { class: 'panel cy' });
+    tp.innerHTML = `<div class="kicker">YOUR CASE FILES</div><div class="trio">${T.map(d => `<div class="dc">${ART[d]()}<b>${esc(DEV[d].name)}</b><br>${DEV[d].links.map(([t, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(t)} ↗</a>`).join('<br>')}</div>`).join('')}</div>` +
+      wsBox(WS.m2, `Write <b>${esc(DEV[S.third].name)}</b> and its source URL next to <i>"My chosen board and source URL"</i>. Record concise, comparable facts in the table. If a specification depends on a board revision or an external circuit, state the condition.`);
+    const ch = h('button', { class: 'btn ghost small', type: 'button' }, '↺ CHANGE MY THIRD DEVICE');
+    ch.addEventListener('click', () => {
+      if (ch.dataset.sure) { Object.keys(S.pass).filter(k => k.startsWith('m2.')).forEach(k => { delete S.pass[k]; delete S.ans[k]; delete S.ans[k + ':found']; }); S.third = null; save(); renderM2(); renderHud(); return; }
+      ch.dataset.sure = '1'; ch.textContent = '⚠ CLICK AGAIN TO RESET MISSION 2 ANSWERS';
+    });
+    tp.appendChild(ch); root.appendChild(tp);
+    const openCard = ci => ci === 0 || m2CardDone(ci - 1);
+    if (!openCard(ui.m2)) ui.m2 = 0;
+    root.appendChild(steps(M2.map(c => c.title), ui.m2, m2CardDone, openCard, i => { ui.m2 = i; renderM2(); }));
+    const c = M2[ui.m2]; const p = h('div', { class: 'panel' });
+    p.innerHTML = `<div class="kicker">CASE FILE ${ui.m2 + 1} OF ${M2.length}</div><h3 class="mtitle" style="font-size:26px">${esc(c.title)}</h3><div class="muted">Worksheet row: <b style="color:var(--gold)">${esc(c.row)}</b></div><div class="concept">${c.concept}</div>`;
+    const list = c.chals(T);
+    for (let j = 0; j < list.length; j++) {
+      const k = `m2.${c.id}.${j}`;
+      p.appendChild(chal(list[j], k, () => rerenderKeepScroll(renderM2)));
+      if (!S.pass[k]) break;
+    }
+    if (m2CardDone(ui.m2)) {
+      p.insertAdjacentHTML('beforeend', wsBox(WS.m2, `Fill in the row <b>"${esc(c.row)}"</b> for all three devices, in your own words.` + (c.id === 'logic' ? ' Remember: logic voltage is not the same as the supply voltage.' : '')));
+      if (ui.m2 < M2.length - 1) { const nb = h('button', { class: 'btn', type: 'button' }, 'NEXT CASE FILE: ' + esc(M2[ui.m2 + 1].title) + ' ▶'); nb.addEventListener('click', () => { ui.m2++; renderM2(); window.scrollTo(0, 0); }); const a = h('div', { class: 'actions' }); a.appendChild(nb); p.appendChild(a); }
+    }
+    root.appendChild(p);
+    if (mDone(2)) root.appendChild(completePanel(2, '<p>All eight rows investigated.</p>' + wsBox(WS.m2, 'Check that every cell in the comparison table is complete, with conditions stated where a spec depends on the revision or circuit.')));
+  }
+
+  // ================================================================ MISSION 3 RENDER
+  const m3Done = i => M3[i].chals.every((_, j) => S.pass[`m3.${M3[i].id}.${j}`]);
+  function renderM3() {
+    const root = $('m3body'); root.innerHTML = '';
+    root.insertAdjacentHTML('beforeend', missionHead(3, 'Real engineering decisions. Each one shows why a choice works or fails, and several answers are sometimes reasonable. After each scenario, answer the matching worksheet question in your own words.'));
+    const open = i => i === 0 || m3Done(i - 1);
+    if (!open(ui.m3)) ui.m3 = 0;
+    root.appendChild(steps(M3.map(s => s.icon + ' ' + s.title), ui.m3, m3Done, open, i => { ui.m3 = i; renderM3(); }));
+    const sc = M3[ui.m3]; const p = h('div', { class: 'panel' });
+    p.innerHTML = `<div class="kicker">SCENARIO ${ui.m3 + 1} OF ${M3.length}</div><h3 class="mtitle" style="font-size:26px">${sc.icon} ${esc(sc.title)}</h3><div class="scen"><b class="h">CLIENT JOB · </b>${esc(sc.scen)}</div>`;
+    for (let j = 0; j < sc.chals.length; j++) { const k = `m3.${sc.id}.${j}`; p.appendChild(chal(sc.chals[j], k, () => rerenderKeepScroll(renderM3))); if (!S.pass[k]) break; }
+    if (m3Done(ui.m3)) {
+      p.insertAdjacentHTML('beforeend', wsBox(WS.m3, `Answer <b>Question ${sc.q}</b>: <i>${esc(M3Q[sc.q])}</i><br>Use evidence or examples from Missions 1 and 2.`));
+      if (ui.m3 < M3.length - 1) { const nb = h('button', { class: 'btn', type: 'button' }, 'NEXT SCENARIO ▶'); nb.addEventListener('click', () => { ui.m3++; renderM3(); window.scrollTo(0, 0); }); const a = h('div', { class: 'actions' }); a.appendChild(nb); p.appendChild(a); }
+    }
+    root.appendChild(p);
+    if (mDone(3)) root.appendChild(completePanel(3, '<p>Workshop complete.</p>' + wsBox(WS.m3, 'Check you\'ve answered all five questions in your own words.')));
+  }
+
+  // ================================================================ MISSION 4 RENDER
+  const M4STEPS = ['Brief', 'Inputs & outputs', 'Controller', 'Power', 'Self-check', 'Programming', 'Justify'];
+  const M4KEYS = KEYS[4];
+  function resetM4From(stepIx) { M4KEYS.slice(stepIx).forEach(k => { delete S.pass[k]; delete S.ans[k]; delete S.tries[k]; }); const m = S.m4; if (stepIx <= 0) m.brief = null; if (stepIx <= 2) m.dev = null; if (stepIx <= 3) m.sup = null; if (stepIx <= 4) { m.self = {}; m.selfDone = false; } if (stepIx <= 5) m.soft = null; if (stepIx <= 6) { m.cons = []; m.trade = null; ['m4.trade'].forEach(k => { delete S.pass[k]; delete S.ans[k]; delete S.tries[k]; }); } S.done = false; S.finishedAt = null; save(); }
+  const pillTxt = { strong: 'STRONG', ok: 'WORKABLE', weak: 'WEAK' };
+  const pill = r => `<span class="pill ${r}">${pillTxt[r]}</span>`;
+  function renderM4() {
+    const root = $('m4body'); root.innerHTML = ''; const m = S.m4;
+    root.insertAdjacentHTML('beforeend', missionHead(4, 'A client has commissioned your studio. Choose one brief, then select and evaluate a controller. Several choices can be technically defensible: the studio wants your reasoning.'));
+    const open = i => i === 0 || !!S.pass[M4KEYS[i - 1]];
+    if (!open(ui.m4)) ui.m4 = 0;
+    root.appendChild(steps(M4STEPS, ui.m4, i => !!S.pass[M4KEYS[i]], open, i => { ui.m4 = i; renderM4(); }));
+    const p = h('div', { class: 'panel' }); root.appendChild(p);
+    const B = m.brief && BRIEFS[m.brief];
+    const next = (label) => { const a = h('div', { class: 'actions' }); const b = h('button', { class: 'btn', type: 'button' }, (label || 'NEXT') + ' ▶'); b.addEventListener('click', () => { ui.m4++; renderM4(); window.scrollTo(0, 0); }); a.appendChild(b); p.appendChild(a); };
+    const head = (t) => { p.insertAdjacentHTML('beforeend', `<div class="kicker">STEP ${ui.m4 + 1} OF 7</div><h3 class="mtitle" style="font-size:26px">${t}</h3>` + (B ? `<div class="scen"><b class="h">${B.icon} BRIEF ${m.brief} · ${esc(B.name)}:</b> ${esc(B.ws)} <span class="muted">${esc(B.detail)}</span>${m.dev ? `<br><b class="h">CONTROLLER:</b> ${esc(DEV[m.dev].name)}` : ''}</div>` : '')); };
+    const s = ui.m4;
+    if (s === 0) {
+      head('Choose a client brief');
+      const g = h('div', { class: 'briefs' });
+      Object.entries(BRIEFS).forEach(([k, b]) => {
+        const o = h('button', { class: 'opt' + (m.brief === k ? ' sel' : ''), type: 'button', 'aria-pressed': String(m.brief === k) }, `<span class="bi" aria-hidden="true">${b.icon}</span><b>Brief ${k} · ${esc(b.name)}</b>${esc(b.ws)}<small>${esc(b.detail)}</small>`);
+        o.addEventListener('click', () => { if (m.brief && m.brief !== k) resetM4From(0); m.brief = k; S.pass['m4.brief'] = true; save(); sfx.good(); renderM4(); renderHud(); });
+        g.appendChild(o);
+      });
+      p.appendChild(g);
+      if (m.brief) { p.insertAdjacentHTML('beforeend', wsBox(WS.m4, `Tick <b>Brief ${m.brief}</b> next to "I choose". Changing brief here resets the later steps.`)); next(); }
+      return;
+    }
+    if (s === 1) {
+      head('What does the system need?');
+      p.appendChild(chal({ type: 'sort', tag: 'REQUIREMENTS', q: 'Sort each component: is it needed for this brief, an optional extra, or not needed?', hint: 'Re-read the brief. Only include what it actually asks for.', bins: [{ id: 'need', t: 'Needed' }, { id: 'opt', t: 'Optional extra' }, { id: 'no', t: 'Not needed' }], items: IOREQ[m.brief] }, 'm4.io', () => rerenderKeepScroll(renderM4)));
+      if (S.pass['m4.io']) next();
+      return;
+    }
+    if (s === 2) {
+      head('Select a controller');
+      const map = { strong: 'right', ok: 'ok', weak: 'wrong' };
+      const spec = { type: 'pick', tag: 'CLIENT REVIEW', q: 'Which controller will you propose? The client\'s engineer reviews each proposal. You can try others to compare.', hint: 'Check your inputs and outputs, power source and processing needs against each device.',
+        opts: ORDER.map(d => ({ t: DEV[d].name, r: map[FIT[m.brief][d][0]], fb: pill(FIT[m.brief][d][0]) + ' ' + FIT[m.brief][d][1] })),
+        onChoose: (i) => { const d = ORDER[i]; const changed = m.dev && m.dev !== d; if (changed) resetM4From(3); m.dev = d; save(); if (changed) setTimeout(() => rerenderKeepScroll(renderM4), 1400); return false; } };
+      if (m.dev) S.ans['m4.dev'] = ORDER.indexOf(m.dev);
+      p.appendChild(chal(spec, 'm4.dev', () => rerenderKeepScroll(renderM4)));
+      if (S.pass['m4.dev'] && m.dev) { p.insertAdjacentHTML('beforeend', wsBox(WS.m4, `Write <b>${esc(DEV[m.dev].name)}</b> as your selected device and model. Choosing a different controller here resets the later steps.`)); next(); }
+      return;
+    }
+    if (s === 3) {
+      head('Power requirements');
+      const keys = Object.keys(SUPPLIES), map = { strong: 'right', ok: 'ok', weak: 'wrong' };
+      const spec = { type: 'pick', tag: 'POWER PLAN', q: `How will you power the ${esc(DEV[m.dev].short)} for this brief?`, hint: 'Check the allowed input range on the manufacturer page, and whether the brief requires batteries.',
+        opts: keys.map(k => { const r = powerRating(m.brief, m.dev, k); return { t: SUPPLIES[k], r: map[r[0]], fb: pill(r[0]) + ' ' + r[1] }; }),
+        onChoose: (i) => { m.sup = keys[i]; save(); return false; } };
+      if (m.sup) S.ans['m4.pwr'] = keys.indexOf(m.sup);
+      p.appendChild(chal(spec, 'm4.pwr', () => rerenderKeepScroll(renderM4)));
+      if (S.pass['m4.pwr']) next();
+      return;
+    }
+    if (s === 4) {
+      head('Rate your own choice');
+      p.insertAdjacentHTML('beforeend', '<p class="muted">Rate your controller against each requirement, then compare your ratings with the studio engineer\'s.</p>');
+      const t = h('div', { class: 'rows' });
+      Object.entries(CRIT).forEach(([c, label]) => {
+        const r = h('div', { class: 'srow' }, `<div class="it"><b>${label}</b></div>`); const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Rate ' + label });
+        ['strong', 'ok', 'weak'].forEach(v => { const b = h('button', { type: 'button', 'aria-pressed': String(m.self[c] === v) }, pillTxt[v]); b.disabled = m.selfDone; b.addEventListener('click', () => { sfx.click(); m.self[c] = v; save(); seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }); seg.appendChild(b); });
+        r.appendChild(seg);
+        if (m.selfDone) { const e = engRating(m.brief, m.dev, c); r.classList.add(e[0] === m.self[c] ? 'right' : 'okish'); r.appendChild(h('div', { class: 'why' }, `Engineer: ${pill(e[0])} ${e[1]}`)); }
+        t.appendChild(r);
+      });
+      p.appendChild(t);
+      const fb = h('div', { class: 'fb' }); const a = h('div', { class: 'actions' });
+      if (!m.selfDone) {
+        const cb = h('button', { class: 'btn small', type: 'button' }, 'COMPARE WITH THE ENGINEER ▶');
+        cb.addEventListener('click', () => { if (Object.keys(CRIT).some(c => !m.self[c])) { fb.className = 'fb show info'; fb.textContent = 'Rate all five requirements first.'; return; } m.selfDone = true; S.pass['m4.self'] = true; save(); sfx.good(); rerenderKeepScroll(renderM4); });
+        a.appendChild(cb);
+      } else {
+        const match = Object.keys(CRIT).filter(c => engRating(m.brief, m.dev, c)[0] === m.self[c]).length;
+        fb.className = 'fb show ' + (match >= 4 ? 'good' : 'mid'); fb.innerHTML = `You matched the engineer on <b>${match} of 5</b>. Where you differ, decide whether your reasoning or theirs is stronger. Engineers can disagree if they justify it with specifications.`;
+      }
+      p.appendChild(a); p.appendChild(fb);
+      if (S.pass['m4.self']) next();
+      return;
+    }
+    if (s === 5) {
+      head('Programming requirements');
+      const keys = Object.keys(SOFT);
+      const spec = { type: 'pick', tag: 'TOOLCHAIN', q: `Which programming software and language will your team use for the ${esc(DEV[m.dev].short)}?`, hint: 'Check the manufacturer\'s "Getting started" or "Software" section.',
+        opts: keys.map(k => ({ t: SOFT[k], r: DEV[m.dev].soft.includes(k) ? 'right' : 'wrong', fb: DEV[m.dev].soft.includes(k) ? `Supported for the ${DEV[m.dev].short}.` + (m.dev === 'pi5' && m.brief === 'C' ? ' Python on Raspberry Pi OS gives access to image-processing libraries.' : '') : `Not the supported route for the ${DEV[m.dev].short}. Check the manufacturer page.` })),
+        onChoose: (i) => { m.soft = keys[i]; save(); return false; } };
+      p.appendChild(chal(spec, 'm4.soft', () => rerenderKeepScroll(renderM4)));
+      if (S.pass['m4.soft']) next();
+      return;
+    }
+    if (s === 6) {
+      head('Build your justification');
+      p.insertAdjacentHTML('beforeend', '<p>Your worksheet needs <b>three technical considerations</b> and <b>one limitation or trade-off</b>, based on specifications rather than personal preference.</p>');
+      // considerations
+      const cbox = h('div', { class: 'ch' }, `<span class="tag">THREE CONSIDERATIONS</span><div class="q">Choose the three technical considerations you'll write about.</div>`);
+      const g = h('div', { class: 'opts' });
+      Object.entries(CRIT).forEach(([c, label]) => {
+        const e = engRating(m.brief, m.dev, c), on = m.cons.includes(c);
+        const b = h('button', { class: 'opt chk', type: 'button', 'aria-pressed': String(on) }, `${label} ${pill(e[0])}<small>${esc(e[1])}</small>`);
+        b.addEventListener('click', () => { sfx.click(); if (m.cons.includes(c)) m.cons = m.cons.filter(x => x !== c); else if (m.cons.length < 3) m.cons.push(c); else { toast('Choose exactly three'); return; } save(); rerenderKeepScroll(renderM4); });
+        g.appendChild(b);
+      });
+      cbox.appendChild(g); cbox.insertAdjacentHTML('beforeend', `<div class="muted" style="margin-top:6px">${m.cons.length} / 3 chosen. A weaker rating can still be a consideration: explain how your design handles it.</div>`);
+      p.appendChild(cbox);
+      // trade-off
+      const tr = TRADE[m.dev], list = [];
+      tr.t.forEach((x, i) => { list.push({ t: x, r: 'right', fb: 'A genuine limitation, backed up by the specifications. Explain how it affects this brief.' }); if (tr.m[i]) list.push({ t: tr.m[i], r: 'wrong', fb: 'That isn\'t true for this device. Check the manufacturer page.' }); });
+      p.appendChild(chal({ type: 'pick', tag: 'ONE TRADE-OFF', q: `Which of these is a genuine limitation of the ${esc(DEV[m.dev].short)}? (Choose the one you'll write about.)`, hint: 'Two of the statements are myths. Check them against what you researched in Mission 2.', opts: list,
+        onChoose: (i) => { m.trade = list[i].t; save(); return false; } }, 'm4.trade', () => rerenderKeepScroll(renderM4)));
+      const tbox = h('div', { class: 'ch' }, `<span class="tag">DRAFT (OPTIONAL)</span><div class="q">Draft your first technical consideration in one sentence. It stays on this device and appears in your summary.</div>`);
+      const ta = h('textarea', { 'aria-label': 'Draft justification sentence', maxlength: '600' }); ta.value = m.just || ''; ta.addEventListener('input', () => { m.just = ta.value; save(); });
+      tbox.appendChild(ta); p.appendChild(tbox);
+      const ready = m.cons.length === 3 && S.pass['m4.trade'];
+      const a = h('div', { class: 'actions' }); const fin = h('button', { class: 'btn', type: 'button' }, '🏁 SUBMIT TO THE CLIENT'); fin.disabled = !ready;
+      fin.addEventListener('click', () => { S.pass['m4.final'] = true; S.done = true; S.finishedAt = S.finishedAt || Date.now(); save(); sfx.win(); rerenderKeepScroll(renderM4); });
+      a.appendChild(fin); if (!ready) a.insertAdjacentHTML('beforeend', '<span class="muted">Choose three considerations and a genuine trade-off first.</span>'); p.appendChild(a);
+      if (S.pass['m4.final']) {
+        const fit = FIT[m.brief][m.dev];
+        root.appendChild(completePanel(4, `<p>Commission submitted: <b>${esc(DEV[m.dev].name)}</b> for <b>Brief ${m.brief} · ${esc(B.name)}</b> ${pill(fit[0])}</p><p>${esc(fit[1])}</p>` +
+          wsBox(WS.m4, `<b>Final checkpoint: complete your engineering justification in the worksheet.</b><ul><li>Tick Brief ${m.brief} and write the selected device and model.</li><li>Technical considerations 1–3: ${m.cons.map(c => CRIT[c]).join(', ')}. Say what feature matters and how it suits the brief, with specifications.</li><li>One limitation or trade-off: what might make your choice less suitable?</li><li>Final reflection: what would you investigate before buying a controller for your own Systems Engineering project?</li></ul>`)));
+      }
+    }
+  }
+
+  // ================================================================ SUMMARY
+  function fmtTime(ms) { const m = Math.round(ms / 60000); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; }
+  function summaryData() {
+    const m = S.m4, allKeys = [].concat(KEYS[1], KEYS[2], KEYS[3], KEYS[4]);
+    const L = [];
+    L.push(['THE CONTROLLER CHALLENGE · COMPLETION SUMMARY']);
+    L.push([S.done ? 'Status: all four missions complete' : `Status: in progress (${pct()}%)`]);
+    L.push([`Time on task: ${fmtTime((S.finishedAt || Date.now()) - S.started)} · Hints opened: ${Object.keys(S.hints).length} · Answers revealed: ${Object.keys(S.revealed).filter(k => S.revealed[k]).length}`]);
+    L.push(['h', WS.m1]);
+    L.push([`Exhibits identified: ${ORDER.filter(d => S.pass['m1.' + d]).length} / 7` + (S.pass['m1.lab'] ? ' · Lab sort complete' : '')]);
+    L.push(['h', WS.m2]);
+    L.push([S.third ? `Devices investigated: PICAXE-20M2 + AXE118, Raspberry Pi 5, ${DEV[S.third].name}` : 'Third device not chosen yet']);
+    L.push([`Case files complete: ${M2.filter((_, i) => S.third && m2CardDone(i)).map(c => c.title).join(', ') || 'none yet'}`]);
+    L.push(['h', WS.m3]);
+    L.push([`Scenarios complete: ${M3.filter((_, i) => m3Done(i)).map(s => s.title + ' (Q' + s.q + ')').join(', ') || 'none yet'}`]);
+    const ok = S.ans['m3.cost.0'] != null ? M3[4].chals[0].opts[S.ans['m3.cost.0']] : null;
+    if (ok) L.push([`Night-light choice: ${ok.t}`]);
+    L.push(['h', WS.m4]);
+    if (m.brief) L.push([`Brief ${m.brief}: ${BRIEFS[m.brief].ws}`]);
+    if (m.dev) L.push([`Selected controller: ${DEV[m.dev].name} (engineer review: ${pillTxt[FIT[m.brief][m.dev][0]]})`]);
+    if (m.sup) L.push([`Power: ${SUPPLIES[m.sup]} (${pillTxt[powerRating(m.brief, m.dev, m.sup)[0]]})`]);
+    if (m.soft) L.push([`Programming: ${SOFT[m.soft]}`]);
+    if (m.selfDone) L.push([`Self-rating matched the engineer on ${Object.keys(CRIT).filter(c => engRating(m.brief, m.dev, c)[0] === m.self[c]).length} of 5 requirements`]);
+    if (m.cons.length) L.push([`Technical considerations: ${m.cons.map(c => CRIT[c]).join(', ')}`]);
+    if (m.trade) L.push([`Trade-off: ${m.trade}`]);
+    if (m.just) L.push([`Draft sentence: ${m.just}`]);
+    L.push(['h', 'Worksheet checklist']);
+    L.push(['[ ] Mission 1: seven boxes with official images, device types, purposes and source URLs; "Check your classification" answered']);
+    L.push(['[ ] Mission 2: comparison table complete, plus my chosen board and source URL']);
+    L.push(['[ ] Mission 3: Questions 1–5 answered in my own words']);
+    L.push(['[ ] Mission 4: brief ticked, device named, three considerations, one trade-off, final reflection']);
+    void allKeys; return L;
+  }
+  function renderSummary() {
+    const root = $('sumbody'); root.innerHTML = ''; const L = summaryData();
+    const card = h('div', { class: 'sumcard', id: 'sumcard' });
+    let html = `<div class="noprint" style="margin-bottom:10px"><label for="sumName" style="font-weight:bold">Name for printing (optional):</label> <input type="text" id="sumName" style="max-width:320px;background:#fff;color:#111;border:1px solid #999" autocomplete="off"><div class="nb">Not saved or sent anywhere. It only appears on this printout.</div></div><div id="printName" style="font-weight:bold"></div>`;
+    let inList = false;
+    L.forEach((row, i) => {
+      if (i === 0) { html += `<h3>${esc(row[0])}</h3>`; return; }
+      if (row[0] === 'h') { if (inList) html += '</ul>'; html += `<h4>${esc(row[1])}</h4><ul>`; inList = true; return; }
+      html += inList ? `<li>${esc(row[0])}</li>` : `<div>${esc(row[0])}</div>`;
+    });
+    if (inList) html += '</ul>';
+    html += `<div class="nb">Generated ${new Date().toLocaleString()} · Progress stored only in this browser.</div>`;
+    card.innerHTML = html; root.appendChild(card);
+    const nm = card.querySelector('#sumName'); nm.addEventListener('input', () => { card.querySelector('#printName').textContent = nm.value ? 'Name: ' + nm.value : ''; });
+    const a = h('div', { class: 'actions noprint' });
+    const cp = h('button', { class: 'btn', type: 'button' }, '📋 COPY SUMMARY');
+    cp.addEventListener('click', () => {
+      const txt = (nm.value ? 'Name: ' + nm.value + '\n' : '') + L.map(r => r[0] === 'h' ? '\n## ' + r[1] : r[0]).join('\n');
+      const done = () => toast('Summary copied: paste it into your worksheet or Teams');
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => fallbackCopy(txt, done)); else fallbackCopy(txt, done);
+    });
+    const pr = h('button', { class: 'btn ghost', type: 'button' }, '🖨 PRINT'); pr.addEventListener('click', () => window.print());
+    const hb = h('button', { class: 'btn ghost', type: 'button' }, '🗺 MISSIONS'); hb.addEventListener('click', goHub);
+    a.appendChild(cp); a.appendChild(pr); a.appendChild(hb); root.appendChild(a);
+  }
+  function fallbackCopy(txt, done) { const t = document.createElement('textarea'); t.value = txt; t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Copy failed. Select the text and copy it manually.'); } t.remove(); }
+
+  // ================================================================ RESET + INIT
+  $('startBtn').addEventListener('click', () => { initAudio(); sfx.good(); goHub(); });
+  $('hubSummary').addEventListener('click', () => { renderSummary(); show('summary'); });
+  $('resetBtn').addEventListener('click', () => { $('resetModal').classList.add('show'); $('resetNo').focus(); });
+  $('resetNo').addEventListener('click', () => { $('resetModal').classList.remove('show'); $('resetBtn').focus(); });
+  $('resetYes').addEventListener('click', () => { try { localStorage.removeItem(STORE_KEY); } catch (e) {} S = fresh(); save(); Object.assign(ui, { station: null, m2: 0, m3: 0, m4: 0 }); $('resetModal').classList.remove('show'); toast('Activity restarted'); goHub(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('resetModal').classList.contains('show')) $('resetNo').click(); });
+  if (load()) { $('startBtn').textContent = S.done ? 'REVIEW MY MISSIONS ▶' : 'CONTINUE ▶'; }
+
+  // ---------------- sanity checks (developer console) ----------------
+  Object.entries(M1).forEach(([d, c]) => { console.assert(DEV[d] && ART[d], 'M1 device missing ' + d); if (c.type === 'hotspot') console.assert(c.spots.filter(s => s.ok).length === 1, 'hotspot needs one answer: ' + d); });
+  [LABSORT].concat(...M3.map(s => s.chals)).filter(c => c.type === 'sort').forEach(c => c.items.forEach(it => console.assert(it.ok.every(o => c.bins.some(b => b.id === o)), 'bad bin in ' + c.tag)));
+  THIRD.forEach(t => M2.forEach(c => c.chals(['picaxe', 'pi5', t]).forEach(x => { if (x.type === 'sort') x.items.forEach(it => console.assert(it.ok.every(o => x.bins.some(b => b.id === o)), `M2 ${c.id} bad bin for ${t}: ${it.t}`)); })));
+  ['A', 'B', 'C'].forEach(b => ORDER.forEach(d => { console.assert(FIT[b][d], 'FIT missing ' + b + d); Object.keys(SUPPLIES).forEach(s => console.assert(powerRating(b, d, s), 'PWR missing ' + d + s)); Object.keys(CRIT).forEach(c => console.assert(engRating(b, d, c), 'rating missing ' + b + d + c)); }));
+  // test hook: look up a challenge spec by its tag (used by the automated play-through test)
+  window.__CC = { S: () => S, KEYS, pct, spec: (tag) => [LABSORT].concat(Object.values(M1), ...M2.map(c => c.chals(trio())), ...M3.map(s => s.chals)).find(c => c.tag === tag) || null };
+})();
+</script>
+<script src="lock.js"></script>
+<script>SELocks.guard(window.CC_LOCK_LEVEL);</script>
+</body>
+</html>
