@@ -3,161 +3,258 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Systems Engineering – Level Select</title>
+<title>Systems Engineering – Game Hub</title>
 <style>
   * { box-sizing: border-box; }
-  :root { --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; }
+  :root { --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --orange: #fb923c; --teal: #2dd4bf; --violet: #a78bfa; }
+  html { background: #000; scroll-behavior: smooth; }
   body {
     margin: 0; min-height: 100vh; color: #eee; font-family: monospace; overflow-x: hidden;
     background: radial-gradient(ellipse at 50% 0%, #2a0a3d 0%, #0b0218 55%, #000 100%);
   }
+  a { color: var(--cyan); }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
   .grid-floor {
-    position: fixed; left: -50%; right: -50%; top: 60%; bottom: -30%; z-index: 0;
+    position: fixed; left: -50%; right: -50%; top: 60%; bottom: -30%; z-index: 0; pointer-events: none;
     background-image: linear-gradient(var(--pink) 2px, transparent 2px), linear-gradient(90deg, var(--pink) 2px, transparent 2px);
     background-size: 60px 60px; transform: perspective(260px) rotateX(62deg); transform-origin: center top;
     animation: gridmove 1.2s linear infinite; opacity: 0.35;
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 40%); mask-image: linear-gradient(to bottom, transparent 0%, #000 40%);
   }
   @keyframes gridmove { to { background-position: 0 60px; } }
-  main { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 36px 16px 60px; text-align: center; }
+  @media (prefers-reduced-motion: reduce) { .grid-floor { animation: none; } html { scroll-behavior: auto; } }
+  main { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; padding: 36px 16px 60px; text-align: center; }
   .kicker { color: var(--cyan); letter-spacing: 6px; font-weight: bold; text-shadow: 0 0 4px #000, 0 0 10px var(--cyan); }
   h1 {
     margin: 8px 0 4px; font: bold clamp(32px, 7vw, 64px) monospace; color: #fff;
     text-shadow: 0 0 3px #000, 0 0 12px var(--cyan), 0 0 30px var(--pink);
   }
   .sub { color: var(--green); letter-spacing: 8px; font-weight: bold; text-shadow: 0 0 10px #22c55e; }
-  .levels { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 34px; text-align: left; }
+
+  /* ---------- lanes: pick where you're going ---------- */
+  .lanes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 30px; text-align: left; }
+  .lane {
+    display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 12px; text-decoration: none; color: #eee;
+    background: rgba(0,0,0,0.8); border: 2px solid #444; transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .lane:hover, .lane:focus-visible { transform: translateY(-3px); }
+  .lane .ic { font-size: 30px; }
+  .lane .who { font-size: 12px; letter-spacing: 3px; color: #aaa; }
+  .lane b { font-size: 20px; }
+  .lane span.d { font-size: 13px; color: #ccc; line-height: 1.45; flex: 1; }
+  .lane .prog { font-size: 12px; color: var(--green); min-height: 1.2em; }
+  .lane .go { font-weight: bold; letter-spacing: 1px; font-size: 13px; }
+  .lane.sat { border-color: var(--gold); } .lane.sat b, .lane.sat .go { color: var(--gold); }
+  .lane.sat:hover, .lane.sat:focus-visible { box-shadow: 0 0 22px rgba(250,204,21,0.35); }
+  .lane.su { border-color: var(--orange); } .lane.su b, .lane.su .go { color: var(--cyan); }
+  .lane.su:hover, .lane.su:focus-visible { box-shadow: 0 0 22px rgba(251,146,60,0.35); }
+  .lane.rm { border-color: var(--violet); } .lane.rm b, .lane.rm .go { color: #c4b5fd; }
+  .lane.rm:hover, .lane.rm:focus-visible { box-shadow: 0 0 22px rgba(167,139,250,0.35); }
+
+  /* ---------- sections ---------- */
+  section { margin-top: 56px; scroll-margin-top: 16px; }
+  .sec-title { font: bold clamp(24px, 5vw, 40px) monospace; color: #fff; margin: 6px 0 4px; }
+  .sec-lead { color: #ccc; font-size: 14px; max-width: 640px; margin: 6px auto 0; line-height: 1.5; }
+  #sat .sec-title { text-shadow: 0 0 3px #000, 0 0 12px var(--gold), 0 0 26px var(--pink); }
+  #stepup .sec-title { text-shadow: 0 0 3px #000, 0 0 12px var(--cyan), 0 0 26px var(--orange); }
+  #research .sec-title { text-shadow: 0 0 3px #000, 0 0 12px var(--violet), 0 0 26px var(--pink); }
+  .top { display: inline-block; margin-top: 14px; font-size: 12px; color: #888; }
+
+  /* ---------- cards (shared) ---------- */
   .lvl {
-    position: relative; border-radius: 12px; padding: 18px 16px 16px; background: rgba(0,0,0,0.8);
-    border: 2px solid #444; display: flex; flex-direction: column; gap: 8px;
+    position: relative; border-radius: 12px; padding: 18px 16px 16px; background: rgba(0,0,0,0.82);
+    border: 2px solid #444; display: flex; flex-direction: column; gap: 8px; text-align: left;
   }
-  .lvl .n { font-size: 13px; letter-spacing: 4px; color: #aaa; }
-  .lvl h2 { margin: 0; font-size: 24px; }
+  .lvl .n { font-size: 12px; letter-spacing: 3px; color: #aaa; }
+  .lvl h2 { margin: 0; font-size: 21px; }
   .lvl p { margin: 0; font-size: 14px; line-height: 1.45; color: #ccc; flex: 1; }
-  .lvl .btn {
-    display: block; text-align: center; padding: 11px; border-radius: 6px; font: bold 16px monospace;
-    text-decoration: none; letter-spacing: 1px;
-  }
-  .l1 { border-color: var(--green); }
-  .l1 h2 { color: var(--green); }
-  .l1 .btn { background: #0b0b0b; color: var(--green); border: 1px solid var(--green); }
-  .l2 { border-color: var(--gold); box-shadow: 0 0 26px rgba(250,204,21,0.35); transform: scale(1.03); }
-  .l2 h2 { color: var(--gold); }
-  .l2 .btn { background: linear-gradient(90deg, var(--cyan), var(--pink)); color: #000; }
-  .badge {
-    position: absolute; top: -12px; right: 12px; background: var(--gold); color: #000; font-weight: bold;
-    font-size: 12px; padding: 4px 8px; border-radius: 4px; letter-spacing: 1px;
-  }
-  .l3 { border-color: #2dd4bf; box-shadow: 0 0 26px rgba(45,212,191,0.35); }
-  .l3 h2 { color: #2dd4bf; }
-  .l3 .btn { background: linear-gradient(90deg, #2dd4bf, var(--cyan)); color: #000; }
-  .l2 { transform: none; box-shadow: none; }
-  .lc { border-color: #fb923c; box-shadow: 0 0 26px rgba(251,146,60,0.35); }
-  .lc h2 { color: #fb923c; }
-  .lc .btn { background: linear-gradient(90deg, #fb923c, var(--gold)); color: #000; }
+  .lvl .btn { display: block; text-align: center; padding: 11px; border-radius: 6px; font: bold 15px monospace; text-decoration: none; letter-spacing: 1px; }
+  .badge { position: absolute; top: -12px; right: 12px; background: var(--gold); color: #000; font-weight: bold; font-size: 12px; padding: 4px 8px; border-radius: 4px; letter-spacing: 1px; }
   .done { color: var(--green); font-size: 13px; }
-  .lsu { border-color: #fb923c; box-shadow: 0 0 26px rgba(34,211,238,0.3); }
-  .lsu h2 { color: var(--cyan); }
-  .lsu .btn { background: linear-gradient(90deg, var(--cyan), #fb923c); color: #000; }
-  .lcc { border-color: #a78bfa; box-shadow: 0 0 26px rgba(167,139,250,0.3); }
-  .lcc h2 { color: #c4b5fd; }
-  .lcc .btn { background: linear-gradient(90deg, #a78bfa, var(--cyan)); color: #000; }
+  .done:empty { display: none; }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tags span { font-size: 11px; padding: 2px 7px; border-radius: 10px; border: 1px solid #555; color: #ccc; background: #111; }
   .lvl.locked { border-color: #444 !important; box-shadow: none !important; filter: grayscale(0.85); opacity: 0.6; }
   .lvl.locked .btn { background: #222 !important; color: #999 !important; border: 1px solid #444 !important; pointer-events: none; }
   .lvl .lockmsg { display: none; color: #f87171; font-size: 13px; }
   .lvl.locked .lockmsg { display: block; }
-  footer { margin-top: 40px; font-size: 12px; color: #777; }
-  footer a { color: #888; }
-  @media (max-width: 760px) { .levels { grid-template-columns: 1fr; } .l2 { transform: none; } }
+
+  /* ---------- SAT route: one numbered path ---------- */
+  .route { list-style: none; padding: 0; margin: 26px 0 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; counter-reset: stop; }
+  .route > li { position: relative; display: flex; }
+  .route > li > .lvl { flex: 1; }
+  .route > li:not(:last-child)::after {
+    content: '▶'; position: absolute; right: -21px; top: 50%; transform: translateY(-50%); color: var(--gold);
+    font-size: 16px; text-shadow: 0 0 8px var(--gold);
+  }
+  .stop { position: absolute; top: -14px; left: 14px; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font: bold 14px monospace; color: #000; background: var(--gold); box-shadow: 0 0 10px rgba(250,204,21,0.6); }
+  .route .lvl { padding-top: 22px; }
+  .l1 { border-color: var(--green); } .l1 h2 { color: var(--green); } .l1 .btn { background: #0b0b0b; color: var(--green); border: 1px solid var(--green); }
+  .l1 .stop { background: var(--green); }
+  .l2 { border-color: var(--gold); } .l2 h2 { color: var(--gold); } .l2 .btn { background: linear-gradient(90deg, var(--cyan), var(--pink)); color: #000; }
+  .lc { border-color: var(--orange); border-style: dashed; } .lc h2 { color: var(--orange); } .lc .btn { background: linear-gradient(90deg, var(--orange), var(--gold)); color: #000; }
+  .lc .stop { background: var(--orange); font-size: 13px; }
+  .l3 { border-color: var(--teal); } .l3 h2 { color: var(--teal); } .l3 .btn { background: linear-gradient(90deg, var(--teal), var(--cyan)); color: #000; }
+  .l3 .stop { background: var(--teal); }
+  .more { margin-top: 18px; padding: 10px; border: 2px dashed #555; border-radius: 10px; color: #888; font-weight: bold; letter-spacing: 2px; font-size: 13px; }
+
+  /* ---------- Step Up ---------- */
+  .lsu { border-color: var(--orange); box-shadow: 0 0 26px rgba(34,211,238,0.25); max-width: 680px; margin: 22px auto 0; }
+  .lsu h2 { color: var(--cyan); }
+  .lsu .btn { background: linear-gradient(90deg, var(--cyan), var(--orange)); color: #000; }
+
+  /* ---------- Research missions: a growing grid ---------- */
+  .missions { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; margin-top: 24px; }
+  .lcc { border-color: var(--violet); box-shadow: 0 0 22px rgba(167,139,250,0.25); }
+  .lcc h2 { color: #c4b5fd; }
+  .lcc .btn { background: linear-gradient(90deg, var(--violet), var(--cyan)); color: #000; }
+  .soon { border: 2px dashed #555; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    color: #888; padding: 22px 16px; min-height: 160px; font-weight: bold; letter-spacing: 2px; font-size: 13px; text-align: center; }
+  .soon small { font-weight: normal; letter-spacing: 0; color: #777; font-size: 12px; }
+
+  footer { margin-top: 48px; font-size: 12px; color: #777; }
+
+  @media (max-width: 900px) {
+    .route { grid-template-columns: 1fr 1fr; row-gap: 34px; }
+    .route > li:nth-child(2)::after { content: none; }
+  }
+  @media (max-width: 760px) {
+    .lanes { grid-template-columns: 1fr; }
+    .lane { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+    .lane span.d { flex-basis: 100%; }
+    .route { grid-template-columns: 1fr; row-gap: 34px; }
+    .route > li:not(:last-child)::after { content: '▼'; right: auto; left: 50%; top: auto; bottom: -27px; transform: translateX(-50%); }
+    .route > li:nth-child(2)::after { content: '▼'; }
+  }
 </style>
 </head>
 <body>
-<div class="grid-floor"></div>
+<div class="grid-floor" aria-hidden="true"></div>
 <main>
-  <div class="kicker">VCE · UNITS 3 &amp; 4</div>
+  <div class="kicker">VCE SYSTEMS ENGINEERING</div>
   <h1>SYSTEMS ENGINEERING</h1>
-  <div class="sub">LEVEL SELECT</div>
-  <div style="margin-top:10px;font-size:14px"><a href="#stepup" style="color:var(--cyan)">Year 11 Step Up? Your Units 1 &amp; 2 game is below ↓</a> · <a href="#research" style="color:#c4b5fd">Research missions ↓</a></div>
+  <div class="sub">CHOOSE YOUR PATH</div>
 
-  <div class="levels">
-    <div class="lvl l1" data-lock="1">
-      <div class="n">LEVEL 1</div>
-      <h2>Orientation</h2>
-      <p>Explore the campus and learn how the subject works and how you're assessed.<br><br>
-      <b>Already played it in class?</b> You don't need to replay it, but you can if you want a better rank.</p>
-      <div class="done" id="l1done"></div>
-      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
-      <a class="btn" href="orientation.html">PLAY LEVEL 1</a>
-    </div>
+  <nav class="lanes" aria-label="Choose your path">
+    <a class="lane sat" href="#sat">
+      <span class="ic" aria-hidden="true">🏁</span>
+      <span class="who">YEAR 12 · UNITS 3 &amp; 4</span>
+      <b>SAT Journey</b>
+      <span class="d">Four stops from orientation to planning your 9–10 SAT evidence.</span>
+      <span class="prog" id="satProg"></span>
+      <span class="go">GO ↓</span>
+    </a>
+    <a class="lane su" href="#stepup">
+      <span class="ic" aria-hidden="true">🚀</span>
+      <span class="who">YEAR 11 · UNITS 1 &amp; 2</span>
+      <b>Step Up</b>
+      <span class="d">New to the subject? Explore electronics and mechanical systems and make your passport.</span>
+      <span class="prog" id="suProg"></span>
+      <span class="go">GO ↓</span>
+    </a>
+    <a class="lane rm" href="#research">
+      <span class="ic" aria-hidden="true">🔬</span>
+      <span class="who">ANY YEAR · WITH WORKSHEETS</span>
+      <b>Research Missions</b>
+      <span class="d">Investigate real components and technology, then make justified engineering choices.</span>
+      <span class="prog" id="rmProg"></span>
+      <span class="go">GO ↓</span>
+    </a>
+  </nav>
 
-    <div class="lvl l2" data-lock="2">
-      <div class="n">LEVEL 2</div>
-      <h2>Rubric Heist</h2>
-      <p>Crack 8 vaults, one for each SAT criterion, using your printed rubric. Live leaderboard: get your session code from the board at the front.</p>
-      <div class="done" id="l2done"></div>
-      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
-      <a class="btn" href="rubric-heist.html">PLAY LEVEL 2 ▶</a>
-    </div>
-
-    <div class="lvl lc" data-lock="4">
-      <div class="badge">NEW</div>
-      <div class="n">CHECKPOINT · BEFORE LEVEL 3</div>
-      <h2>Will It Fly?</h2>
-      <p>Lock in your project. Run your idea through six checks: integrated system, power, size and storage, making it, budget and time. No idea yet? The idea explorer helps you find one.</p>
-      <div class="done" id="lcdone"></div>
-      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
-      <a class="btn" href="will-it-fly.html">CHECK MY IDEA ▶</a>
-    </div>
-
-    <div class="lvl l3" data-lock="3">
-      <div class="n">LEVEL 3</div>
-      <h2>The 9–10 Evidence Lab</h2>
-      <p>Compare evidence against the High and Very High descriptors for all eight criteria, then plan your own SAT evidence: what goes where in your chosen format, and what you'll do next.</p>
-      <div class="done" id="l3done"></div>
-      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
-      <a class="btn" href="evidence-lab.html">PLAY LEVEL 3 ▶</a>
-    </div>
-  </div>
-  <div style="margin-top:22px; padding:12px; border:2px dashed #555; border-radius:10px; color:#888; font-weight:bold; letter-spacing:2px">
-    🔒 MORE LEVELS COMING
-  </div>
-
-  <!-- Year 11 Step Up: a separate game with its own progress (not part of the Units 3 & 4 levels) -->
-  <div id="stepup" style="margin-top:44px">
-    <div class="kicker">VCE · UNITS 1 &amp; 2</div>
-    <div style="font:bold clamp(24px,5vw,40px) monospace;color:#fff;text-shadow:0 0 3px #000,0 0 12px var(--cyan),0 0 26px #fb923c;margin:6px 0 4px">YEAR 11 STEP UP</div>
-    <div class="levels" style="grid-template-columns:1fr;max-width:620px;margin:18px auto 0">
-      <div class="lvl lsu" data-lock="5">
-        <div class="n">STEP UP · SEPARATE GAME</div>
-        <h2>My Year in Systems</h2>
-        <p>New to Systems Engineering? Explore the Unit 1 electronics zone and the Unit 2 mechanical zone, pick up the habits that work in both, then make your My Year in Systems passport. No experience needed.</p>
-        <div class="done" id="sudone"></div>
+  <!-- ================= YEAR 12 SAT JOURNEY (lock ids 1, 2, 4, 3) ================= -->
+  <section id="sat" aria-labelledby="satH">
+    <div class="kicker">YEAR 12 · UNITS 3 &amp; 4</div>
+    <h2 class="sec-title" id="satH">SAT JOURNEY</h2>
+    <p class="sec-lead">Play the stops in order. Your teacher opens each one when it's time.</p>
+    <ol class="route">
+      <li><div class="lvl l1" data-lock="1">
+        <span class="stop" aria-hidden="true">1</span>
+        <div class="n">LEVEL 1</div>
+        <h2>Orientation</h2>
+        <p>Explore the campus and learn how the subject works and how you're assessed. <b>Already played it in class?</b> You don't need to replay it, but you can if you want a better rank.</p>
+        <div class="done" id="l1done"></div>
         <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
-        <a class="btn" href="step-up.html">PLAY STEP UP ▶</a>
-      </div>
-    </div>
-  </div>
+        <a class="btn" href="orientation.html">PLAY LEVEL 1</a>
+      </div></li>
+      <li><div class="lvl l2" data-lock="2">
+        <span class="stop" aria-hidden="true">2</span>
+        <div class="n">LEVEL 2</div>
+        <h2>Rubric Heist</h2>
+        <p>Crack 8 vaults, one for each SAT criterion, using your printed rubric. Live leaderboard: get your session code from the board at the front.</p>
+        <div class="done" id="l2done"></div>
+        <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+        <a class="btn" href="rubric-heist.html">PLAY LEVEL 2 ▶</a>
+      </div></li>
+      <li><div class="lvl lc" data-lock="4">
+        <span class="stop" aria-hidden="true">✓</span>
+        <div class="n">CHECKPOINT · BEFORE LEVEL 3</div>
+        <h2>Will It Fly?</h2>
+        <p>Lock in your project. Run your idea through six checks: integrated system, power, size and storage, making it, budget and time. No idea yet? The idea explorer helps you find one.</p>
+        <div class="done" id="lcdone"></div>
+        <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+        <a class="btn" href="will-it-fly.html">CHECK MY IDEA ▶</a>
+      </div></li>
+      <li><div class="lvl l3" data-lock="3">
+        <span class="stop" aria-hidden="true">3</span>
+        <div class="n">LEVEL 3</div>
+        <h2>The 9–10 Evidence Lab</h2>
+        <p>Compare evidence against the High and Very High descriptors for all eight criteria, then plan your own SAT evidence: what goes where in your chosen format, and what you'll do next.</p>
+        <div class="done" id="l3done"></div>
+        <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+        <a class="btn" href="evidence-lab.html">PLAY LEVEL 3 ▶</a>
+      </div></li>
+    </ol>
+    <div class="more">🔒 MORE LEVELS COMING</div>
+    <a class="top" href="#top">▲ back to the top</a>
+  </section>
 
-  <!-- Research missions: reusable activities, separate from the SAT level numbering, with their own progress -->
-  <div id="research" style="margin-top:44px">
-    <div class="kicker">SYSTEMS ENGINEERING · RESEARCH MISSIONS</div>
-    <div style="font:bold clamp(24px,5vw,40px) monospace;color:#fff;text-shadow:0 0 3px #000,0 0 12px #a78bfa,0 0 26px var(--pink);margin:6px 0 4px">RESEARCH MISSIONS</div>
-    <div class="levels" style="grid-template-columns:1fr;max-width:620px;margin:18px auto 0">
+  <!-- ================= YEAR 11 STEP UP (separate game, lock id 5) ================= -->
+  <section id="stepup" aria-labelledby="suH">
+    <div class="kicker">YEAR 11 · UNITS 1 &amp; 2</div>
+    <h2 class="sec-title" id="suH">STEP UP</h2>
+    <p class="sec-lead">A separate game with its own progress. It isn't part of the Units 3 &amp; 4 levels.</p>
+    <div class="lvl lsu" data-lock="5">
+      <div class="n">STEP UP · SEPARATE GAME</div>
+      <h2>My Year in Systems</h2>
+      <div class="tags"><span>Year 11</span><span>No experience needed</span><span>Electronics + mechanical</span></div>
+      <p>New to Systems Engineering? Explore the Unit 1 electronics zone and the Unit 2 mechanical zone, pick up the habits that work in both, then make your My Year in Systems passport.</p>
+      <div class="done" id="sudone"></div>
+      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+      <a class="btn" href="step-up.html">PLAY STEP UP ▶</a>
+    </div>
+    <a class="top" href="#top">▲ back to the top</a>
+  </section>
+
+  <!-- ================= RESEARCH MISSIONS (reusable, own progress; lock ids from 6) =================
+       To add a mission: copy the .lvl.lcc card into .missions, give it the next free data-lock id and a unique *done id,
+       then add its progress key to RESEARCH below. -->
+  <section id="research" aria-labelledby="rmH">
+    <div class="kicker">ANY YEAR · WITH WORKSHEETS</div>
+    <h2 class="sec-title" id="rmH">RESEARCH MISSIONS</h2>
+    <p class="sec-lead">Stand-alone investigations that go with a worksheet. Have your worksheet open before you start.</p>
+    <div class="missions">
       <div class="lvl lcc" data-lock="6">
         <div class="badge">NEW</div>
-        <div class="n">RESEARCH MISSION · WITH WORKSHEET</div>
+        <div class="n">RESEARCH MISSION</div>
         <h2>The Controller Challenge</h2>
-        <p>Investigate seven microcontroller boards, chips and computers, from the Arduino UNO and micro:bit to PICAXE and Raspberry Pi 5. Make real compatibility calls, then choose the right controller for a client. Have your research worksheet open.</p>
+        <div class="tags"><span>Year 11 · Year 12 revision</span><span>45–60 min</span><span>📝 Worksheet</span><span>Electronics</span></div>
+        <p>Investigate seven microcontroller boards, chips and computers, from the Arduino UNO and micro:bit to PICAXE and Raspberry Pi 5. Make real compatibility calls, then choose the right controller for a client.</p>
         <div class="done" id="ccdone"></div>
         <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
         <a class="btn" href="controller-challenge.html">START MISSION ▶</a>
       </div>
+      <div class="soon">🔒 MORE MISSIONS COMING<small>New research missions will appear here.</small></div>
     </div>
-  </div>
+    <a class="top" href="#top">▲ back to the top</a>
+  </section>
 
+  <footer>Progress is saved in this browser only.</footer>
 </main>
 <script src="lock.js"></script>
 <script>
+  document.querySelector('main').id = 'top';
   // teacher locks
   const btnText = {};
   document.querySelectorAll('[data-lock]').forEach(c => { const a = c.querySelector('a.btn'); btnText[c.dataset.lock] = a.textContent; });
@@ -172,27 +269,29 @@
   }
   function refreshLocks() { SELocks.fetch().then(applyLocks).catch(() => {}); }
   refreshLocks(); setInterval(refreshLocks, SELocks.RECHECK_MS);
-  try {
-    const p = JSON.parse(localStorage.getItem('rubricHeistProgress') || 'null');
-    if (p && p.done) document.getElementById('l2done').textContent = '✓ Cleared on this device';
-    else if (p && p.started) document.getElementById('l2done').textContent = '▶ In progress on this device';
-    const w = JSON.parse(localStorage.getItem('willItFlyProgress') || 'null');
-    if (w && w.done) document.getElementById('lcdone').textContent = '✓ Pitch card made on this device';
-    else if (w && w.started) document.getElementById('lcdone').textContent = '▶ In progress on this device';
-    const q = JSON.parse(localStorage.getItem('evidenceLabProgress') || 'null');
-    if (q && q.done) document.getElementById('l3done').textContent = '✓ Plan finished on this device';
-    else if (q && q.started) document.getElementById('l3done').textContent = '▶ In progress on this device';
-  } catch (e) {}
-  try {
-    const su = JSON.parse(localStorage.getItem('seStepUpProgress') || 'null');
-    if (su && su.done) document.getElementById('sudone').textContent = '✓ Passport made on this device';
-    else if (su && su.started) document.getElementById('sudone').textContent = '▶ In progress on this device';
-  } catch (e) {}
-  try {
-    const cc = JSON.parse(localStorage.getItem('seControllerChallengeProgress') || 'null');
-    if (cc && cc.done) document.getElementById('ccdone').textContent = '✓ All four missions complete on this device';
-    else if (cc && cc.started) document.getElementById('ccdone').textContent = '▶ In progress on this device';
-  } catch (e) {}
+
+  // progress on this device (each game keeps its own key; nothing is changed here)
+  function read(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
+  function status(key, el, doneText) {
+    const p = read(key), e = document.getElementById(el);
+    if (p && p.done) { e.textContent = doneText; return 'done'; }
+    if (p && p.started) { e.textContent = '▶ In progress on this device'; return 'started'; }
+    return null;
+  }
+  const sat = [
+    status('rubricHeistProgress', 'l2done', '✓ Cleared on this device'),
+    status('willItFlyProgress', 'lcdone', '✓ Pitch card made on this device'),
+    status('evidenceLabProgress', 'l3done', '✓ Plan finished on this device')
+  ];
+  const su = status('seStepUpProgress', 'sudone', '✓ Passport made on this device');
+  const RESEARCH = [['seControllerChallengeProgress', 'ccdone', '✓ All four missions complete on this device']];
+  const rm = RESEARCH.map(r => status(...r));
+
+  const n = (arr, v) => arr.filter(x => x === v).length;
+  if (n(sat, 'done')) document.getElementById('satProg').textContent = `✓ ${n(sat, 'done')} of 3 tracked stops done on this device`;
+  else if (n(sat, 'started')) document.getElementById('satProg').textContent = '▶ In progress on this device';
+  if (su) document.getElementById('suProg').textContent = su === 'done' ? '✓ Passport made' : '▶ In progress on this device';
+  if (n(rm, 'done') || n(rm, 'started')) document.getElementById('rmProg').textContent = n(rm, 'done') ? `✓ ${n(rm, 'done')} of ${RESEARCH.length} complete on this device` : '▶ In progress on this device';
 </script>
 </body>
 </html>
