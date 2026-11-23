@@ -635,8 +635,11 @@
   // ---------- level locks ----------
   const LOCKABLE = [
     { n: 1, name: 'Level 1 · Orientation' }, { n: 2, name: 'Level 2 · Rubric Heist' },
-    { n: 4, name: 'Checkpoint · Will It Fly?' }, { n: 3, name: 'Level 3 · 9–10 Evidence Lab' }
+    { n: 4, name: 'Checkpoint · Will It Fly?' }, { n: 3, name: 'Level 3 · 9–10 Evidence Lab' },
+    // Year 11 Step Up (step-up.html). Only shown once a level_locks row for level 5 exists in Supabase.
+    { n: 5, name: 'Step Up · Units 1 & 2', optional: true }
   ];
+  const lockable = () => LOCKABLE.filter(l => !l.optional || l.n in lockState);
   let lockState = {};
   async function loadLocks() {
     $('lockMsg').textContent = 'Loading…';
@@ -649,7 +652,7 @@
     renderLocks();
   }
   function renderLocks() {
-    $('lockRows').innerHTML = LOCKABLE.map(l => { const on = !!lockState[l.n];
+    $('lockRows').innerHTML = lockable().map(l => { const on = !!lockState[l.n];
       return `<div class="lockrow"><div>${esc(l.name)}<small>${on ? 'Students can\'t start this level' : 'Open to students'}</small></div>
         <button class="lkbtn ${on ? 'shut' : 'open'}" data-lk="${l.n}">${on ? '🔒 LOCKED' : '🔓 UNLOCKED'}</button></div>`; }).join('');
     $('lockRows').querySelectorAll('[data-lk]').forEach(b => b.addEventListener('click', () => setLocks([Number(b.dataset.lk)], !lockState[b.dataset.lk])));
@@ -679,8 +682,8 @@
   $('locksBtnSetup').addEventListener('click', toggleLocks);
   $('locksClose').addEventListener('click', toggleLocks);
   $('locks').addEventListener('click', e => { if (e.target.id === 'locks') toggleLocks(); });
-  $('lockAll').addEventListener('click', () => setLocks(LOCKABLE.map(l => l.n), true));
-  $('unlockAll').addEventListener('click', () => setLocks(LOCKABLE.map(l => l.n), false));
+  $('lockAll').addEventListener('click', () => setLocks(lockable().map(l => l.n), true));
+  $('unlockAll').addEventListener('click', () => setLocks(lockable().map(l => l.n), false));
 
   // ---------- controls ----------
   function toggleTeacher() { $('teacher').classList.toggle('hidden'); renderTeacher(); }

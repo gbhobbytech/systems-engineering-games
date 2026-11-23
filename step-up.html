@@ -1,0 +1,2691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Step Up – Systems Engineering Units 1 &amp; 2</title>
+<style>
+  .neon-pink {
+    color: #ff4ecf;
+    text-shadow:
+      0 0 4px #ff4ecf,
+      0 0 8px #ff4ecf,
+      0 0 12px #ff4ecf,
+      0 0 18px #ff4ecf,
+      0 0 24px #ff2ecb,
+      0 0 30px #ff2ecb;
+    font-weight: bold;
+  }
+
+  * { box-sizing: border-box; }
+
+  :root {
+    --tile: 32px;
+    --gap: 2px;
+  }
+
+  body {
+    background: #111;
+    color: #eee;
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 20px 12px;
+  }
+  #gameWrapper {
+    border: 3px solid #555;
+    padding: 16px;
+    background: #000;
+    position: relative;
+    width: min(900px, calc(100vw - 24px));
+    max-width: 100%;
+    overflow: hidden;
+  }
+  #hud {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  #hudTitle {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  #hudItems div {
+    line-height: 1.3;
+  }
+  .hud-status { color: #facc15; margin-top: 4px; }
+  .hud-dim { color: #888; }
+
+  #mapViewport {
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  #map {
+    display: grid;
+    grid-template-columns: repeat(20, var(--tile));
+    grid-template-rows: repeat(20, var(--tile));
+    gap: var(--gap);
+    width: max-content;
+    margin: 0 auto;
+  }
+  .tile {
+    width: var(--tile);
+    height: var(--tile);
+    background: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+  }
+
+  .tile.player { background: #0f0 !important; color: #000 !important; text-shadow: none !important; font-weight: bold; }
+
+  .building { background: #444; }
+  .b-assessment { background: #1d4ed8; } /* blue */
+  .b-integrity  { background: #a855f7; } /* purple */
+  .b-command    { background: #f97316; } /* orange */
+  .b-logbook    { background: #22c55e; } /* green */
+  .b-start      { background: #eab308; color: #000; } /* yellow */
+  .b-exit       { background: #dc2626; } /* red */
+  .b-spin       { background: #06b6d4; color: #000; } /* cyan */
+  .b-easter     { background: #ec4899; } /* pink */
+  .b-safety     { /* hazard stripes */
+    background: repeating-linear-gradient(45deg, #facc15 0 5px, #111 5px 10px);
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 0 0 3px #000, 0 0 3px #000;
+  }
+  .b-systems    { background: #cbd5e1; color: #000; } /* light slate */
+  .b-workshop   { background: #7c4a1e; } /* brown */
+
+  .wall {
+    background: #333;
+    box-shadow: inset 0 0 4px #000;
+  }
+
+  /* Fog of war */
+  .fog {
+    background: rgb(25, 28, 32);
+    color: rgb(1, 17, 50);
+  }
+
+  #instructions {
+    margin-top: 8px;
+    color: #ccc;
+    font-size: 14px;
+    text-align: center;
+    min-height: 1.4em;
+  }
+  #instructions.warn { color: #facc15; }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* Dialog overlay (quizzes, feedback, spin mini-game) */
+  #dialog {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 16px;
+    width: min(860px, calc(100vw - 24px));
+    max-height: 72vh;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.95);
+    border: 1px solid #888;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 16px;
+    z-index: 4;
+  }
+  #dialogTitle {
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+  #dialogText {
+    white-space: pre-wrap;
+    line-height: 1.35;
+  }
+  .opt-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin: 6px 0 0;
+    padding: 7px 9px;
+    background: #111;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+  }
+  .opt-btn:hover { border-color: #0f0; }
+  #dialogHint {
+    margin-top: 8px;
+    color: #999;
+    font-size: 13px;
+  }
+
+  /* Room / interior screen */
+  #roomScreen {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    border: 1px solid #666;
+    padding: 8px;
+    flex-direction: row;
+    gap: 8px;
+    z-index: 3;
+  }
+  #roomScreen:not(.hidden) {
+    display: flex;
+  }
+  #roomArt {
+    white-space: pre;
+    font-family: monospace;
+    font-size: 20px;
+    min-width: 30%;
+    max-width: 30%;
+    line-height: 1.1;
+  }
+  #roomContent {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #roomText {
+    white-space: pre-wrap;
+    font-size: 20px;
+    line-height: 1.3;
+  }
+  .gold-star { font-size: 1.2em; line-height: 1; color: #facc15; text-shadow: 0 0 4px #facc15, 0 0 8px #b45309; }
+  .line-tick { color: #4ade80; }
+
+  /* Spin Lab wheel */
+  .wheel-wrap {
+    position: relative;
+    width: 230px;
+    height: 230px;
+    margin: 18px auto 8px;
+  }
+  .wheel {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 4px solid #e5e7eb;
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
+    transition: transform 4.2s cubic-bezier(0.12, 0.8, 0.18, 1);
+  }
+  .wheel.gold-win { box-shadow: 0 0 28px #facc15, 0 0 60px #b45309; }
+  .wheel-label {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 84px;
+    margin-left: -42px;
+    margin-top: -7px;
+    text-align: center;
+    font: bold 11px monospace;
+    color: #fff;
+    text-shadow: 0 0 3px #000, 0 0 3px #000;
+    white-space: nowrap;
+  }
+  .wheel-label.gold { color: #fff7d6; font-size: 15px; }
+  .wheel-hub {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border-radius: 50%;
+    background: #111;
+    border: 3px solid #e5e7eb;
+  }
+  .wheel-pointer {
+    position: absolute;
+    left: 50%;
+    top: -16px;
+    margin-left: -11px;
+    width: 0;
+    height: 0;
+    border-left: 11px solid transparent;
+    border-right: 11px solid transparent;
+    border-top: 22px solid #f87171;
+    filter: drop-shadow(0 0 3px #000);
+    z-index: 2;
+  }
+  .spin-result { white-space: pre-wrap; margin-top: 8px; min-height: 1.4em; }
+  .spin-result .reflect { color: #93c5fd; }
+  .smoke {
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .smoke span {
+    position: absolute;
+    font-size: 56px;
+    text-shadow: 0 0 10px #3b82f6;
+    color: #60a5fa;
+    opacity: 0;
+    animation: puff 2.4s ease-out forwards;
+  }
+  .smoke span:nth-child(2) { animation-delay: 0.25s; }
+  .smoke span:nth-child(3) { animation-delay: 0.5s; }
+  .smoke span:nth-child(4) { animation-delay: 0.75s; }
+  @keyframes puff {
+    0%   { transform: translate(-50%, 0) scale(0.4); opacity: 0.9; }
+    100% { transform: translate(calc(-50% + var(--dx, 0px)), -130px) scale(1.8); opacity: 0; }
+  }
+  .smoke.grey span { color: #9ca3af; font-size: 40px; text-shadow: 0 0 8px #6b7280; }
+  .star-burst {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    font-size: 70px;
+    color: #facc15;
+    text-shadow: 0 0 12px #facc15, 0 0 30px #f59e0b;
+    transform: translate(-50%, -50%) scale(0);
+    animation: burst 1.4s ease-out forwards;
+    pointer-events: none;
+    z-index: 3;
+  }
+  @keyframes burst {
+    0%   { transform: translate(-50%, -50%) scale(0) rotate(-90deg); opacity: 1; }
+    60%  { transform: translate(-50%, -50%) scale(1.5) rotate(10deg); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.1) rotate(0deg); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wheel { transition-duration: 0.8s; }
+    .smoke span, .star-burst { animation-duration: 0.01s; }
+  }
+  @media (max-width: 600px) {
+    .wheel-wrap { width: 190px; height: 190px; }
+  }
+  .line-cross { color: #f87171; }
+  #roomTitle {
+    font-weight: bold;
+    margin-bottom: 1px;
+    font-size: 22px;
+  }
+  #roomHint {
+    margin-top: 18px;
+    padding-top: 8px;
+    border-top: 1px solid #333;
+    font-size: 14px;
+    color: #aaa;
+  }
+
+  /* End screen */
+  #endScreen {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top, #222 0, #000 60%);
+    border: 1px solid #666;
+    padding: 16px;
+    text-align: center;
+    z-index: 5;
+    overflow-y: auto;
+  }
+  #endScreen:not(.hidden) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #endAscii {
+    white-space: pre;
+    margin: 0 0 4px;
+    font-size: 16px;
+  }
+  .win-text { font-size: 18px; margin-bottom: 6px; }
+  #endText {
+    margin-bottom: 8px;
+    font-size: 15px;
+    white-space: pre-wrap;
+  }
+  #endCards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 10px;
+    max-width: 760px;
+  }
+  .card-chip {
+    border: 1px solid #0f0;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+    max-width: 240px;
+    text-align: left;
+  }
+  .card-chip.locked { border-color: #444; color: #666; }
+  .card-chip b { display: block; }
+
+  #ticketForm {
+    width: 100%;
+    max-width: 560px;
+    text-align: left;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: #0a0a0a;
+  }
+  #ticketForm h3 { margin: 0 0 6px; font-size: 15px; color: #facc15; }
+  #ticketForm label { display: block; font-size: 13px; margin: 6px 0 2px; color: #ccc; }
+  #ticketForm input, #ticketForm textarea {
+    width: 100%;
+    background: #111;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 5px 7px;
+    font: 14px monospace;
+  }
+  #ticketForm textarea { height: 48px; resize: vertical; }
+  .row2 { display: flex; gap: 8px; }
+  .row2 > div { flex: 1; }
+  #downloadBtn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 9px;
+    background: #0f0;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font: bold 15px monospace;
+    cursor: pointer;
+  }
+  #ticketMsg { margin-top: 6px; font-size: 13px; min-height: 1.2em; }
+  #ticketMsg.err { color: #f87171; }
+  #ticketMsg.ok { color: #4ade80; }
+
+  #credits {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 8px;
+    white-space: pre-wrap;
+    text-align: left;
+  }
+  #endHint {
+    font-size: 13px;
+    color: #aaa;
+  }
+  #endHint.warn { color: #facc15; }
+
+  /* ---------- Splash screen ---------- */
+  #splash, #onboard {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    overflow: hidden;
+  }
+  #splash {
+    background: radial-gradient(ellipse at 50% 35%, #2a0a3d 0%, #0b0218 55%, #000 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .sun {
+    position: absolute;
+    left: 50%;
+    top: 47%;
+    width: 300px;
+    height: 300px;
+    margin: -260px 0 0 -150px;
+    border-radius: 50%;
+    background:
+      repeating-linear-gradient(to bottom, transparent 0 62%, #0b0218 62% 66%, transparent 66% 72%, #0b0218 72% 77%, transparent 77% 84%, #0b0218 84% 90%, transparent 90%),
+      linear-gradient(to bottom, #fde047 0%, #fb923c 45%, #ec4899 100%);
+    box-shadow: 0 0 60px #ec4899, 0 0 120px #f97316;
+    opacity: 0.85;
+    animation: sunrise 2.2s ease-out both;
+  }
+  @keyframes sunrise {
+    from { transform: translateY(120px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 0.85; }
+  }
+  .grid-floor {
+    position: absolute;
+    left: -50%;
+    right: -50%;
+    top: 47%;
+    bottom: -20%;
+    background-image:
+      linear-gradient(#ff4ecf 2px, transparent 2px),
+      linear-gradient(90deg, #ff4ecf 2px, transparent 2px);
+    background-size: 60px 60px;
+    transform: perspective(260px) rotateX(62deg);
+    transform-origin: center top;
+    animation: gridmove 0.9s linear infinite;
+    opacity: 0.55;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 35%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 35%);
+  }
+  @keyframes gridmove { to { background-position: 0 60px; } }
+  .scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 3px);
+    animation: crt 0.15s infinite;
+  }
+  @keyframes crt { 50% { opacity: 0.85; } }
+  .floaty {
+    position: absolute;
+    font-size: 42px;
+    opacity: 0.75;
+    pointer-events: none;
+  }
+  .floaty.gear { color: #22d3ee; text-shadow: 0 0 12px #22d3ee; animation: spin 7s linear infinite; }
+  .floaty.gear.rev { color: #a855f7; text-shadow: 0 0 12px #a855f7; animation-direction: reverse; animation-duration: 5s; }
+  .floaty.zap { color: #facc15; text-shadow: 0 0 14px #facc15; animation: zap 2.6s ease-in-out infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes zap {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.4; }
+    10% { opacity: 1; transform: translateY(-6px) scale(1.25); }
+    20% { opacity: 0.5; }
+    50% { transform: translateY(-14px) scale(1); }
+  }
+  .splash-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 0 12px;
+  }
+  .splash-kicker {
+    color: #22d3ee;
+    letter-spacing: 6px;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 3px #000, 0 0 6px #000, 0 0 10px #22d3ee;
+    font-weight: bold;
+    animation: fadeUp 0.8s 0.3s ease-out both;
+  }
+  .glitch {
+    position: relative;
+    margin: 0;
+    font: bold clamp(30px, 7.5vw, 66px) monospace;
+    color: #fff;
+    letter-spacing: 2px;
+    text-shadow: 0 0 2px #000, 0 0 4px #000, 0 0 10px #22d3ee, 0 0 26px #ff4ecf, 0 0 50px #ff4ecf;
+    animation: slam 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) both, flicker 5s 1.2s infinite;
+  }
+  .glitch::before, .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    text-shadow: none;
+  }
+  .glitch::before { color: #22d3ee; clip-path: inset(0 0 58% 0); animation: glitchA 2.8s infinite steps(1); }
+  .glitch::after  { color: #ff4ecf; clip-path: inset(55% 0 0 0); animation: glitchB 3.4s infinite steps(1); }
+  @keyframes slam {
+    0%   { transform: scale(3); opacity: 0; filter: blur(12px); }
+    100% { transform: scale(1); opacity: 1; filter: blur(0); }
+  }
+  @keyframes flicker {
+    0%, 19%, 21%, 62%, 64%, 100% { opacity: 1; }
+    20%, 63% { opacity: 0.35; }
+  }
+  @keyframes glitchA {
+    0%, 86%, 100% { transform: translate(0); opacity: 0; }
+    87% { transform: translate(-5px, -2px); opacity: 0.9; }
+    90% { transform: translate(4px, 1px); opacity: 0.9; }
+    93% { transform: translate(-2px, 0); opacity: 0.9; }
+  }
+  @keyframes glitchB {
+    0%, 78%, 100% { transform: translate(0); opacity: 0; }
+    79% { transform: translate(5px, 2px); opacity: 0.9; }
+    83% { transform: translate(-4px, -1px); opacity: 0.9; }
+  }
+  .splash-sub {
+    margin-top: 6px;
+    font: bold clamp(18px, 4vw, 30px) monospace;
+    letter-spacing: clamp(6px, 2vw, 16px);
+    color: #4ade80;
+    text-shadow: 0 0 10px #22c55e;
+    animation: fadeUp 0.8s 0.7s ease-out both;
+  }
+  .splash-tag {
+    margin-top: 22px;
+    height: 1.4em;
+    font: bold clamp(16px, 3.4vw, 24px) monospace;
+    color: #facc15;
+    text-shadow: 0 0 10px #f59e0b;
+  }
+  .splash-tag.pop { animation: pop 0.35s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(1.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .splash-press {
+    margin-top: 34px;
+    font: bold 16px monospace;
+    color: #fff;
+    letter-spacing: 3px;
+    animation: fadeUp 0.6s 1.3s ease-out both, blink 1.1s 1.9s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes fadeUp {
+    from { transform: translateY(14px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  #splash.leaving { animation: warpOut 0.55s ease-in forwards; }
+  @keyframes warpOut {
+    0%   { filter: brightness(1); transform: scale(1); opacity: 1; }
+    40%  { filter: brightness(2.5); }
+    100% { filter: brightness(4); transform: scale(1.4); opacity: 0; }
+  }
+
+  /* ---------- Sign-in / onboarding ---------- */
+  #onboard {
+    overflow-y: auto;
+    background: radial-gradient(circle at top, #1a1030 0, #000 70%);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 24px 12px;
+  }
+  .ob-card {
+    width: 100%;
+    max-width: 620px;
+    border: 2px solid #22d3ee;
+    border-radius: 8px;
+    padding: 16px 18px;
+    background: rgba(0, 0, 0, 0.85);
+    box-shadow: 0 0 22px rgba(34, 211, 238, 0.35);
+    animation: fadeUp 0.5s ease-out both;
+  }
+  .ob-card h2 {
+    margin: 0 0 4px;
+    color: #22d3ee;
+    text-shadow: 0 0 8px #22d3ee;
+    font-size: 22px;
+  }
+  .ob-intro { color: #bbb; font-size: 13px; margin: 0 0 10px; }
+  .ob-card label, .ob-label { display: block; font-size: 14px; margin: 12px 0 4px; color: #eee; }
+  .ob-card input, .ob-card textarea {
+    width: 100%;
+    background: #111;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font: 15px monospace;
+  }
+  .ob-card textarea { height: 52px; resize: vertical; }
+  .ob-note { font-size: 12px; color: #888; margin-top: 4px; }
+  .choice-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .choice-btn {
+    flex: 1;
+    min-width: 54px;
+    padding: 9px 6px;
+    background: #111;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 6px;
+    font: bold 15px monospace;
+    cursor: pointer;
+  }
+  .choice-btn:hover { border-color: #22d3ee; }
+  .choice-btn.on { background: #22d3ee; color: #000; border-color: #22d3ee; box-shadow: 0 0 10px #22d3ee; }
+  .scale-ends { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-top: 3px; }
+  #startBtn {
+    margin-top: 16px;
+    width: 100%;
+    padding: 11px;
+    background: linear-gradient(90deg, #22d3ee, #ff4ecf);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font: bold 17px monospace;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+  #obMsg { min-height: 1.3em; margin-top: 6px; font-size: 13px; color: #f87171; }
+  #cardFor { font-size: 14px; color: #ccc; margin-bottom: 4px; }
+  #cardFor b { color: #fff; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grid-floor, .scanlines, .floaty, .glitch, .glitch::before, .glitch::after, .splash-press { animation: none !important; }
+  }
+
+  /* Touch controls (shown on touch screens / narrow screens) */
+  #touchControls {
+    display: none;
+    width: min(900px, calc(100vw - 24px));
+    margin-top: 10px;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 48px);
+    gap: 4px;
+  }
+  .tbtn {
+    background: #222;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 8px;
+    font: bold 15px monospace;
+    touch-action: manipulation;
+    cursor: pointer;
+  }
+  .tbtn:active { background: #0f0; color: #000; }
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 6px;
+  }
+  .actions .tbtn { padding: 10px 8px; font-size: 14px; }
+  @media (hover: none), (max-width: 700px) {
+    #touchControls { display: flex; }
+  }
+
+  @media (max-width: 600px) {
+    :root { --tile: 15px; --gap: 1px; }
+    .tile { font-size: 7px; }
+    body { padding: 10px 8px; }
+    #gameWrapper { width: calc(100vw - 16px); padding: 10px; }
+    #roomScreen { overflow-y: auto; flex-direction: column; gap: 4px; }
+    #roomArt { min-width: 0; max-width: none; font-size: 16px; }
+    #roomText { font-size: 16px; }
+    #dialog { top: 10px; bottom: auto; width: calc(100vw - 16px); max-height: 80vh; font-size: 14px; }
+    #endAscii { font-size: 13px; }
+    #endText { font-size: 14px; }
+    .row2 { flex-direction: column; gap: 0; }
+    #touchControls { width: calc(100vw - 16px); gap: 6px; }
+    .dpad { grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); }
+  }
+
+  /* ---------- Step Up additions ---------- */
+  .b-elab   { background: #0e7490; }
+  .b-sus    { background: #15803d; }
+  .b-mech   { background: #b45309; }
+  .b-inc    { background: #c2410c; }
+  .b-tunnel { background: #78350f; }
+  .b-optional { outline: 1px dashed #fff; outline-offset: -3px; }
+  .z-u1 { background: #0b2a33; }
+  .z-u2 { background: #33200b; }
+  .z-shared { background: #1d2a1f; }
+  .door { background: #3f3f46; color: #a1a1aa; }
+
+  #hudItems { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 14px; }
+  .hud-group { min-width: 0; }
+  .hud-group h4 { margin: 0 0 2px; font-size: 13px; letter-spacing: 1px; }
+  .hud-u1 h4 { color: #22d3ee; }
+  .hud-u2 h4 { color: #fb923c; }
+  .hud-sh h4 { color: #4ade80; }
+  .hud-wide { grid-column: 1 / -1; }
+  #zoneTag { font-size: 13px; margin-top: 2px; }
+
+  .opt-btn[disabled] { opacity: 0.45; text-decoration: line-through; cursor: default; border-color: #444; }
+  .opt-btn.picked { border-color: #22d3ee; background: #062a33; }
+  .mfb-ok { color: #4ade80; font-weight: bold; }
+  .mfb-no { color: #facc15; font-weight: bold; }
+  .mfb-cb { color: #ff4ecf; font-weight: bold; }
+  .cls-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; padding: 6px; border: 1px solid #333; border-radius: 4px; }
+  .cls-row.bad { border-color: #f87171; }
+  .cls-row .cls-text { flex: 1 1 260px; }
+  .cls-row .cls-why { flex-basis: 100%; color: #fca5a5; font-size: 13px; }
+  .cat-btn { padding: 5px 9px; background: #111; color: #eee; border: 1px solid #555; border-radius: 4px; font: bold 13px monospace; cursor: pointer; }
+  .cat-btn.on { background: #22d3ee; color: #000; border-color: #22d3ee; }
+  .act-btn { margin-top: 8px; padding: 8px 12px; background: #22d3ee; color: #000; border: none; border-radius: 4px; font: bold 14px monospace; cursor: pointer; }
+  .other-in { width: 100%; margin-top: 6px; background: #111; color: #eee; border: 1px solid #555; border-radius: 4px; padding: 6px 8px; font: 14px monospace; }
+  .example-tag { color: #facc15; }
+
+  /* passport on the end screen */
+  #passport { width: 100%; max-width: 640px; text-align: left; border: 2px solid #22d3ee; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; background: #050d12; }
+  #passport h3 { margin: 0 0 6px; color: #22d3ee; font-size: 17px; letter-spacing: 1px; }
+  #passport .sum { font-size: 13px; line-height: 1.4; border-left: 3px solid #444; padding: 4px 8px; margin: 6px 0; color: #ddd; }
+  #passport .sum.u1 { border-color: #22d3ee; }
+  #passport .sum.u2 { border-color: #fb923c; }
+  #passport .sum.both { border-color: #4ade80; }
+  #passport label { display: block; font-size: 13px; margin: 8px 0 2px; color: #ccc; }
+  #passport input, #passport textarea { width: 100%; background: #111; color: #eee; border: 1px solid #555; border-radius: 4px; padding: 5px 7px; font: 14px monospace; }
+  #passport textarea { height: 44px; resize: vertical; }
+  .pp-btns { display: flex; gap: 8px; margin-top: 10px; }
+  .pp-btns button { flex: 1; padding: 9px; border: none; border-radius: 4px; font: bold 15px monospace; cursor: pointer; }
+  #ppDownload { background: #0f0; color: #000; }
+  #ppPrint { background: #22d3ee; color: #000; }
+  #ppMsg { margin-top: 6px; font-size: 13px; min-height: 1.2em; }
+  #ppMsg.err { color: #f87171; }
+  #ppMsg.ok { color: #4ade80; }
+  .next-box { margin: 0 0 12px; padding: 10px 14px; border: 2px dashed #ff4ecf; border-radius: 8px; max-width: 640px; text-align: left; font-size: 14px; line-height: 1.45; }
+  .next-box b { color: #ff4ecf; }
+  .ob-ticks { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ob-ticks .choice-btn { flex: 1 1 140px; font-size: 13px; }
+
+  #printArea { display: none; }
+  @media print {
+    @page { size: A4; margin: 14mm; }
+    body { background: #fff !important; color: #000 !important; padding: 0 !important; display: block !important; }
+    #gameWrapper, #touchControls { display: none !important; }
+    #printArea { display: block !important; font: 11pt/1.4 Arial, Helvetica, sans-serif; color: #000; }
+    #printArea h1 { font-size: 20pt; margin: 0 0 2px; }
+    #printArea .pa-sub { font-size: 10pt; color: #444; margin-bottom: 10px; }
+    #printArea .pa-box { border: 1.5px solid #000; border-radius: 6px; padding: 6px 10px; margin: 0 0 8px; break-inside: avoid; }
+    #printArea .pa-box h2 { font-size: 12pt; margin: 0 0 3px; }
+    #printArea .pa-row { margin: 4px 0; }
+    #printArea .pa-row b { display: block; font-size: 10pt; }
+    #printArea .pa-lines { height: 30mm; border-bottom: 1px dashed #999; }
+    #printArea .pa-page2 { break-before: page; page-break-before: always; }
+    #printArea .pa-sketch { height: 95mm; border: 1px dashed #999; border-radius: 4px; }
+    #printArea .pa-foot { font-size: 9pt; color: #444; margin-top: 6px; }
+  }
+  @media (max-width: 760px) { #hudItems { grid-template-columns: 1fr; } }
+
+  /* ---------- Fit-to-window + adjustable text size (Step Up only) ---------- */
+  :root { --ui: 1; }
+  #gameWrapper { width: var(--wrapW, min(900px, calc(100vw - 24px))); }
+  #touchControls { width: var(--wrapW, min(900px, calc(100vw - 24px))); }
+  .tile { font-size: calc(var(--tile) * 0.38); }
+  #hud { font-size: calc(14px * var(--ui)); position: relative; }
+  #hud .hud-group h4 { font-size: calc(13px * var(--ui)); }
+  #zoneTag { font-size: calc(13px * var(--ui)); }
+  #instructions { font-size: calc(14px * var(--ui)); }
+  #roomTitle { font-size: calc(22px * var(--ui)); }
+  #roomText, #roomArt { font-size: calc(20px * var(--ui)); }
+  #roomHint { font-size: calc(14px * var(--ui)); }
+  #dialog { font-size: calc(16px * var(--ui)); width: min(calc(860px * var(--ui)), calc(100vw - 24px)); }
+  #dialogHint, .cls-row .cls-why { font-size: calc(13px * var(--ui)); }
+  .cat-btn, .act-btn { font-size: calc(14px * var(--ui)); }
+  #endText { font-size: calc(16px * var(--ui)); }
+  #viewCtl { position: absolute; top: 6px; right: 8px; display: flex; gap: 4px; align-items: center; }
+  #viewCtl button { background: #222; color: #eee; border: 1px solid #555; border-radius: 4px; font: bold 13px monospace; padding: 3px 7px; cursor: pointer; }
+  #viewCtl button:hover { border-color: #22d3ee; }
+  #viewCtl span { font-size: 12px; color: #888; min-width: 3.2em; text-align: center; }
+  @media (max-width: 600px) {
+    .tile { font-size: calc(var(--tile) * 0.42); }
+    #roomText, #roomArt { font-size: calc(16px * var(--ui)); }
+    #dialog { font-size: calc(14px * var(--ui)); width: calc(100vw - 16px); }
+    #endText { font-size: calc(14px * var(--ui)); }
+    #hudTitle { padding-right: 120px; }
+  }
+</style>
+</head>
+<body>
+<div id="gameWrapper">
+  <div id="hud">
+    <div id="viewCtl" aria-label="Text size">
+      <button type="button" id="viewMinus" title="Smaller text (−)" aria-label="Smaller text">A−</button>
+      <span id="viewPct">100%</span>
+      <button type="button" id="viewPlus" title="Bigger text (+)" aria-label="Bigger text">A+</button>
+    </div>
+    <div id="hudTitle">Step Up Progress</div>
+    <div id="zoneTag"></div>
+    <div id="hudItems"></div>
+  </div>
+
+  <div id="mapViewport"><div id="map" aria-label="Campus map"></div></div>
+
+  <p id="instructions"></p>
+
+  <!-- Interior / room screen -->
+  <div id="roomScreen" class="hidden">
+    <div id="roomArt"></div>
+    <div id="roomContent">
+      <div id="roomTitle"></div>
+      <div id="roomText"></div>
+      <div id="roomHint"></div>
+    </div>
+  </div>
+
+  <!-- Mission / feedback / mini-game dialog -->
+  <div id="dialog" class="hidden" role="dialog" aria-live="polite">
+    <div id="dialogTitle"></div>
+    <div id="dialogText"></div>
+    <div id="dialogHint">Press Enter to close</div>
+  </div>
+
+  <!-- End screen -->
+  <div id="endScreen" class="hidden">
+    <pre id="endAscii">
+  \o/   \o/
+   |     |
+  / \   / \
+STEP UP COMPLETE!</pre>
+    <div class="win-text">⚡⚙ YOU'RE READY FOR YEAR 11 ⚙⚡</div>
+    <div id="endText"></div>
+    <div id="endCards"></div>
+
+    <div id="passport">
+      <h3>MY YEAR IN SYSTEMS · PASSPORT</h3>
+      <div id="ppFor" style="font-size:14px;color:#ccc"></div>
+      <div class="sum u1" id="ppSumU1"></div>
+      <div class="sum u2" id="ppSumU2"></div>
+      <div class="sum both" id="ppSumBoth"></div>
+      <label for="ppComp">One component I expect to learn about in Unit 1</label>
+      <input id="ppComp" maxlength="60" list="dlComp" />
+      <label for="ppSus">A sustainability problem that interests me</label>
+      <textarea id="ppSus" maxlength="140"></textarea>
+      <label for="ppMech">One mechanism I expect to investigate in Unit 2</label>
+      <input id="ppMech" maxlength="60" list="dlMech" />
+      <label for="ppUser">A user need or inclusive design opportunity that interests me</label>
+      <textarea id="ppUser" maxlength="140"></textarea>
+      <label for="ppHabit">One habit I'll use for collecting evidence</label>
+      <input id="ppHabit" maxlength="90" />
+      <label for="ppQ">One question I still have</label>
+      <textarea id="ppQ" maxlength="140"></textarea>
+      <label>How ready do I feel for Systems Engineering NOW?</label>
+      <div class="choice-row" id="confAfter">
+        <button type="button" class="choice-btn" data-val="1">1</button>
+        <button type="button" class="choice-btn" data-val="2">2</button>
+        <button type="button" class="choice-btn" data-val="3">3</button>
+        <button type="button" class="choice-btn" data-val="4">4</button>
+        <button type="button" class="choice-btn" data-val="5">5</button>
+      </div>
+      <div class="scale-ends"><span>1 = not yet</span><span>5 = bring it on</span></div>
+      <div class="pp-btns">
+        <button id="ppDownload" type="button">Download passport (PNG)</button>
+        <button id="ppPrint" type="button">Print passport</button>
+      </div>
+      <div id="ppMsg"></div>
+    </div>
+    <datalist id="dlComp"><option>LED</option><option>Resistor</option><option>Light sensor (LDR)</option><option>Motion sensor (PIR)</option><option>Temperature sensor</option><option>Microcontroller</option><option>Motor</option><option>Solar panel</option><option>Battery</option><option>Switch</option></datalist>
+    <datalist id="dlMech"><option>Lever</option><option>Pulley</option><option>Wheel and axle</option><option>Inclined plane</option><option>Screw</option><option>Wedge</option><option>Gears</option><option>Linkages</option></datalist>
+
+    <div class="next-box">
+      <b>NEXT: YOUR FIRST PRACTICAL</b><br>
+      Your teacher will set this up. You'll <b>build or investigate a simple system</b>, record a
+      <b>photo or sketch</b>, explain <b>one thing you observed</b>, and write <b>one next step</b>.
+      The printed passport has space for it.
+    </div>
+    <div style="margin-bottom:10px"><a href="index.html#stepup" style="color:#aaa">◀ Back to the game menu</a></div>
+    <div id="credits"></div>
+    <div id="endHint">Esc: back to the map &nbsp;·&nbsp; R twice: restart</div>
+  </div>
+
+  <!-- Splash screen -->
+  <div id="splash">
+    <div class="sun"></div>
+    <div class="grid-floor"></div>
+    <div class="floaty gear" style="left:7%; top:12%;">⚙</div>
+    <div class="floaty gear rev" style="right:8%; top:20%; font-size:56px;">⚙</div>
+    <div class="floaty zap" style="left:16%; top:58%;">⚡</div>
+    <div class="floaty zap" style="right:15%; top:62%; animation-delay:1.1s;">⚡</div>
+    <div class="floaty gear rev" style="left:44%; top:6%; font-size:28px;">⚙</div>
+    <div class="splash-content">
+      <div class="splash-kicker">VCE · UNITS 1 &amp; 2 · YEAR 11 STEP UP</div>
+      <h1 class="glitch" data-text="SYSTEMS ENGINEERING">SYSTEMS ENGINEERING</h1>
+      <div class="splash-sub">STEP UP</div>
+      <div class="splash-tag" id="splashTag">&nbsp;</div>
+      <div class="splash-press">▶ PRESS ENTER OR TAP TO START ◀</div>
+    </div>
+    <div class="scanlines"></div>
+  </div>
+
+  <!-- Sign-in / resume -->
+  <div id="onboard" class="hidden">
+    <div class="ob-card" id="resumeCard" style="display:none">
+      <h2>Welcome back!</h2>
+      <p class="ob-intro" id="resumeText"></p>
+      <button id="resumeBtn" type="button" class="choice-btn" style="width:100%;margin-top:8px">CONTINUE WHERE I LEFT OFF ▶</button>
+      <button id="freshBtn" type="button" class="choice-btn" style="width:100%;margin-top:8px">Start fresh (clears Step Up progress on this device)</button>
+    </div>
+    <div class="ob-card" id="signCard">
+      <h2>Sign in, engineer</h2>
+      <p class="ob-intro">Your name and class go on the passport you'll make at the end. Two quick questions, then you're in. No experience needed: everyone starts somewhere.</p>
+      <div class="row2">
+        <div>
+          <label for="obName">First name</label>
+          <input id="obName" maxlength="24" autocomplete="off" />
+        </div>
+        <div>
+          <label for="obClass">Class</label>
+          <input id="obClass" maxlength="12" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="ob-label">1. Have you tried any of these before? (tap any, or "Not yet")</div>
+      <div class="ob-ticks" id="obTried">
+        <button type="button" class="choice-btn" data-val="electronics">Electronics</button>
+        <button type="button" class="choice-btn" data-val="coding">Coding</button>
+        <button type="button" class="choice-btn" data-val="tools">Workshop tools</button>
+        <button type="button" class="choice-btn" data-val="none">Not yet</button>
+      </div>
+      <div class="ob-note">"Not yet" is a perfectly good answer. This subject starts from the beginning.</div>
+
+      <div class="ob-label">2. How ready do you feel for Systems Engineering right now?</div>
+      <div class="choice-row" id="obConf">
+        <button type="button" class="choice-btn" data-val="1">1</button>
+        <button type="button" class="choice-btn" data-val="2">2</button>
+        <button type="button" class="choice-btn" data-val="3">3</button>
+        <button type="button" class="choice-btn" data-val="4">4</button>
+        <button type="button" class="choice-btn" data-val="5">5</button>
+      </div>
+      <div class="scale-ends"><span>1 = not yet</span><span>5 = bring it on</span></div>
+
+      <button id="startBtn" type="button">ENTER THE CAMPUS ▶</button>
+      <div id="obMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- On-screen controls for touch devices -->
+<div id="touchControls">
+  <div class="dpad">
+    <span></span><button class="tbtn" data-key="ArrowUp" aria-label="Up">▲</button><span></span>
+    <button class="tbtn" data-key="ArrowLeft" aria-label="Left">◀</button><span></span><button class="tbtn" data-key="ArrowRight" aria-label="Right">▶</button>
+    <span></span><button class="tbtn" data-key="ArrowDown" aria-label="Down">▼</button><span></span>
+  </div>
+  <div class="actions">
+    <button class="tbtn" data-key="Enter">Enter</button>
+    <button class="tbtn" data-key="b">Back</button>
+    <button class="tbtn" data-key="Escape">Leave</button>
+    <button class="tbtn" data-key="g">Words</button>
+    <button class="tbtn" data-key="s">Spin</button>
+    <button class="tbtn" data-key="r">Restart</button>
+  </div>
+</div>
+
+<!-- Printable passport (filled in by script, only visible when printing) -->
+<div id="printArea"></div>
+<script>
+  // =====================================================================
+  //  STEP UP · VCE Systems Engineering Units 1 & 2 (study design from 2026)
+  //  Separate game from the Units 3 & 4 orientation. Own storage keys.
+  //  Curriculum wording is paraphrased from the VCAA VCE Systems Engineering
+  //  Study Design (from 2026), Units 1 and 2. Project ideas in this game are
+  //  EXAMPLES ONLY, not confirmed class projects.
+  // =====================================================================
+  const STORE_KEY = 'seStepUpProgress';
+  const PLAYER_KEY = 'seStepUpPlayer';
+  const LOCK_LEVEL = 5; // teacher lock id (see dashboard.html); stays open if no lock row exists
+  const SHARE_INSTRUCTION = 'Save your passport and share it the way your teacher asks.';
+  const params = new URLSearchParams(location.search);
+  const CHECKPOINTS_ON = params.get('checkpoints') !== 'off'; // teacher option: ?checkpoints=off
+
+  // ---- Map: 20 x 20. Left = Unit 1 zone, middle = shared, right = Unit 2 zone ----
+  const width = 20, height = 20;
+  const WALL_COLS = [7, 12];
+  const DOOR_ROWS = [3, 9, 10, 16];
+  function isBlocked(x, y) { return WALL_COLS.includes(x) && !DOOR_ROWS.includes(y); }
+  function zoneAt(x, y) {
+    if (WALL_COLS.includes(x)) return 'door';
+    return x < 7 ? 'u1' : x > 12 ? 'u2' : 'shared';
+  }
+  const ZONES = {
+    u1: { name: 'UNIT 1 ZONE · Electrotechnological systems design', color: '#22d3ee', xs: [0, 6] },
+    u2: { name: 'UNIT 2 ZONE · Mechanical systems design', color: '#fb923c', xs: [13, 19] },
+    shared: { name: 'SHARED SPACES · habits you use in both units', color: '#4ade80', xs: [8, 11] }
+  };
+
+  const buildings = [
+    { id: 'start',     name: 'Welcome Gate',              zone: 'shared', className: 'b-start',     label: 'ST' },
+    { id: 'safety',    name: 'Safety Bay',                zone: 'shared', className: 'b-safety',    label: 'SA' },
+    { id: 'logbook',   name: 'Logbook Hut',               zone: 'shared', className: 'b-logbook',   label: 'LB' },
+    { id: 'testbench', name: 'Test Bench',                zone: 'shared', className: 'b-workshop',  label: 'TB' },
+    { id: 'integrity', name: 'Integrity Office',          zone: 'shared', className: 'b-integrity', label: 'IN' },
+    { id: 'command',   name: 'Command Tower',             zone: 'shared', className: 'b-command',   label: 'CT', optional: true },
+    { id: 'exit',      name: 'Exit Gate',                 zone: 'shared', className: 'b-exit',      label: 'EX' },
+    { id: 'elab',      name: 'Electronics Lab',           zone: 'u1',     className: 'b-elab',      label: 'EL' },
+    { id: 'studio1',   name: 'Sustainable Design Studio', zone: 'u1',     className: 'b-sus',       label: 'SD' },
+    { id: 'spin',      name: 'Spin Lab',                  zone: 'u1',     className: 'b-spin',      label: 'SP', optional: true },
+    { id: 'mwork',     name: 'Mechanical Workshop',       zone: 'u2',     className: 'b-mech',      label: 'MW' },
+    { id: 'studio2',   name: 'Inclusive Design Studio',   zone: 'u2',     className: 'b-inc',       label: 'ID' },
+    { id: 'tunnel',    name: 'Time Tunnel',               zone: 'u2',     className: 'b-tunnel',    label: 'TT', optional: true },
+    { id: 'shrine',    name: 'Mystery Shrine',            zone: 'u2',     className: 'b-easter',    label: '??', optional: true }
+  ];
+  const CORE = { u1: ['elab', 'studio1'], u2: ['mwork', 'studio2'], shared: ['safety', 'logbook', 'testbench', 'integrity'] };
+  const coreOrder = [...CORE.u1, ...CORE.u2, ...CORE.shared];
+  const optionalOrder = ['command', 'tunnel', 'spin', 'shrine'];
+
+  // ---- Takeaway cards ----
+  const cardData = {
+    elab:      { name: 'The Loop',      text: 'Input → process → output. Feedback closes the loop.' },
+    studio1:   { name: 'The Footprint', text: 'Energy = power × time. Measure it, don\'t guess it.' },
+    mwork:     { name: 'The Trade',     text: 'Less force means more distance. MA = load ÷ effort.' },
+    studio2:   { name: 'The User',      text: 'Design with people, not just for them. Test with the user.' },
+    safety:    { name: 'The Rule',      text: 'Check before power or use. Unsure? Stop and ask.' },
+    logbook:   { name: 'The Habit',     text: 'Little and often: photo, note, test result.' },
+    testbench: { name: 'The Cycle',     text: 'Predict, test, change ONE thing, re-test.' },
+    integrity: { name: 'The Shield',    text: 'Show your process. Say where help came from.' },
+    command:   { name: 'The Verbs',     text: 'Identify: name it. Describe: what it is like. Explain: how or why.' },
+    tunnel:    { name: 'The Timeline',  text: 'Every machine stands on earlier ideas.' }
+  };
+  const cardOrder = ['elab', 'studio1', 'mwork', 'studio2', 'safety', 'logbook', 'testbench', 'integrity', 'command', 'tunnel'];
+
+  // ---- Plain-language unit summaries (used on the passport) ----
+  const UNIT_SUMMARY = {
+    u1: 'UNIT 1 · Electrotechnological systems design. How electrotechnology developed and what influences its design; circuits, components, sensors, control, microcontrollers and programming; how systems use and convert energy. You design, produce and evaluate an electrotechnological system that addresses a sustainability problem.',
+    u2: 'UNIT 2 · Mechanical systems design. How mechanical systems evolved, including Aboriginal and Torres Strait Islander peoples\' contributions and perspectives; simple machines, gears and linkages, forces, motion, mechanical advantage and energy; innovation and inclusive design. You design and produce a mechanical system responding to an inclusive design problem.',
+    both: 'BOTH UNITS · The systems engineering process, working safely, and a multimodal record of evidence. Assessment in Units 1 and 2 is school-based: your teacher will confirm the tasks and dates.'
+  };
+
+  // ---- Jargon buster (press G / "Words") ----
+  const GLOSSARY = [
+    ['Electrotechnological', 'Uses electrical or electronic circuits.'],
+    ['Component', 'One part of a circuit, e.g. an LED, resistor, sensor or motor.'],
+    ['Sensor', 'A component that measures something (light, movement, temperature) and turns it into a signal.'],
+    ['Microcontroller', 'A tiny computer on one chip. Your program tells it how to use inputs to control outputs.'],
+    ['Input / process / output', 'What goes in, what the system does with it, what comes out.'],
+    ['Feedback', 'When a system senses the result of its own output and adjusts.'],
+    ['Ohm\'s law', 'V = I × R: voltage = current × resistance.'],
+    ['Energy', 'Energy = power × time, e.g. 10 W for 2 h = 20 Wh.'],
+    ['Sustainability', 'Meeting needs now without causing problems for people and the planet later.'],
+    ['Simple machines', 'Lever, inclined plane, pulley, screw, wedge, wheel and axle.'],
+    ['Mechanical advantage (MA)', 'Load ÷ effort. MA 3 = a third of the force, but three times the distance.'],
+    ['Inclusive design', 'Designing so a wide range of people, with different abilities and needs, can use it.'],
+    ['Systems engineering process', 'Investigate and define → design → plan → produce → test → evaluate, and improve as you go.'],
+    ['Record of evidence', 'Your multimodal record (photos, sketches, video, notes, test results) showing how your work developed.'],
+    ['Hierarchy of control', 'Ways to reduce risk, best first: eliminate, substitute, engineer it out, procedures, then protective gear.']
+  ];
+
+  // ---- Room dialogue: brief slides, then a mission ----
+  const roomData = {
+    start: {
+      asciiFrames: [` .---.\n |o o|\n | ^ |\n |'-'|\n '---'\nGuide Bot`, ` .---.\n |o o|\n | - |\n |'-'|\n '---'\nGuide Bot`],
+      lines: [
+`Welcome to Step Up! I'm Guide Bot.
+
+This is VCE Systems Engineering Units 1 and 2:
+your Year 11 year. You do NOT need any electronics,
+coding or workshop experience. We start from zero.
+(Most engineers' first circuit was an LED wired backwards.)`,
+`The campus has three areas:
+
+◀ LEFT (blue): UNIT 1 ZONE
+   Electrotechnological systems design
+   circuits, sensors, microcontrollers, coding, energy, sustainability
+
+▶ RIGHT (orange): UNIT 2 ZONE
+   Mechanical systems design
+   simple machines, forces, motion, mechanical advantage, inclusive design
+
+● MIDDLE (green): SHARED SPACES
+   Safety, evidence, testing, integrity: habits for BOTH units`,
+`How this works:
+- 8 core missions: 2 in each unit zone, 4 in the middle.
+- Places marked ✚ are optional extras.
+- Wrong answers are fine. Retry, and fixing a mistake
+  earns a COMEBACK. That's what engineers do all day.
+- Press G any time for the Jargon Buster.
+
+When the core missions are done, the Exit Gate checks
+you can tell the units apart. Then you make your passport.`
+      ]
+    },
+    elab: {
+      asciiFrames: [`  .-----.\n  | o o |\n  |  =  |\n  '--+--'\n   [###]\n  Ohmbot`, `  .-----.\n  | o o |\n  |  ~  |\n  '--+--'\n   [#*#]\n  Ohmbot`],
+      lines: [
+`UNIT 1 ZONE · ELECTRONICS LAB
+I'm Ohmbot. Resistance is NOT futile here.
+
+"Electrotechnological" just means systems that use
+electrical or electronic circuits.
+
+In Unit 1 you'll learn about circuits and components
+(LEDs, resistors, switches, sensors, motors),
+microcontrollers and programming, and how systems
+use and convert energy.`,
+`Every controlled system does three jobs:
+INPUT   → senses something (a sensor or switch)
+PROCESS → decides what to do (often your code)
+OUTPUT  → does something (light, sound, movement)
+
+A microcontroller is a tiny computer on one chip.
+Your program connects its inputs to its outputs.
+You'll also draw circuits, simulate them, measure them,
+and use Ohm's law: V = I × R. One line. You've got this.`,
+`Electrotechnology has a history too:
+Morse code telegraph → radio → computers → internet
+→ robotics and biomedical engineering.
+
+Each was shaped by influences of its time: needs,
+materials, money, culture. In Unit 1 you'll explain
+developments like these and what influences design.
+
+Mission: work out how a self-switching light thinks.`
+      ]
+    },
+    studio1: {
+      asciiFrames: [`   _____\n  / ~~~ \\\n | W  W |\n  \\_^^_/\n  Watt Ever`, `   _____\n  / ~~~ \\\n | W  W |\n  \\_--_/\n  Watt Ever`],
+      lines: [
+`UNIT 1 ZONE · SUSTAINABLE DESIGN STUDIO
+I'm Watt Ever, energy detective.
+Motto: "Watt-ever you do, measure it."
+
+Sustainability = meeting needs now without causing
+problems for people and the planet later.
+Think energy use, materials, waste, repair, and the
+social, environmental and economic impacts of a design.`,
+`Unit 1's big design job: produce an electrotechnological
+system that addresses a sustainability problem,
+then evaluate the system AND how you used the
+systems engineering process.
+
+EXAMPLES ONLY (your teacher sets the real brief):
+- a light that switches off when nobody's there
+- plant watering that only runs when the soil is dry
+- a fan that only runs when the room is hot`,
+`How you'll show your learning in Unit 1:
+two outcomes, both assessed at school.
+Your teacher chooses tasks from options like a short
+written report, an oral presentation (video or podcast) or a
+visual presentation, PLUS a multimodal record of
+evidence of your systems engineering process.
+Your teacher will confirm the actual tasks and dates.
+
+Mission: compare two lighting designs for wasted energy.`
+      ]
+    },
+    mwork: {
+      asciiFrames: [`   ___\n  (o o)\n  /|=|\\\n  _|_|_\n [@]-[@]\n Gus Gearwell`, `   ___\n  (o o)\n  /|=|\\\n  _|_|_\n [@]=[@]\n Gus Gearwell`],
+      lines: [
+`UNIT 2 ZONE · MECHANICAL WORKSHOP
+G'day, I'm Gus Gearwell. I'm geared up for this.
+
+Unit 2 is about mechanical systems: things that move.
+You'll meet the six simple machines:
+lever · inclined plane · pulley · screw · wedge · wheel and axle
+plus gears and linkages.
+
+Mechanisms change movement: its direction, speed,
+distance and the force you need.`,
+`Mechanical advantage (MA) = load ÷ effort.
+MA of 3 means you push with a third of the force…
+but you move three times as far. No free lunch:
+a machine never puts out more energy than goes in.
+
+You'll calculate this for levers, pulleys and gears,
+and test it for real (friction always has an opinion).`,
+`Mechanical design has a long history.
+Aboriginal peoples developed and refined spear-throwers
+(one name is "woomera", a Dharug word) that act as a
+lever extending the arm, often shaped for the user and spear.
+The Gunditjmara people built eel traps, channels and weirs
+at Budj Bim: at least 6,600 years old.
+Also: the Archimedes screw, Leonardo da Vinci's machines,
+the Wright Flyer, cranes and steam-powered transport.
+Knowledge belongs to particular Nations and communities;
+in class you'll learn from their own sources where possible.`
+      ]
+    },
+    studio2: {
+      asciiFrames: [`   .--.\n  ( ^^ )\n   \\__/\n  /|  |\\\n   |__|\n Designer Kai`, `   .--.\n  ( ^- )\n   \\__/\n  /|  |\\\n   |__|\n Designer Kai`],
+      lines: [
+`UNIT 2 ZONE · INCLUSIVE DESIGN STUDIO
+Hi, I'm Kai. I design for people, with people.
+
+Inclusive design means designing so a wide range of
+people can use something, including people with
+disability, older people, kids, left-handers…
+anyone the "average user" idea leaves out.
+
+People's needs differ, even with the same condition.
+So we don't guess: we ask, observe and test with users.`,
+`Study design examples: wheelchairs, prosthetic limbs,
+mobility aids, water purification systems.
+
+In Unit 2 you'll design and produce a mechanical system
+that responds to an inclusive design problem.
+EXAMPLES ONLY (your teacher sets the real brief):
+- a lever-assisted lifting aid
+- an easier-to-turn tap or jar opener
+- a page-turner or reacher`,
+`How you'll show your learning in Unit 2:
+two outcomes, both assessed at school.
+Again, your teacher chooses tasks such as a short written
+report, an oral or a visual presentation, PLUS a
+multimodal record of evidence of your design process.
+Your teacher will confirm the actual tasks and dates.
+
+Mission: make a lifting aid work for its real user.`
+      ]
+    },
+    safety: {
+      asciiFrames: [`  ______\n | SAFE |\n |  !   |\n |______|\nSafety Bot`, `  ______\n | SAFE |\n |  !!  |\n |______|\nSafety Bot`],
+      lines: [
+`SHARED · SAFETY BAY
+Welcome! I'm Safety Bot. Both units involve tools,
+power and moving parts, so we check BEFORE we start.
+
+The routine:
+1. Inspect the setup before power or use.
+2. Spot anything that doesn't match the plan.
+3. If something's wrong or you're unsure: STOP and ask.`,
+`Engineers reduce risk using the hierarchy of control,
+best option first:
+eliminate the hazard → substitute something safer →
+engineer it out (guards, fuses) → procedures →
+protective gear (glasses, gloves) last.
+
+Hot, smelly, smoky or sparking? Switch off safely
+and get your teacher. The logbook can wait.`
+      ]
+    },
+    logbook: {
+      asciiFrames: [` ______\n |LOG |\n |    |\n |____|\nEngr. Log`, ` ______\n |LOG*|\n |    |\n |____|\nEngr. Log`],
+      lines: [
+`SHARED · LOGBOOK HUT
+I'm Engineer Log, collector of messy sketches, shaky
+videos and proud "it finally worked!" moments.
+
+Both units ask for a record of evidence of your systems
+engineering process. It's multimodal: photos, sketches,
+short videos, screenshots, notes, test results.`,
+`The secret: capture it AS you go, not at the end.
+Future-you will not remember what you changed on Tuesday.
+Future-you is already confused.
+
+A useful entry says: what you did, what happened
+(with evidence), and what you'll do next.`
+      ]
+    },
+    testbench: {
+      asciiFrames: [`  _______\n | TEST  |\n |  [ ]  |\n |_______|\n Test Bot`, `  _______\n | TEST* |\n |  [x]  |\n |_______|\n Test Bot`],
+      lines: [
+`SHARED · TEST BENCH
+I'm Test Bot. My catchphrase: "Did you test it, or do
+you just believe in it?"
+
+The systems engineering process runs through both units:
+investigate and define → design → plan → produce
+→ test → evaluate. And around again.`,
+`At the bench we use a simple loop:
+PREDICT what will happen (and why)
+TEST it and record the results
+CHANGE ONE THING
+RE-TEST and compare
+
+Change three things at once and you'll never know
+which one helped. Ask me how I know.`
+      ]
+    },
+    integrity: {
+      asciiFrames: [`.----.\n| || |\n| || |\n| || |\n'----'\nOfficer Auth`, `.----.\n| || |\n| || |\n| ||o|\n'----'\nOfficer Auth`],
+      lines: [
+`SHARED · INTEGRITY OFFICE
+Officer Auth. Short version, because you're busy:
+
+✔ Ask for help, get feedback, discuss ideas
+✔ Say where help, ideas and sources came from
+✔ Follow your teacher's rules for AI (they can differ by task)
+✘ Copy someone's work, code or results
+✘ Hand in AI or other people's work as your own
+
+If you can show your process, you're safe.`
+      ]
+    },
+    command: {
+      asciiFrames: [` /^^^/\n | C |\n | M |\n | D |\n '---'\nCmd Wiz`, ` /^^^/\n | C |\n | M |\n | D*|\n '---'\nCmd Wiz`],
+      lines: [
+`✚ OPTIONAL · COMMAND TOWER
+BEHOLD! The Command Wizard. Tiny words, big power.
+
+For now, three verbs:
+IDENTIFY → name it.          "The output is the fan."
+DESCRIBE → what it's like.   "A pulley is a grooved wheel a rope runs around."
+EXPLAIN  → how or why.       "…so the effort needed is smaller, BECAUSE…"
+
+Spot the verb, answer the verb. Pass my trial for a card.`
+      ]
+    },
+    tunnel: {
+      asciiFrames: [`  |\\/\\/\\/|\n  |/\\/\\/\\|\n  |\\/\\/\\/|\n  |/\\/\\/\\|\n Archie the\n Screw`, `  |/\\/\\/\\|\n  |\\/\\/\\/|\n  |/\\/\\/\\|\n  |\\/\\/\\/|\n Archie the\n Screw`],
+      lines: [
+`✚ OPTIONAL · TIME TUNNEL
+I'm Archie, an Archimedes screw. I've been lifting water
+for over two thousand years and my back is fine, thanks.
+
+Some stops in mechanical history:
+- Budj Bim (Gunditjmara Country): eel traps, channels, weirs
+- The Archimedes screw: an inclined plane wrapped round a shaft
+- Leonardo da Vinci's sketches of gears and flying machines
+- The Wright Flyer (1903)
+- Cranes, steam transport, dams, roads and bridges`,
+`Innovation keeps going:
+biomimicry copies nature (Velcro came from burrs),
+nanomachines work at tiny scales, fluid mechanics
+shapes pumps and turbines.
+
+Answer one time-travel question for a card.`
+      ]
+    },
+    spin: {
+      asciiFrames: [`   .-----.\n  /   |   \\\n | ---o--- |\n  \\   |   /\n   '-----'\nBlue Smoke Wheel`, `   .-----.\n  / \\   / \\\n |    o    |\n  \\ /   \\ /\n   '-----'\nBlue Smoke Wheel`],
+      frameDelay: 350,
+      lines: [
+`✚ OPTIONAL · SPIN LAB
+Here we simulate the ancient electronics ritual:
+"Will my circuit release the magic blue smoke?"
+
+(Blue smoke = a component cooking itself. Every
+electronics student meets it eventually.)`,
+`Press S (or Enter) to spin the wheel.
+Results are comedic, but each one comes with a
+real lesson. Legend speaks of a tiny sliver of gold…`
+      ]
+    },
+    shrine: {
+      asciiFrames: [`<span class="neon-pink">   _\n  / o)\n ( (\n  \\_\\__\n   (___)\n   /   \\\n  /_/\\_\\</span>\nPink Flamingo`, `<span class="neon-pink">   _\n  / -)\n ( (\n  \\_\\__\n   (___)\n   /   \\\n  /_/\\_\\</span>\nMysterious Bird`],
+      frameDelay: 800,
+      lines: [
+`✚ OPTIONAL · MYSTERY SHRINE
+A lone pink flamingo balances on one leg,
+judging your cable management.
+
+It is, technically, a very stable mechanical system.`,
+`The flamingo speaks:
+"Every time hot glue is used to 'fix' a mechanical
+problem, a flamingo sighs softly.
+Find the cause. Fix the cause. Test the fix."
+
+You feel strangely motivated to check every bolt, pivot
+and axle before you reach for the glue gun.`
+      ]
+    },
+    exit: {
+      asciiFrames: [` _____\n |   |\n | E |\n | X |\n | I |\n | T |\n '---'\nExit Bot`, ` _____\n |   |\n | E |\n | X |\n | I |\n | T*|\n '---'\nExit Bot`],
+      lines: [
+`EXIT GATE
+Final check: which unit is it?
+
+I'll show you short scenarios. Sort each one into
+Unit 1, Unit 2, or Both units.
+Get one wrong and it comes back later, so you can
+fix it. No time limit. No penalty. Just thinking.
+
+Then you'll make your My Year in Systems passport.`
+      ]
+    }
+  };
+
+  // ---- Missions ----
+  // step types:
+  //  choice:   { q, opts: [{ t, ok, fb }], explain? }       – retry allowed, wrong options greyed out
+  //  classify: { q, cats, items: [{ t, c, why }], explain }  – sort every item, wrong rows flagged
+  //  pick:     { q, key, opts, other }                       – the student's own choice (feeds the passport)
+  const missions = {
+    elab: { title: 'Mission: Lights Out', steps: [
+      { type: 'classify',
+        q: 'A hallway light switches itself off when it isn\'t needed.\nSort each part into INPUT, PROCESS or OUTPUT.',
+        cats: ['Input', 'Process', 'Output'],
+        items: [
+          { t: 'Motion sensor (PIR): detects someone moving', c: 'Input', why: 'It senses something in the world, so it\'s an input.' },
+          { t: 'Light sensor (LDR): measures how dark it is', c: 'Input', why: 'Sensors measure things: that\'s an input.' },
+          { t: 'Code: IF it\'s dark AND someone moved, THEN turn the light on', c: 'Process', why: 'The code makes a decision: that\'s the process.' },
+          { t: 'Code: after 2 minutes with no movement, turn it off', c: 'Process', why: 'Counting and deciding happens in the process.' },
+          { t: 'LED strip: lights up the hallway', c: 'Output', why: 'It\'s what the system does to the world: an output.' }
+        ],
+        explain: 'Sensors in, code decides, light out. When the light\'s effect is sensed again, that\'s feedback.' },
+      { type: 'choice',
+        q: 'Testing problem: the light switches off while someone stands still reading a noticeboard.\nWhat should you test first?',
+        opts: [
+          { t: 'Increase the "no movement" time a little, then re-test', ok: true, fb: 'The problem is the timeout, so change that one thing and re-test.' },
+          { t: 'Make the light sensor more sensitive, then re-test', ok: false, fb: 'The light sensor measures darkness. The light turns off because of the no-movement timer.' },
+          { t: 'Change the timer, sensor and code together, then re-test', ok: false, fb: 'If it improves, you won\'t know which change fixed it. Change one thing at a time.' },
+          { t: 'Replace the motion sensor with a manual switch', ok: false, fb: 'People forget to switch lights off, so this would waste energy again.' }
+        ] },
+      { type: 'pick', key: 'comp',
+        q: 'Your choice: which component are you most curious to learn about in Unit 1?\n(Goes on your passport. You can edit it later.)',
+        opts: ['LED', 'Resistor', 'Light sensor (LDR)', 'Motion sensor (PIR)', 'Microcontroller', 'Motor', 'Solar panel', 'Battery'], other: true }
+    ] },
+
+    studio1: { title: 'Mission: Watt Waste', steps: [
+      { type: 'choice',
+        q: 'Two lighting designs for a hallway that\'s empty most of the night:\n\nDesign A: a timer turns the light on from 6 pm to 6 am.\nDesign B: sensors turn it on only when it\'s dark AND someone is there, then off after 2 minutes.\n\nWhich design probably wastes less energy?',
+        opts: [
+          { t: 'Design B', ok: true, fb: 'The light is only on when it\'s needed, so far less energy is wasted on an empty hallway.' },
+          { t: 'Design A', ok: false, fb: 'A runs all night whether anyone is there or not, so it wastes more.' },
+          { t: 'Neither: they use the same LED', ok: false, fb: 'Same LED, but energy also depends on how LONG it\'s on.' }
+        ] },
+      { type: 'choice',
+        q: 'Check it with numbers. The LED uses 10 W.\nDesign A is on 12 hours a night. Design B is on about 1 hour.\nEnergy = power × time. How much does each use per night?',
+        opts: [
+          { t: 'A: 120 Wh. B: 10 Wh.', ok: true, fb: '10 W × 12 h = 120 Wh and 10 W × 1 h = 10 Wh. Numbers beat opinions.' },
+          { t: 'A: 22 Wh. B: 11 Wh.', ok: false, fb: 'That adds power and time. Energy = power × time (multiply).' },
+          { t: 'A: 1.2 Wh. B: 0.1 Wh.', ok: false, fb: 'That divides. Energy = power × time (multiply).' },
+          { t: 'A: 10 Wh. B: 10 Wh.', ok: false, fb: '10 W is the power (the rate). Energy also depends on how many hours.' }
+        ],
+        explain: 'Wh = watt-hours, a unit of energy. In Unit 1 you\'ll calculate energy and power, and measure circuits too.' },
+      { type: 'choice',
+        q: 'Design B needs extra parts: two sensors and a microcontroller.\nWhich question is about the SUSTAINABILITY of that choice?',
+        opts: [
+          { t: 'Does the energy saved outweigh the extra parts\' impact?', ok: true, fb: 'Yes. Extra parts have materials, energy and waste costs, so weigh them against the savings.' },
+          { t: 'Do the sensors respond quickly enough at night?', ok: false, fb: 'That\'s about performance. Important, but not the sustainability question.' },
+          { t: 'Is the LED in Design B brighter than in Design A?', ok: false, fb: 'Both designs use the same LED, so brightness isn\'t the trade-off here.' }
+        ] },
+      { type: 'pick', key: 'sus',
+        q: 'Your choice: which sustainability problem interests you?\n(EXAMPLES ONLY. Pick one or write your own.)',
+        opts: ['Lights or devices left on when no one is using them', 'Wasting water in gardens', 'Heating or cooling empty rooms', 'Charging that wastes energy', 'Too much e-waste from things that can\'t be repaired'], other: true }
+    ] },
+
+    mwork: { title: 'Mission: Lift Off', steps: [
+      { type: 'choice',
+        q: 'You need to lift a 300 N load (about a 30 kg bag) onto a bench.\nIgnoring friction, effort = load ÷ MA.\nWhich arrangement needs about 100 N of effort?',
+        opts: [
+          { t: 'A lever with MA 3 (effort arm 3× the load arm)', ok: true, fb: '300 ÷ 3 = 100 N.' },
+          { t: 'A lever with MA 1.5 (effort arm 1.5× the load arm)', ok: false, fb: '300 ÷ 1.5 = 200 N.' },
+          { t: 'A block and tackle with MA 2', ok: false, fb: '300 ÷ 2 = 150 N.' },
+          { t: 'A single fixed pulley (MA 1)', ok: false, fb: '300 ÷ 1 = 300 N. A single fixed pulley changes the direction of the force, not its size.' }
+        ] },
+      { type: 'choice',
+        q: 'With the MA 3 lever you push with about 100 N. What\'s the trade-off?',
+        opts: [
+          { t: 'You push about three times further than the load rises', ok: true, fb: 'Less force, more distance. Energy in ≈ energy out (plus a bit lost to friction).' },
+          { t: 'The load rises about three times further than you push', ok: false, fb: 'That\'s backwards. To use less force, YOU move further.' },
+          { t: 'The lever makes the load about three times lighter', ok: false, fb: 'The load weighs the same. The lever changes the force you need to apply.' },
+          { t: 'It puts out about three times more energy than you put in', ok: false, fb: 'Machines can\'t create energy. They trade force for distance.' }
+        ] },
+      { type: 'choice',
+        q: 'History check: how does a spear-thrower (such as a woomera) work mechanically?',
+        opts: [
+          { t: 'As a lever that lengthens the thrower\'s arm', ok: true, fb: 'A longer lever means the tip moves faster, so the spear leaves faster. Makers often shaped them to suit the user and the spear.' },
+          { t: 'As a pulley that changes the spear\'s direction', ok: false, fb: 'There\'s no rope or wheel. It pivots like a lever.' },
+          { t: 'As a wedge that splits the air ahead of the spear', ok: false, fb: 'The thrower stays in the hand. It works by extending the arm like a lever.' },
+          { t: 'As a wheel and axle that spins the spear', ok: false, fb: 'Nothing rotates on an axle here. It\'s a lever.' }
+        ] },
+      { type: 'pick', key: 'mech',
+        q: 'Your choice: which mechanism do you most want to investigate in Unit 2?',
+        opts: ['Lever', 'Pulley', 'Gears', 'Wheel and axle', 'Inclined plane', 'Screw', 'Wedge', 'Linkages'], other: true }
+    ] },
+
+    studio2: { title: 'Mission: Grip Check', steps: [
+      { type: 'choice',
+        q: 'Your lever-lifting aid works well for you. But its handle is a thin rod you squeeze hard, and it is difficult for the intended user to operate: they have limited grip strength.\nWhat should you investigate next?',
+        opts: [
+          { t: 'How the intended user grips it, by watching them try', ok: true, fb: 'Start with the person. Their experience is your best evidence.' },
+          { t: 'Whether people with a strong grip find it easy', ok: false, fb: 'They aren\'t the intended user, so their result doesn\'t answer the question.' },
+          { t: 'How strong the handle rod is under the full load', ok: false, fb: 'Strength matters, but the problem is that the user can\'t operate it. Investigate that first.' },
+          { t: 'Which handle material looks the most professional', ok: false, fb: 'Appearance can matter to users, but it doesn\'t solve the grip problem.' }
+        ] },
+      { type: 'choice',
+        q: 'Ideas so far: a thick foam grip, a loop you push with your palm or forearm, or a crank handle.\nWhich statement is MOST accurate?',
+        opts: [
+          { t: 'Each may suit some users but not others, so test with the user', ok: true, fb: 'Exactly. There\'s no single fix that suits everyone. Let users guide the choice.' },
+          { t: 'The thick foam grip will suit everyone with limited grip', ok: false, fb: 'It might help some people, but needs vary. Never assume one fix fits all.' },
+          { t: 'The crank is best, because it needs no grip at all', ok: false, fb: 'A crank still needs some hold and turning effort, so it may not suit everyone. Test it.' },
+          { t: 'Any of them will do, since all are easier than the rod', ok: false, fb: 'Easier to imagine isn\'t proof. Test with the intended user.' }
+        ] },
+      { type: 'choice',
+        q: 'How could you show that your new handle actually helped?',
+        opts: [
+          { t: 'Test old and new handles with the user, and record the results', ok: true, fb: 'A before-and-after test with the intended user, recorded as evidence.' },
+          { t: 'Test the new handle yourself several times and record it', ok: false, fb: 'You aren\'t the intended user, so your results don\'t show it helped them.' },
+          { t: 'Record that the new handle is thicker than the old one', ok: false, fb: 'That describes the change, not whether it helped the user.' },
+          { t: 'Ask a classmate to rate the new handle out of 10', ok: false, fb: 'A classmate isn\'t the intended user. Test with the person you\'re designing for.' }
+        ] },
+      { type: 'pick', key: 'user',
+        q: 'Your choice: which user need or inclusive design opportunity interests you?\n(EXAMPLES ONLY. Pick one or write your own.)',
+        opts: ['Opening jars, taps or doors with limited grip', 'Lifting or carrying for someone with limited strength', 'Reaching high or low shelves', 'Gardening for someone who can\'t kneel', 'Tools that work for left-handed people'], other: true }
+    ] },
+
+    safety: { title: 'Mission: Bench Check', steps: [
+      { type: 'choice',
+        q: 'Before you switch on a circuit for the first time, you check the setup.\nWhich of these is a problem?',
+        opts: [
+          { t: 'The red (+) battery lead is on the blue (−) rail', ok: true, fb: 'Reversed polarity: the fast route to blue smoke. Fix it before power.' },
+          { t: 'You have safety glasses on and the bench is dry', ok: false, fb: 'That\'s exactly right. Look for what doesn\'t match the plan.' },
+          { t: 'The components are placed as the diagram shows', ok: false, fb: 'Matching the circuit diagram is what you want.' },
+          { t: 'The power switch is OFF while you check', ok: false, fb: 'Power OFF while checking is the safe way to inspect.' }
+        ] },
+      { type: 'choice',
+        q: 'You switch on. A component gets hot and you smell burning. What do you do FIRST?',
+        opts: [
+          { t: 'Switch off the power if it\'s safe, then tell your teacher', ok: true, fb: 'Stop, make safe, get help. Record it once everything\'s safe.' },
+          { t: 'Film it first so you have evidence for your logbook', ok: false, fb: 'Safety first. Evidence can wait until it\'s safe.' },
+          { t: 'Leave it on for a minute to see if it settles down', ok: false, fb: 'A burning smell means stop now.' },
+          { t: 'Touch the parts to find out which one is hot', ok: false, fb: 'Hot components can burn you. Switch off and keep your hands away.' }
+        ] },
+      { type: 'choice',
+        q: 'Now it\'s the Unit 2 workshop. You need a hole drilled and the drill press is free.\nYou haven\'t been shown how to use it yet. What do you do?',
+        opts: [
+          { t: 'Ask your teacher to show you before you use it', ok: true, fb: 'Training before use. Unsure? Stop and ask. Always.' },
+          { t: 'Watch a video on drill presses, then use it carefully', ok: false, fb: 'A video isn\'t a safety induction from your teacher.' },
+          { t: 'Get a friend who has used it before to show you', ok: false, fb: 'Kind, but your teacher decides when you\'re ready for a machine.' },
+          { t: 'Use it slowly, with safety glasses on', ok: false, fb: 'Safety glasses are the last line of defence. You need training first.' }
+        ] }
+    ] },
+
+    logbook: { title: 'Mission: Evidence Hunter', steps: [
+      { type: 'choice',
+        q: 'Which logbook entry is MOST useful?',
+        opts: [
+          { t: '"14 Mar. LED didn\'t light (photo). It was backwards; flipped it, works. Next: add sensor."', ok: true, fb: 'Problem, evidence, change, result and next step, all in one short entry.' },
+          { t: '"14 Mar. Spent the whole lesson on the circuit. Lots of progress, really happy with it."', ok: false, fb: 'Dated and positive, but no evidence, no problem, no change and no next step.' },
+          { t: '"14 Mar." followed by three photos of the circuit with no notes', ok: false, fb: 'Photos are good evidence, but without notes no one knows what they show or what changed.' },
+          { t: '"Term summary (written in June): the circuit worked after a few fixes."', ok: false, fb: 'Written much later, it misses details and can\'t show what really happened.' }
+        ] },
+      { type: 'choice',
+        q: 'Your prototype works, but you have no test results. What should you do next?',
+        opts: [
+          { t: 'Plan and run a test, then record the results', ok: true, fb: '"It works" becomes evidence of how well it works.' },
+          { t: 'Write that it works and start the next part', ok: false, fb: 'A claim isn\'t a test result. How well does it work, and under what conditions?' },
+          { t: 'Take a photo of it working and move on', ok: false, fb: 'A photo shows it worked once. A test shows how well it works.' },
+          { t: 'Ask a friend to confirm that it works', ok: false, fb: 'Their opinion isn\'t a test result. Test it and record what happens.' }
+        ] },
+      { type: 'pick', key: 'habit',
+        q: 'Your choice: which evidence habit will you use?',
+        opts: ['A photo at the end of every practical lesson', 'A quick video or voice note when something changes', 'Sketch before I build', 'Record every test in a table', 'Note where help and ideas came from'], other: true }
+    ] },
+
+    testbench: { title: 'Mission: One Change', steps: [
+      { type: 'choice',
+        q: 'Your little buggy rolls down a ramp but stops short of the 2 m target.\nBefore testing a change, which is the BEST prediction?',
+        opts: [
+          { t: '"Raising the ramp will make it roll further, because it starts higher."', ok: true, fb: 'It says what will happen and why, and you can test it.' },
+          { t: '"Raising the ramp will probably help the buggy in some way."', ok: false, fb: 'It doesn\'t say what will happen or why, so it\'s hard to test.' },
+          { t: '"It will roll further, because buggies improve with more testing."', ok: false, fb: 'The reason isn\'t about how the buggy works. Give a physical reason.' },
+          { t: '"Raising the ramp will make it roll exactly 2 m."', ok: false, fb: 'Specific, but there\'s no reason. Say WHY you expect it.' }
+        ] },
+      { type: 'choice',
+        q: 'Which test plan is BEST?',
+        opts: [
+          { t: 'Raise only the ramp, keep all else the same, run it 3 times', ok: true, fb: 'One change, fair test, repeated runs.' },
+          { t: 'Raise the ramp and add weight, then run it 3 times', ok: false, fb: 'Two changes at once: you won\'t know which one made the difference.' },
+          { t: 'Raise only the ramp, then run it once', ok: false, fb: 'One change is good, but one run can be a fluke. Repeat it.' },
+          { t: 'Fit new wheels, and raise the ramp if that isn\'t enough', ok: false, fb: 'If you change both, you can\'t tell which one helped. Test one change at a time.' }
+        ] },
+      { type: 'choice',
+        q: 'A different test: you predicted your lever would need 100 N, but the spring scale reads 120 N.\nWhat\'s the most sensible conclusion?',
+        opts: [
+          { t: 'Friction and flex add effort: record the gap and investigate', ok: true, fb: 'The gap between prediction and result is useful evidence.' },
+          { t: 'The calculation was wrong, so stop using calculations', ok: false, fb: 'The maths gave a good estimate. Testing shows what the real world adds.' },
+          { t: 'Record 100 N, since that\'s what the maths says', ok: false, fb: 'Never change results to match predictions. Real data matters.' },
+          { t: 'The spring scale must be broken, so ignore the reading', ok: false, fb: 'Check the scale by all means, but friction is the more likely cause. Investigate rather than ignore.' }
+        ] }
+    ] },
+
+    integrity: { title: 'Mission: Fair Play', steps: [
+      { type: 'choice',
+        q: 'You found a wiring idea on a website that would help your circuit. What should you do?',
+        opts: [
+          { t: 'Use it, and note the source and what you changed', ok: true, fb: 'Acknowledge the source and show your own work on top of it.' },
+          { t: 'Use it without a note, since it was free online', ok: false, fb: 'Even when you\'re allowed to use it, you still say where it came from.' },
+          { t: 'Redraw it neatly so it looks like your own design', ok: false, fb: 'Disguising a source is the integrity problem.' },
+          { t: 'Avoid it: using any outside idea is cheating', ok: false, fb: 'Using ideas is normal and allowed. The key is acknowledging them.' }
+        ] },
+      { type: 'choice',
+        q: 'For this task, your teacher allows AI for explaining concepts. Which use fits those rules?',
+        opts: [
+          { t: 'Ask it to explain resistors, check it, and note you used it', ok: true, fb: 'Within the rules, checked, and acknowledged.' },
+          { t: 'Ask it to explain resistors, but don\'t mention it anywhere', ok: false, fb: 'The use is allowed, but hiding it isn\'t. Say how it helped.' },
+          { t: 'Ask it to write your evaluation, then hand that in', ok: false, fb: 'That goes beyond explaining concepts, and it isn\'t your work.' },
+          { t: 'Ask it to write your code, then rename the variables', ok: false, fb: 'Renaming variables doesn\'t make the code yours, and it goes beyond the rules.' }
+        ] }
+    ] },
+
+    command: { title: 'Trial of Three Verbs', steps: [
+      { type: 'choice',
+        q: 'IDENTIFY the output: "A fan turns on when a temperature sensor reads above 28 °C."',
+        opts: [
+          { t: 'The fan', ok: true, fb: 'Identify = name it. Short and exact.' },
+          { t: 'The temperature sensor', ok: false, fb: 'That\'s the input: it measures the temperature.' },
+          { t: 'The 28 °C setting', ok: false, fb: 'That\'s part of the process: the condition the system checks.' },
+          { t: 'The fan cools the room by moving air', ok: false, fb: 'That explains what it does. "Identify" just wants the name.' }
+        ] },
+      { type: 'choice',
+        q: 'Which answer DESCRIBES a pulley?',
+        opts: [
+          { t: 'A grooved wheel on an axle, with a rope running around it', ok: true, fb: 'Describe = what it\'s like and what its parts are.' },
+          { t: 'A simple machine used in cranes, lifts and flagpoles', ok: false, fb: 'That says where it\'s used, not what it\'s like.' },
+          { t: 'It makes lifting easier because it changes force direction', ok: false, fb: 'That explains why it helps (explain), rather than describing it.' },
+          { t: 'A pulley is one of the six simple machines', ok: false, fb: 'That classifies it, but doesn\'t say what it\'s like.' }
+        ] },
+      { type: 'choice',
+        q: 'Which answer EXPLAINS why a longer lever arm makes lifting easier?',
+        opts: [
+          { t: 'Further from the pivot, less force gives the same turning effect', ok: true, fb: 'Explain = how or why: cause and effect.' },
+          { t: 'A lever is a rigid bar that pivots on a fulcrum', ok: false, fb: 'That describes a lever but doesn\'t explain why.' },
+          { t: 'Longer levers are used in crowbars and wheelbarrows', ok: false, fb: 'Those are examples, not a reason.' },
+          { t: 'The longer the lever arm, the easier the load is to lift', ok: false, fb: 'That restates the claim without saying why.' }
+        ] }
+    ] },
+
+    tunnel: { title: 'Time-Travel Question', steps: [
+      { type: 'choice',
+        q: 'How does an Archimedes screw lift water?',
+        opts: [
+          { t: 'Turning it carries water up along its spiral thread', ok: true, fb: 'It\'s an inclined plane wrapped round a shaft: two simple machines in one.' },
+          { t: 'Turning it creates suction that pulls water up the tube', ok: false, fb: 'No suction. Pockets of water ride up the thread as it turns.' },
+          { t: 'Turning it pushes water up, like a pump with a piston', ok: false, fb: 'There\'s no piston. The spiral thread carries the water up.' },
+          { t: 'Turning it spins the water so it\'s flung upwards', ok: false, fb: 'It turns slowly. The spiral thread carries the water, it doesn\'t throw it.' }
+        ] }
+    ] }
+  };
+
+  // ---- Final check: which unit? ----
+  const finalPool = [
+    { t: 'You program a microcontroller so a garden is watered only when a soil-moisture sensor reads dry.', a: 'u1', why: 'Sensors, code and a sustainability problem (water): Unit 1.' },
+    { t: 'You compare how much energy two LED circuits use, using energy = power × time.', a: 'u1', why: 'Electrical energy in circuits: Unit 1.' },
+    { t: 'You explore how Morse code telegraphy led to modern telecommunications.', a: 'u1', why: 'Developments in electrotechnology: Unit 1.' },
+    { t: 'You choose components with lower standby power so your system wastes less energy.', a: 'u1', why: 'Component choice for a sustainable electrotechnological system: Unit 1.' },
+    { t: 'You calculate the mechanical advantage of a pulley system for lifting a heavy box.', a: 'u2', why: 'Simple machines and mechanical advantage: Unit 2.' },
+    { t: 'You test two handle shapes with the intended user, who has limited grip strength.', a: 'u2', why: 'Inclusive design for a mechanical system: Unit 2.' },
+    { t: 'You investigate how spear-throwers and the Archimedes screw use mechanical principles.', a: 'u2', why: 'The evolution of mechanical systems: Unit 2.' },
+    { t: 'You build a gear train so a crank turns a wheel faster.', a: 'u2', why: 'Gears and motion: Unit 2.' },
+    { t: 'You photograph your setup and note one thing to change before the next test.', a: 'both', why: 'Recording evidence is a habit for both units.' },
+    { t: 'You inspect your setup and get your teacher\'s OK before first use.', a: 'both', why: 'Safety checks happen in both units.' },
+    { t: 'You note in your record of evidence that a website gave you an idea.', a: 'both', why: 'Acknowledging sources applies in both units.' },
+    { t: 'You predict a result, change one thing, then re-test.', a: 'both', why: 'Testing and improving is part of the systems engineering process in both units.' }
+  ];
+  const FINAL_LABELS = { u1: 'Unit 1 (electrotechnological)', u2: 'Unit 2 (mechanical)', both: 'Both units' };
+
+  // ---- Blue Smoke wheel (reused from the orientation) ----
+  const spinOutcomes = [
+    { label: 'Smoke!', color: '#1d4ed8', effect: 'smoke', text: 'Your prototype emits a tiny puff of blue smoke.\nEveryone nearby nods in sad understanding.', reflect: 'What one check before power-on would have caught this?' },
+    { label: 'Too quiet', color: '#334155', text: 'Nothing explodes.\nNothing smokes.\nYou are suspicious. Something must be wrong.', reflect: 'What test would prove it actually works, not just that nothing broke?' },
+    { label: 'Backwards', color: '#1e40af', effect: 'smoke', text: 'You wired the battery backwards.\nThe magic smoke escapes instantly.\nR.I.P. LED.', reflect: 'Check polarity: red (+) to positive, black (−) to negative, BEFORE power.' },
+    { label: 'First try?!', color: '#475569', text: 'Your circuit works first try.\nYou immediately fear you have made a terrible unseen mistake.', reflect: 'Record it anyway. What\'s your evidence it worked?' },
+    { label: 'Burning?', color: '#2563eb', effect: 'wisp', text: 'A faint burning smell appears.\nYou spot it before disaster.\nYou earn +1 wisdom.', reflect: 'The safe sequence: switch off, tell your teacher, then record what happened.' },
+    { label: 'Loose wire', color: '#1e293b', text: 'The problem was a loose wire.\nYou fix it and pretend it was all part of the plan.', reflect: 'What goes in your logbook? The symptom, the cause and the fix.' },
+    { label: '★', color: '#facc15', gold: true, effect: 'gold', size: 18, text: 'The wheel lands on the tiny GOLD sliver!\nYour circuit works, your logbook is up to date\nand every wire is labelled.\nA golden star floats down from the ceiling.', reflect: 'Rare, but not luck: checked, tested, recorded. That\'s how you get there for real.' }
+  ];
+  (function layoutWheel() {
+    const goldSize = spinOutcomes.filter(o => o.size).reduce((t, o) => t + o.size, 0);
+    const normal = spinOutcomes.filter(o => !o.size);
+    const each = (360 - goldSize) / normal.length;
+    let a = 0;
+    spinOutcomes.forEach(o => { o.start = a; o.end = a + (o.size || each); a = o.end; });
+  })();
+</script>
+<script>
+  // ---------------- Elements ----------------
+  const $ = id => document.getElementById(id);
+  const mapEl = $('map'), hudEl = $('hud'), hudItemsEl = $('hudItems'), zoneTagEl = $('zoneTag');
+  const dialogEl = $('dialog'), dialogTitleEl = $('dialogTitle'), dialogTextEl = $('dialogText'), dialogHintEl = $('dialogHint');
+  const roomScreenEl = $('roomScreen'), roomArtEl = $('roomArt'), roomTitleEl = $('roomTitle'), roomTextEl = $('roomText'), roomHintEl = $('roomHint');
+  const instructionsEl = $('instructions');
+  const endScreenEl = $('endScreen'), endTextEl = $('endText'), endCardsEl = $('endCards'), endHintEl = $('endHint'), creditsEl = $('credits');
+  const ppMsgEl = $('ppMsg');
+
+  // ---------------- State (saved to localStorage under STORE_KEY only) ----------------
+  function blankState() {
+    return { v: 1, started: false, done: false,
+      player: { name: '', cls: '', tried: [], confBefore: 0, confAfter: 0 },
+      layout: null, pos: null, visited: [], completed: [], extras: [], cards: [], comebacks: 0,
+      picks: {}, checkpoints: [], luckyStar: false, passport: {}, finishedAt: null };
+  }
+  let S = blankState();
+  let visitedTiles = new Set(), completed = new Set(), extras = new Set(), earnedCards = new Set(), checkpointsShown = new Set();
+  const playerPos = { x: 0, y: 0 };
+
+  function save() {
+    S.pos = { x: playerPos.x, y: playerPos.y };
+    S.visited = [...visitedTiles]; S.completed = [...completed]; S.extras = [...extras];
+    S.cards = [...earnedCards]; S.checkpoints = [...checkpointsShown];
+    S.layout = {}; buildings.forEach(b => { S.layout[b.id] = [b.x, b.y]; });
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
+  }
+  function readSaved() {
+    try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); return s && s.v === 1 && s.started ? s : null; } catch (e) { return null; }
+  }
+  function applyState(s) {
+    S = Object.assign(blankState(), s);
+    S.player = Object.assign(blankState().player, s.player || {});
+    visitedTiles = new Set(S.visited); completed = new Set(S.completed); extras = new Set(S.extras);
+    earnedCards = new Set(S.cards); checkpointsShown = new Set(S.checkpoints);
+    let ok = !!S.layout;
+    if (ok) buildings.forEach(b => { const p = S.layout[b.id]; if (!p) ok = false; else { b.x = p[0]; b.y = p[1]; } });
+    if (!ok) randomiseBuildings();
+    if (S.pos) { playerPos.x = S.pos.x; playerPos.y = S.pos.y; }
+    revealAround(playerPos.x, playerPos.y);
+  }
+
+  // ---------------- View state ----------------
+  let viewMode = 'splash';      // splash | onboard | map | room | end
+  let dialogOpen = false, dialogMode = 'info';
+  let currentBuilding = null;
+  let roomLineIndex = 0, currentRoomLines = [], roomAnimInterval = null, roomAnimFrameIndex = 0;
+  let mission = null;           // active mission run
+  let finalRun = null;          // active final check
+  let pendingLeave = false;     // leave the room after closing the mission-complete dialog
+  let resetArmedUntil = 0, resetTimer = null;
+  let lastZone = null;
+
+  const buildingById = id => buildings.find(b => b.id === id);
+  const allCoreDone = () => coreOrder.every(id => completed.has(id));
+
+  // ---------------- Sound (same tiny Web Audio set as the orientation) ----------------
+  let audioCtx = null;
+  function initAudio() {
+    if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; } }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function playBeep(freq, duration, type = 'square', volume = 0.06) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = type; osc.frequency.value = freq; gain.gain.value = volume;
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + duration / 1000);
+  }
+  const sfx = {
+    move: () => playBeep(220, 40, 'square', 0.03),
+    enterRoom: () => playBeep(660, 120, 'square', 0.06),
+    good: () => { playBeep(660, 80); setTimeout(() => playBeep(880, 80), 80); },
+    retry: () => playBeep(240, 160, 'triangle', 0.06),
+    card: () => { playBeep(880, 70); setTimeout(() => playBeep(1175, 90), 80); setTimeout(() => playBeep(1568, 120), 170); },
+    comeback: () => { playBeep(523, 70); setTimeout(() => playBeep(784, 70), 70); setTimeout(() => playBeep(1047, 120), 140); },
+    spinStart: () => playBeep(520, 120, 'triangle', 0.05),
+    spinEnd: () => playBeep(300, 180, 'square', 0.07),
+    win: () => { playBeep(660, 120); setTimeout(() => playBeep(990, 160), 130); setTimeout(() => playBeep(1320, 200), 320); }
+  };
+
+  // ---------------- Map ----------------
+  function revealAround(x, y) {
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && nx < width && ny >= 0 && ny < height) visitedTiles.add(`${nx},${ny}`);
+    }
+  }
+  function randomiseBuildings() {
+    for (let attempt = 0; attempt < 60; attempt++) if (tryPlace(attempt < 40 ? 9 : 4)) break;
+    const st = buildingById('start');
+    playerPos.x = st.x; playerPos.y = st.y;
+    visitedTiles = new Set();
+    revealAround(playerPos.x, playerPos.y);
+  }
+  function tryPlace(minDistSq) {
+    const placed = [];
+    const st = buildingById('start'); st.x = 10; st.y = 10; placed.push({ x: 10, y: 10 });
+    for (const b of buildings) {
+      if (b.id === 'start') continue;
+      const [x0, x1] = ZONES[b.zone].xs;
+      let ok = false;
+      for (let tries = 0; tries < 3000 && !ok; tries++) {
+        const x = x0 + Math.floor(Math.random() * (x1 - x0 + 1));
+        const y = 1 + Math.floor(Math.random() * (height - 2));
+        if (isBlocked(x, y)) continue;
+        const need = b.zone === 'shared' ? Math.min(minDistSq, 5) : minDistSq;
+        if (placed.every(p => (x - p.x) ** 2 + (y - p.y) ** 2 >= need)) { b.x = x; b.y = y; placed.push({ x, y }); ok = true; }
+      }
+      if (!ok) return false;
+    }
+    return true;
+  }
+  function draw() {
+    if (!['map', 'splash', 'onboard'].includes(viewMode)) return;
+    mapEl.innerHTML = '';
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const div = document.createElement('div');
+      div.classList.add('tile');
+      const b = buildings.find(q => q.x === x && q.y === y);
+      if (!visitedTiles.has(`${x},${y}`)) div.classList.add('fog');
+      else if (b) {
+        div.classList.add('building', b.className);
+        if (b.optional) div.classList.add('b-optional');
+        div.title = b.name + (b.optional ? ' (optional ✚)' : '');
+        div.textContent = b.label;
+        if (completed.has(b.id) || extras.has(b.id)) div.style.boxShadow = '0 0 6px #fff';
+        if (b.id === 'exit' && allCoreDone()) div.style.boxShadow = '0 0 8px #facc15';
+      } else if (isBlocked(x, y)) { div.classList.add('wall'); div.textContent = '#'; }
+      else {
+        const z = zoneAt(x, y);
+        div.classList.add(z === 'door' ? 'door' : 'z-' + z);
+        if (z === 'door') div.textContent = '⇄';
+      }
+      if (x === playerPos.x && y === playerPos.y) { div.classList.add('player'); div.textContent = b ? b.label : ''; }
+      mapEl.appendChild(div);
+    }
+    updateZoneTag();
+    updateInstructions();
+  }
+  function updateZoneTag() {
+    let z = zoneAt(playerPos.x, playerPos.y);
+    if (z === 'door') z = lastZone || 'shared';
+    lastZone = z;
+    zoneTagEl.textContent = 'You are in: ' + ZONES[z].name;
+    zoneTagEl.style.color = ZONES[z].color;
+  }
+  function updateInstructions() {
+    if (Date.now() < resetArmedUntil && viewMode === 'map') {
+      instructionsEl.textContent = 'Press R again within 3 seconds to restart. You will lose your Step Up progress!';
+      instructionsEl.classList.add('warn'); return;
+    }
+    instructionsEl.classList.remove('warn');
+    const b = getBuildingAtPlayer();
+    instructionsEl.textContent = b
+      ? `You're at: ${b.name}${b.optional ? ' (optional ✚)' : ''}. Press Enter/Space to go in.`
+      : 'Arrow keys (or the pad) move the green square. Stand on a building and press Enter. G = Jargon Buster.';
+  }
+  function move(dx, dy) {
+    if (dialogOpen || viewMode !== 'map') return;
+    const nx = Math.max(0, Math.min(width - 1, playerPos.x + dx)), ny = Math.max(0, Math.min(height - 1, playerPos.y + dy));
+    if (isBlocked(nx, ny)) return;
+    playerPos.x = nx; playerPos.y = ny;
+    revealAround(nx, ny); draw(); sfx.move();
+  }
+  const getBuildingAtPlayer = () => buildings.find(b => b.x === playerPos.x && b.y === playerPos.y);
+
+  // ---------------- HUD ----------------
+  function setStarText(el, text) {
+    el.textContent = '';
+    String(text).split('★').forEach((part, i) => {
+      if (i > 0) { const s = document.createElement('span'); s.className = 'gold-star'; s.textContent = '★'; el.appendChild(s); }
+      if (part) el.appendChild(document.createTextNode(part));
+    });
+  }
+  function hudGroup(cls, title, ids) {
+    const g = document.createElement('div'); g.className = 'hud-group ' + cls;
+    const h = document.createElement('h4'); h.textContent = title; g.appendChild(h);
+    ids.forEach(id => {
+      const row = document.createElement('div');
+      const done = completed.has(id);
+      setStarText(row, `[${done ? 'x' : ' '}] ${buildingById(id).name}${done ? ' ★' : ''}`);
+      g.appendChild(row);
+    });
+    hudItemsEl.appendChild(g);
+  }
+  function updateHud() {
+    $('hudTitle').textContent = 'Step Up Progress' + (S.player.name ? ` – ${S.player.name} (${S.player.cls})` : '');
+    hudItemsEl.innerHTML = '';
+    hudGroup('hud-u1', '◀ UNIT 1 ZONE', CORE.u1);
+    hudGroup('hud-sh', '● SHARED', CORE.shared);
+    hudGroup('hud-u2', '▶ UNIT 2 ZONE', CORE.u2);
+    const left = coreOrder.filter(id => !completed.has(id)).length;
+    const st = document.createElement('div'); st.className = 'hud-wide';
+    if (S.done) { st.className += ' hud-status'; st.textContent = '★ Step Up complete! Visit the Exit Gate to see your passport again.'; }
+    else if (!left) { st.className += ' hud-status'; st.textContent = '★ All core missions done: the Exit Gate (EX) is open!'; }
+    else { st.className += ' hud-dim'; st.textContent = `${left} core mission${left === 1 ? '' : 's'} to go before the Exit Gate opens.`; }
+    hudItemsEl.appendChild(st);
+    const info = document.createElement('div'); info.className = 'hud-wide hud-dim';
+    setStarText(info, `Cards: ${earnedCards.size}/${cardOrder.length}   Comebacks: ${S.comebacks}   Extras ✚: ${extras.size}/${optionalOrder.length}` + (S.luckyStar ? '   ★ lucky star' : ''));
+    hudItemsEl.appendChild(info);
+  }
+
+  // ---------------- Rooms ----------------
+  function enterRoom(b) {
+    currentBuilding = b; viewMode = 'room'; roomLineIndex = 0;
+    const data = roomData[b.id];
+    if (roomAnimInterval) clearInterval(roomAnimInterval);
+    roomTitleEl.textContent = b.name + (b.optional ? '  ✚' : '');
+    const frames = data.asciiFrames; roomAnimFrameIndex = 0; roomArtEl.innerHTML = frames[0];
+    roomAnimInterval = frames.length > 1 ? setInterval(() => {
+      roomAnimFrameIndex = (roomAnimFrameIndex + 1) % frames.length; roomArtEl.innerHTML = frames[roomAnimFrameIndex];
+    }, data.frameDelay || 1000) : null;
+    currentRoomLines = [...data.lines];
+    if (missions[b.id] && completed.has(b.id)) currentRoomLines[currentRoomLines.length - 1] += '\n\n(✓ You\'ve done this mission. Enter replays it.)';
+    renderRoomText(currentRoomLines[0]); updateRoomHint();
+    roomScreenEl.classList.remove('hidden'); dialogEl.classList.add('hidden'); dialogOpen = false;
+    if (b.optional && !missions[b.id] && !extras.has(b.id)) { extras.add(b.id); updateHud(); save(); }
+    sfx.enterRoom();
+  }
+  function leaveRoom() {
+    if (roomAnimInterval) { clearInterval(roomAnimInterval); roomAnimInterval = null; }
+    viewMode = 'map'; roomScreenEl.classList.add('hidden'); dialogEl.classList.add('hidden');
+    dialogOpen = false; currentBuilding = null; draw(); save();
+    maybeCheckpoint();
+  }
+  // Source text is hard-wrapped for readability; re-join mid-sentence breaks so it flows in narrow panes.
+  function reflow(text) {
+    const lines = String(text).split('\n'), out = [];
+    const isList = l => /^\s{2,}|^[-✔✘◀▶●•]|^\d+\.|^[A-Z][A-Z-]+\b(?![a-z])/.test(l);
+    const isCaps = l => l === l.toUpperCase() && /[A-Z]/.test(l);
+    lines.forEach(l => {
+      const prev = out[out.length - 1];
+      if (prev && l.trim() && prev.trim() && !/[:.!?)"]$/.test(prev.trim()) && !isList(l) && !isCaps(prev)) out[out.length - 1] = prev + ' ' + l.trim();
+      else out.push(l);
+    });
+    return out.join('\n');
+  }
+  function renderRoomText(text) {
+    roomTextEl.innerHTML = '';
+    reflow(text).split('\n').forEach((line, i) => {
+      if (i > 0) roomTextEl.appendChild(document.createTextNode('\n'));
+      const t = line.trimStart();
+      if (t.startsWith('✔') || t.startsWith('✘')) {
+        const sp = document.createElement('span'); sp.className = t.startsWith('✔') ? 'line-tick' : 'line-cross'; sp.textContent = line; roomTextEl.appendChild(sp);
+      } else if (/EXAMPLES ONLY/.test(line)) {
+        const sp = document.createElement('span'); sp.className = 'example-tag'; sp.textContent = line; roomTextEl.appendChild(sp);
+      } else roomTextEl.appendChild(document.createTextNode(line));
+    });
+  }
+  const atEndOfRoom = () => roomLineIndex >= currentRoomLines.length - 1;
+  function updateRoomHint() {
+    if (!currentBuilding) return;
+    const id = currentBuilding.id, atEnd = atEndOfRoom(), parts = [];
+    parts.push(`Slide ${roomLineIndex + 1}/${currentRoomLines.length}`);
+    if (!atEnd) parts.push('Enter: next');
+    if (roomLineIndex > 0) parts.push('B: back');
+    if (atEnd) {
+      if (id === 'exit') parts.push('Enter: final check');
+      else if (missions[id]) parts.push('Enter: start mission');
+      else if (id === 'spin') parts.push('Enter or S: spin');
+      else parts.push('Enter: back to the campus');
+    }
+    parts.push('Esc: leave');
+    roomHintEl.textContent = parts.join('  ·  ');
+  }
+  function advanceRoomLine(d) {
+    roomLineIndex = Math.max(0, Math.min(currentRoomLines.length - 1, roomLineIndex + d));
+    renderRoomText(currentRoomLines[roomLineIndex]); updateRoomHint();
+  }
+
+  // ---------------- Dialog helpers ----------------
+  function openDialog(title, mode, hint) {
+    dialogOpen = true; dialogMode = mode;
+    dialogTitleEl.textContent = title; dialogTextEl.innerHTML = ''; dialogHintEl.textContent = hint || '';
+    dialogEl.classList.remove('hidden'); dialogEl.scrollTop = 0;
+  }
+  function addText(text, cls) {
+    const d = document.createElement('div'); if (cls) d.className = cls;
+    d.style.whiteSpace = 'pre-wrap'; d.style.marginBottom = '4px';
+    setStarText(d, text); dialogTextEl.appendChild(d); return d;
+  }
+  function addOption(idx, text, onPick, opts = {}) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'opt-btn' + (opts.picked ? ' picked' : ''); btn.tabIndex = -1;
+    btn.textContent = (idx + 1) + '. ' + text;
+    if (opts.disabled) btn.disabled = true;
+    btn.addEventListener('click', e => { e.stopPropagation(); btn.blur(); onPick(idx); });
+    dialogTextEl.appendChild(btn); return btn;
+  }
+  function closeDialog() {
+    dialogOpen = false; dialogMode = 'info'; dialogEl.classList.add('hidden');
+    if (spinTimer) { clearTimeout(spinTimer); spinTimer = null; }
+    if (spinRaf) { cancelAnimationFrame(spinRaf); spinRaf = null; }
+    spinningActive = false;
+  }
+  function shuffle(a) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+  // ---------------- Missions ----------------
+  function startMission(id) {
+    mission = { id, def: missions[id], i: 0 };
+    prepStep(); renderStep();
+  }
+  function prepStep() {
+    const s = mission.def.steps[mission.i];
+    mission.wrong = false; mission.tried = new Set(); mission.sel = null; mission.other = '';
+    if (s.type === 'choice') mission.order = shuffle(s.opts);
+    if (s.type === 'classify') { mission.assign = s.items.map(() => null); mission.bad = new Set(); }
+    if (s.type === 'pick') { mission.sel = S.picks[s.key] || null; }
+  }
+  function stepTitle() { return `${mission.def.title}  ·  step ${mission.i + 1} of ${mission.def.steps.length}`; }
+  function renderStep() {
+    const s = mission.def.steps[mission.i];
+    if (s.type === 'choice') {
+      openDialog(stepTitle(), 'mq', 'Press 1–' + s.opts.length + ' or tap an answer  ·  Esc: leave the mission');
+      addText(s.q);
+      mission.order.forEach((o, i) => addOption(i, o.t, answerChoice, { disabled: mission.tried.has(o) }));
+    } else if (s.type === 'classify') {
+      openDialog(stepTitle(), 'classify', 'Tap a label for every item, then Check (or press Enter)  ·  Esc: leave');
+      addText(s.q);
+      s.items.forEach((it, idx) => {
+        const row = document.createElement('div'); row.className = 'cls-row' + (mission.bad.has(idx) ? ' bad' : '');
+        const tx = document.createElement('div'); tx.className = 'cls-text'; tx.textContent = it.t; row.appendChild(tx);
+        s.cats.forEach(c => {
+          const b = document.createElement('button'); b.type = 'button'; b.className = 'cat-btn' + (mission.assign[idx] === c ? ' on' : ''); b.textContent = c;
+          b.addEventListener('click', e => { e.stopPropagation(); mission.assign[idx] = c; mission.bad.delete(idx); playBeep(700, 30, 'square', 0.03); renderStep(); });
+          row.appendChild(b);
+        });
+        if (mission.bad.has(idx)) { const w = document.createElement('div'); w.className = 'cls-why'; w.textContent = 'Hmm, have another look at this one.'; row.appendChild(w); }
+        dialogTextEl.appendChild(row);
+      });
+      const chk = document.createElement('button'); chk.type = 'button'; chk.className = 'act-btn'; chk.textContent = 'CHECK ▶';
+      chk.addEventListener('click', e => { e.stopPropagation(); checkClassify(); });
+      dialogTextEl.appendChild(chk);
+    } else if (s.type === 'pick') {
+      openDialog(stepTitle(), 'pick', 'Tap one (or type your own), then Continue or press Enter. There is no wrong answer.');
+      addText(s.q);
+      s.opts.forEach((o, i) => addOption(i, o, pickOption, { picked: mission.sel === o }));
+      if (s.other) {
+        const inp = document.createElement('input'); inp.className = 'other-in'; inp.maxLength = 90; inp.placeholder = 'Something else? Type it here…';
+        if (mission.sel && !s.opts.includes(mission.sel)) inp.value = mission.sel;
+        inp.addEventListener('input', () => { mission.sel = inp.value.trim() || null; dialogTextEl.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('picked')); });
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); finishPick(); } });
+        inp.addEventListener('click', e => e.stopPropagation());
+        dialogTextEl.appendChild(inp);
+      }
+      const go = document.createElement('button'); go.type = 'button'; go.className = 'act-btn'; go.textContent = 'CONTINUE ▶';
+      go.addEventListener('click', e => { e.stopPropagation(); finishPick(); });
+      dialogTextEl.appendChild(go);
+      const msg = document.createElement('div'); msg.id = 'pickMsg'; msg.style.color = '#f87171'; msg.style.fontSize = '13px'; dialogTextEl.appendChild(msg);
+    }
+  }
+  function answerChoice(idx) {
+    if (dialogMode !== 'mq') return;
+    const s = mission.def.steps[mission.i], o = mission.order[idx];
+    if (!o || mission.tried.has(o)) return;
+    dialogMode = 'mfb'; dialogTextEl.innerHTML = '';
+    addText(s.q).style.color = '#999';
+    if (o.ok) {
+      mission.lastOk = true;
+      addText('✔ Yes!', 'mfb-ok');
+      addText(o.t + '\n→ ' + o.fb + (s.explain ? '\n\n' + s.explain : ''));
+      if (mission.wrong) comeback();
+      else sfx.good();
+      dialogHintEl.textContent = 'Press Enter (or tap here) to continue';
+    } else {
+      mission.lastOk = false; mission.wrong = true; mission.tried.add(o);
+      addText('Not quite, and that\'s OK.', 'mfb-no');
+      addText('You picked: ' + o.t + '\n→ ' + o.fb + '\n\nHave another go. That option is now crossed out.');
+      sfx.retry();
+      dialogHintEl.textContent = 'Press Enter (or tap here) to try again';
+    }
+    dialogEl.scrollTop = 0;
+  }
+  function comeback() {
+    S.comebacks++; sfx.comeback(); updateHud();
+    addText('★ COMEBACK! You fixed your thinking. That counts.', 'mfb-cb');
+  }
+  function checkClassify() {
+    if (dialogMode !== 'classify') return;
+    const s = mission.def.steps[mission.i];
+    if (mission.assign.some(a => !a)) { const m = dialogTextEl.querySelector('.cls-why.need') || document.createElement('div'); m.className = 'cls-why need'; m.textContent = 'Give every item a label first.'; dialogTextEl.appendChild(m); return; }
+    const bad = s.items.map((it, i) => mission.assign[i] === it.c ? -1 : i).filter(i => i >= 0);
+    if (!bad.length) {
+      dialogMode = 'mfb'; mission.lastOk = true; dialogTextEl.innerHTML = '';
+      addText('✔ All sorted!', 'mfb-ok');
+      addText(s.items.map(it => `${it.c.toUpperCase()}: ${it.t}\n   ${it.why}`).join('\n') + '\n\n' + s.explain);
+      if (mission.wrong) comeback(); else sfx.good();
+      dialogHintEl.textContent = 'Press Enter (or tap here) to continue';
+    } else {
+      mission.wrong = true; mission.bad = new Set(bad); sfx.retry();
+      renderStep();
+      addText(`${bad.length} item${bad.length === 1 ? ' needs' : 's need'} another look (outlined in red). Hint: sensors measure, code decides, outputs act.`, 'mfb-no');
+    }
+  }
+  function pickOption(idx) {
+    if (dialogMode !== 'pick') return;
+    const s = mission.def.steps[mission.i];
+    mission.sel = s.opts[idx];
+    const inp = dialogTextEl.querySelector('.other-in'); if (inp) inp.value = '';
+    dialogTextEl.querySelectorAll('.opt-btn').forEach((b, i) => b.classList.toggle('picked', i === idx));
+    playBeep(700, 40, 'square', 0.03);
+  }
+  function finishPick() {
+    if (dialogMode !== 'pick') return;
+    const s = mission.def.steps[mission.i];
+    if (!mission.sel) { const m = $('pickMsg'); if (m) m.textContent = 'Pick one, or type your own idea.'; return; }
+    S.picks[s.key] = mission.sel; save();
+    nextStep();
+  }
+  function nextStep() {
+    mission.i++;
+    if (mission.i >= mission.def.steps.length) return finishMission();
+    prepStep(); renderStep();
+  }
+  function finishMission() {
+    const id = mission.id; mission = null;
+    const b = buildingById(id);
+    let text = '', first = false;
+    if (b.optional) { if (!extras.has(id)) { extras.add(id); first = true; } }
+    else if (!completed.has(id)) { completed.add(id); first = true; }
+    if (cardData[id] && !earnedCards.has(id)) {
+      earnedCards.add(id); setTimeout(sfx.card, 200);
+      text += `★ Card earned: ${cardData[id].name}\n"${cardData[id].text}"`;
+    } else text += first ? 'Mission complete.' : 'Replay complete. Nice revision!';
+    if (!b.optional && first) {
+      const left = coreOrder.filter(x => !completed.has(x)).length;
+      text += left ? `\n\n${left} core mission${left === 1 ? '' : 's'} to go.` : '\n\nAll core missions done. The Exit Gate is open!';
+    }
+    updateHud(); save();
+    openDialog(b.name + ' · mission complete', 'mdone', 'Press Enter (or tap here) to head back to the campus');
+    addText(text);
+    pendingLeave = true;
+  }
+
+  // ---------------- Teacher pause points ----------------
+  const CHECKPOINT_TEXT = {
+    u1: ['⏸ CHECKPOINT: UNIT 1 ZONE CLEAR', 'You\'ve finished both Unit 1 missions.\n\nIf your teacher calls a pause, eyes up front.\nOtherwise, keep going!\n\nThink about it: what\'s the input, process and output of something in this room?'],
+    u2: ['⏸ CHECKPOINT: UNIT 2 ZONE CLEAR', 'You\'ve finished both Unit 2 missions.\n\nIf your teacher calls a pause, eyes up front.\nOtherwise, keep going!\n\nThink about it: who might find an everyday object hard to use, and why?'],
+    shared: ['⏸ CHECKPOINT: SHARED SPACES CLEAR', 'Safety, evidence, testing and integrity: done.\n\nIf your teacher calls a pause, eyes up front.\nOtherwise, keep going!\n\nThink about it: which habit will be hardest for you to keep up?'],
+    exit: ['⏸ CHECKPOINT: READY FOR THE EXIT GATE', 'All core missions complete!\n\nYour teacher may pause the class here before the final check.\nIf not, head to the red EX tile.']
+  };
+  function maybeCheckpoint() {
+    if (!CHECKPOINTS_ON || dialogOpen || viewMode !== 'map') return;
+    const order = ['u1', 'u2', 'shared'];
+    for (const z of order) {
+      if (!checkpointsShown.has(z) && CORE[z].every(id => completed.has(id))) { showCheckpoint(z); return; }
+    }
+    if (!checkpointsShown.has('exit') && allCoreDone()) showCheckpoint('exit');
+  }
+  function showCheckpoint(z) {
+    checkpointsShown.add(z); save();
+    openDialog(CHECKPOINT_TEXT[z][0], 'checkpoint', 'Press Enter (or tap here) to continue');
+    addText(CHECKPOINT_TEXT[z][1]);
+    sfx.win();
+  }
+
+  // ---------------- Jargon Buster ----------------
+  function showGlossary() {
+    if (dialogOpen && dialogMode !== 'glossary') return;
+    if (dialogMode === 'glossary' && dialogOpen) { closeDialog(); return; }
+    openDialog('JARGON BUSTER', 'glossary', 'Press G, Enter or Esc to close');
+    addText(GLOSSARY.map(([w, d]) => `${w}\n   ${d}`).join('\n'));
+  }
+
+  // ---------------- Exit Gate & final check ----------------
+  function openExit() {
+    if (!allCoreDone()) {
+      const left = coreOrder.filter(id => !completed.has(id)).map(id => buildingById(id).name);
+      openDialog('Exit Gate · not open yet', 'info', 'Press Enter or Esc to close');
+      addText('Finish the core missions first.\nStill to go: ' + left.join(', ') + '.');
+      return;
+    }
+    if (S.done) { closeDialog(); leaveRoomTo('end'); return; }
+    startFinal();
+  }
+  function startFinal() {
+    const pick = (a, n) => shuffle(finalPool.filter(q => q.a === a)).slice(0, n);
+    finalRun = { queue: shuffle([...pick('u1', 2), ...pick('u2', 2), ...pick('both', 2)]), total: 6, sorted: 0, missed: new Set() };
+    showFinalQ();
+  }
+  function showFinalQ() {
+    const q = finalRun.queue[0];
+    openDialog(`Exit Gate · Which unit?  (${finalRun.sorted} of ${finalRun.total} sorted)`, 'fq', 'Press 1–3 or tap an answer  ·  Esc: leave (you can come back)');
+    addText((finalRun.missed.has(q) ? '(Back for another go)\n' : '') + q.t + '\n\nWhich unit is this mainly part of?');
+    ['u1', 'u2', 'both'].forEach((k, i) => addOption(i, FINAL_LABELS[k], answerFinal));
+  }
+  function answerFinal(idx) {
+    if (dialogMode !== 'fq') return;
+    const q = finalRun.queue.shift(), pickK = ['u1', 'u2', 'both'][idx];
+    dialogMode = 'ffb'; dialogTextEl.innerHTML = '';
+    addText(q.t).style.color = '#999';
+    if (pickK === q.a) {
+      finalRun.sorted++;
+      addText('✔ ' + FINAL_LABELS[q.a], 'mfb-ok'); addText(q.why);
+      if (finalRun.missed.has(q)) comeback(); else sfx.good();
+    } else {
+      finalRun.missed.add(q); finalRun.queue.push(q);
+      addText('Not quite: you said ' + FINAL_LABELS[pickK] + '.', 'mfb-no');
+      addText(q.why + '\n\nThis one will come back at the end so you can lock it in.');
+      sfx.retry();
+    }
+    dialogHintEl.textContent = finalRun.queue.length ? 'Press Enter (or tap here) for the next scenario' : 'Press Enter (or tap here) to make your passport';
+  }
+  function finishFinal() {
+    finalRun = null; S.done = true; S.finishedAt = S.finishedAt || Date.now();
+    closeDialog(); updateHud(); save();
+    leaveRoomTo('end');
+  }
+  function leaveRoomTo(where) {
+    if (roomAnimInterval) { clearInterval(roomAnimInterval); roomAnimInterval = null; }
+    roomScreenEl.classList.add('hidden'); currentBuilding = null;
+    if (where === 'end') showEndScreen();
+  }
+
+  // ---------------- End screen + passport ----------------
+  const PP_FIELDS = { ppComp: 'comp', ppSus: 'sus', ppMech: 'mech', ppUser: 'user', ppHabit: 'habit', ppQ: 'question' };
+  function showEndScreen() {
+    viewMode = 'end'; dialogEl.classList.add('hidden'); dialogOpen = false;
+    const missed = cardOrder.filter(id => !earnedCards.has(id)).length;
+    setStarText(endTextEl,
+      `You've explored both units of Year 11 Systems Engineering!\n\n` +
+      `Core missions: ${completed.size}/${coreOrder.length}   Cards: ${earnedCards.size}/${cardOrder.length}   Extras ✚: ${extras.size}/${optionalOrder.length}\n` +
+      `Comebacks: ${S.comebacks}${S.comebacks ? '  (every one is a mistake you turned into learning)' : ''}` +
+      (S.luckyStar ? '\n★ Lucky star found in the Spin Lab!' : '') +
+      (missed ? `\n\nOptional: ${missed} card${missed === 1 ? '' : 's'} still out there in the ✚ places.` : ''));
+    endCardsEl.innerHTML = '';
+    cardOrder.forEach(id => {
+      const chip = document.createElement('div'), has = earnedCards.has(id);
+      chip.className = 'card-chip' + (has ? '' : ' locked');
+      const b = document.createElement('b'); setStarText(b, (has ? '★ ' : '☆ ') + cardData[id].name + (has ? '' : ' (not found)'));
+      chip.appendChild(b); if (has) chip.appendChild(document.createTextNode(cardData[id].text));
+      endCardsEl.appendChild(chip);
+    });
+    $('ppFor').textContent = `Passport for: ${S.player.name}  |  ${S.player.cls}`;
+    $('ppSumU1').textContent = UNIT_SUMMARY.u1; $('ppSumU2').textContent = UNIT_SUMMARY.u2; $('ppSumBoth').textContent = UNIT_SUMMARY.both;
+    Object.entries(PP_FIELDS).forEach(([el, key]) => {
+      const v = S.passport[key] != null ? S.passport[key] : (S.picks[key] || '');
+      $(el).value = v;
+    });
+    document.querySelectorAll('#confAfter .choice-btn').forEach(b => b.classList.toggle('on', Number(b.dataset.val) === S.player.confAfter));
+    ppMsgEl.textContent = SHARE_INSTRUCTION; ppMsgEl.className = '';
+    creditsEl.textContent =
+`Credits:
+- Game concept, characters and the Units 3 & 4 orientation:
+  Anthony Gasson
+- Step Up (Units 1 & 2) adaptation: Claude (Anthropic)
+- Curriculum: VCE Systems Engineering Study Design (from 2026), VCAA
+- Special guests: Guide Bot, Ohmbot, Watt Ever, Gus Gearwell,
+  Designer Kai, Safety Bot, Engr. Log, Test Bot, Officer Auth,
+  Cmd Wiz, Archie the Screw & one judgemental pink flamingo`;
+    endHintEl.textContent = 'Esc: back to the map  ·  R twice: restart'; endHintEl.classList.remove('warn');
+    endScreenEl.classList.remove('hidden'); endScreenEl.scrollTop = 0;
+    sfx.win();
+  }
+  function hideEndScreen() {
+    endScreenEl.classList.add('hidden'); viewMode = 'map'; draw();
+  }
+  Object.entries(PP_FIELDS).forEach(([el, key]) => $(el).addEventListener('input', () => {
+    S.passport[key] = $(el).value; save();
+    if (ppMsgEl.className === 'err') { ppMsgEl.textContent = SHARE_INSTRUCTION; ppMsgEl.className = ''; }
+  }));
+  function passportData() {
+    const d = {}; Object.entries(PP_FIELDS).forEach(([el, key]) => { d[key] = $(el).value.trim(); }); return d;
+  }
+  function passportMissing(d) {
+    const names = { comp: 'a Unit 1 component', sus: 'a sustainability problem', mech: 'a Unit 2 mechanism', user: 'a user need', habit: 'an evidence habit', question: 'a question you still have' };
+    const miss = Object.keys(names).filter(k => !d[k]).map(k => names[k]);
+    if (!S.player.confAfter) miss.push('how ready you feel now (1–5)');
+    return miss;
+  }
+  function wrapText(g, text, x, y, maxW, lineH, maxLines) {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    let line = '', lines = 0;
+    for (let i = 0; i < words.length; i++) {
+      const test = line ? line + ' ' + words[i] : words[i];
+      if (g.measureText(test).width > maxW && line) {
+        lines++; if (lines === maxLines) { g.fillText(line + ' …', x, y); return y + lineH; }
+        g.fillText(line, x, y); y += lineH; line = words[i];
+      } else line = test;
+    }
+    if (line) { g.fillText(line, x, y); y += lineH; }
+    return y;
+  }
+  const safeName = s => String(s).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'student';
+  function whenText() {
+    return new Date(S.finishedAt || Date.now()).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function downloadPassport() {
+    const d = passportData(), miss = passportMissing(d);
+    if (miss.length) { ppMsgEl.textContent = 'Still needed: ' + miss.join(', ') + '.'; ppMsgEl.className = 'err'; return; }
+    const W = 1000, c0 = document.createElement('canvas'); c0.width = W; c0.height = 2400;
+    const g = c0.getContext('2d');
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, c0.height);
+    g.textAlign = 'center';
+    g.fillStyle = '#22d3ee'; g.font = 'bold 44px monospace'; g.fillText('MY YEAR IN SYSTEMS', W / 2, 105);
+    g.fillStyle = '#fb923c'; g.font = 'bold 24px monospace'; g.fillText('STEP UP PASSPORT · VCE SYSTEMS ENGINEERING UNITS 1 & 2', W / 2, 145);
+    g.fillStyle = '#fff'; g.font = 'bold 32px monospace'; g.fillText(`${S.player.name}  |  ${S.player.cls}`, W / 2, 205);
+    g.fillStyle = '#aaa'; g.font = '22px monospace'; g.fillText(whenText(), W / 2, 238);
+    g.textAlign = 'left';
+    let y = 285;
+    const sumBox = (txt, col) => {
+      g.font = '19px monospace';
+      const startY = y; g.fillStyle = '#ddd';
+      const endY = wrapText(g, txt, 74, y + 26, W - 148, 25, 6);
+      g.fillStyle = col; g.fillRect(56, startY, 6, endY - startY - 4);
+      y = endY + 12;
+    };
+    sumBox(UNIT_SUMMARY.u1, '#22d3ee'); sumBox(UNIT_SUMMARY.u2, '#fb923c'); sumBox(UNIT_SUMMARY.both, '#4ade80');
+    const rows = [
+      ['UNIT 1 · A component I expect to learn about', d.comp, '#22d3ee'],
+      ['UNIT 1 · A sustainability problem that interests me', d.sus, '#22d3ee'],
+      ['UNIT 2 · A mechanism I expect to investigate', d.mech, '#fb923c'],
+      ['UNIT 2 · A user need / inclusive design opportunity', d.user, '#fb923c'],
+      ['BOTH · My evidence habit', d.habit, '#4ade80'],
+      ['A question I still have', d.question, '#facc15']
+    ];
+    y += 6;
+    rows.forEach(([label, val, col]) => {
+      g.fillStyle = col; g.font = 'bold 21px monospace'; g.fillText(label, 60, y);
+      g.fillStyle = '#fff'; g.font = '21px monospace'; y = wrapText(g, '"' + val + '"', 60, y + 30, W - 120, 28, 2) + 14;
+    });
+    const diff = S.player.confAfter - S.player.confBefore;
+    g.fillStyle = '#ccc'; g.font = '20px monospace';
+    g.fillText(`Ready for Systems Engineering: ${S.player.confBefore}/5 → ${S.player.confAfter}/5${diff > 0 ? '  (+' + diff + ')' : ''}`, 60, y + 4);
+    g.fillText(`Cards ${earnedCards.size}/${cardOrder.length}  ·  Comebacks ${S.comebacks}  ·  Extras ${extras.size}/${optionalOrder.length}`, 60, y + 34);
+    y += 100;
+    g.fillStyle = '#ff4ecf'; g.font = 'bold 22px monospace'; g.fillText('NEXT: MY FIRST PRACTICAL', 60, y);
+    g.fillStyle = '#ddd'; g.font = '18px monospace';
+    y = wrapText(g, 'Build or investigate a simple system → record a photo or sketch → explain one observation → identify a next step.', 60, y + 30, W - 120, 24, 2);
+    g.fillStyle = '#888'; g.font = '17px monospace'; g.fillText(SHARE_INSTRUCTION, 60, y + 20);
+    const H = y + 70, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g2 = c.getContext('2d');
+    g2.drawImage(c0, 0, 0);
+    g2.strokeStyle = '#22d3ee'; g2.lineWidth = 6; g2.strokeRect(20, 20, W - 40, H - 40);
+    g2.strokeStyle = '#fb923c'; g2.lineWidth = 2; g2.strokeRect(36, 36, W - 72, H - 72);
+    const fname = `SE-StepUp-Passport-${safeName(S.player.name)}-${safeName(S.player.cls)}.png`;
+    const finish = url => {
+      const a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+      ppMsgEl.textContent = `Passport downloaded (${fname}). ${SHARE_INSTRUCTION}`; ppMsgEl.className = 'ok';
+    };
+    if (c.toBlob) c.toBlob(blob => { if (!blob) return finish(c.toDataURL('image/png')); const u = URL.createObjectURL(blob); finish(u); setTimeout(() => URL.revokeObjectURL(u), 10000); }, 'image/png');
+    else finish(c.toDataURL('image/png'));
+  }
+  function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+  function buildPrintArea() {
+    const d = passportData();
+    const row = (label, v) => `<div class="pa-row"><b>${escHtml(label)}</b>${v ? escHtml(v) : '<div class="pa-lines"></div>'}</div>`;
+    $('printArea').innerHTML =
+      `<h1>My Year in Systems</h1>
+       <div class="pa-sub">Step Up passport · VCE Systems Engineering Units 1 &amp; 2 · ${escHtml(S.player.name)} | ${escHtml(S.player.cls)} · ${escHtml(whenText())}</div>
+       <div class="pa-box"><h2>The two units</h2><p>${escHtml(UNIT_SUMMARY.u1)}</p><p>${escHtml(UNIT_SUMMARY.u2)}</p><p>${escHtml(UNIT_SUMMARY.both)}</p></div>
+       <div class="pa-box"><h2>Unit 1</h2>${row('One component I expect to learn about', d.comp)}${row('A sustainability problem that interests me', d.sus)}</div>
+       <div class="pa-box"><h2>Unit 2</h2>${row('One mechanism I expect to investigate', d.mech)}${row('A user need or inclusive design opportunity that interests me', d.user)}</div>
+       <div class="pa-box"><h2>Habits and questions</h2>${row('One habit I will use for collecting evidence', d.habit)}${row('One question I still have', d.question)}</div>
+       <div class="pa-foot">Project ideas in the Step Up game are examples only. Your teacher sets the actual tasks, briefs and dates.</div>
+       <div class="pa-box pa-page2"><h2>My first practical · ${escHtml(S.player.name)} | ${escHtml(S.player.cls)}</h2>
+         <div class="pa-row">Build or investigate a simple system, record a photo or sketch, explain one thing you observed, and identify a next step.</div>
+         <div class="pa-row"><b>The simple system I built or investigated</b><div class="pa-lines" style="height:14mm"></div></div>
+         <div class="pa-row"><b>Photo or sketch</b><div class="pa-sketch"></div></div>
+         <div class="pa-row"><b>One thing I observed, and why I think it happened</b><div class="pa-lines"></div></div>
+         <div class="pa-row"><b>My next step</b><div class="pa-lines" style="height:22mm"></div></div>
+         <div class="pa-row"><b>Evidence I captured (tick)</b>☐ photo &nbsp; ☐ sketch &nbsp; ☐ video &nbsp; ☐ test result &nbsp; ☐ notes</div></div>`;
+  }
+  function printPassport() {
+    const d = passportData(), miss = passportMissing(d);
+    if (miss.length) { ppMsgEl.textContent = 'Still needed: ' + miss.join(', ') + '.'; ppMsgEl.className = 'err'; return; }
+    buildPrintArea(); window.print();
+    ppMsgEl.textContent = 'Print dialog opened. Choose your printer or "Save as PDF".'; ppMsgEl.className = 'ok';
+  }
+  window.addEventListener('beforeprint', buildPrintArea);
+  $('ppDownload').addEventListener('click', downloadPassport);
+  $('ppPrint').addEventListener('click', printPassport);
+
+  // ---------------- Spin Lab (reused wheel) ----------------
+  let spinTimer = null, spinningActive = false, spinRaf = null, wheelRotation = 0;
+  function segmentAt(angle) { const a = ((angle % 360) + 360) % 360; return spinOutcomes.findIndex(o => a >= o.start && a < o.end); }
+  function buildWheel() {
+    const wrap = document.createElement('div'); wrap.className = 'wheel-wrap';
+    const pointer = document.createElement('div'); pointer.className = 'wheel-pointer';
+    const wheel = document.createElement('div'); wheel.className = 'wheel';
+    wheel.style.background = 'conic-gradient(' + spinOutcomes.map(o => `${o.color} ${o.start}deg ${o.end}deg`).join(', ') + ')';
+    wheel.style.transition = 'none'; wheel.style.transform = `rotate(${wheelRotation}deg)`;
+    spinOutcomes.forEach(o => {
+      const mid = (o.start + o.end) / 2, label = document.createElement('div');
+      label.className = 'wheel-label' + (o.gold ? ' gold' : ''); label.textContent = o.label;
+      const flip = mid > 180 ? 90 : -90;
+      label.style.transform = `rotate(${mid}deg) translateY(-${o.gold ? 92 : 70}px) rotate(${o.gold ? 0 : flip}deg)`;
+      if (o.gold) label.style.color = '#7c2d12';
+      wheel.appendChild(label);
+    });
+    const hub = document.createElement('div'); hub.className = 'wheel-hub';
+    wrap.appendChild(pointer); wrap.appendChild(wheel); wrap.appendChild(hub);
+    return { wrap, wheel };
+  }
+  function currentWheelAngle(wheel) {
+    const t = getComputedStyle(wheel).transform; if (!t || t === 'none') return 0;
+    const m = t.match(/matrix\(([^)]+)\)/); if (!m) return 0;
+    const [a, b] = m[1].split(',').map(Number); return Math.atan2(b, a) * 180 / Math.PI;
+  }
+  function startSpin(forceAngle) {
+    if (!currentBuilding || currentBuilding.id !== 'spin') return;
+    if (spinRaf) cancelAnimationFrame(spinRaf); if (spinTimer) clearTimeout(spinTimer);
+    openDialog('Spin Lab · Blue Smoke Roulette', 'spin', 'Spinning…');
+    spinningActive = true;
+    const { wrap, wheel } = buildWheel();
+    const result = document.createElement('div'); result.className = 'spin-result'; result.textContent = 'Round and round it goes…';
+    dialogTextEl.appendChild(wrap); dialogTextEl.appendChild(result); sfx.spinStart();
+    let target = typeof forceAngle === 'number' ? forceAngle : Math.random() * 360;
+    const seg = spinOutcomes[segmentAt(target)];
+    const margin = Math.min(3, (seg.end - seg.start) / 4);
+    target = Math.min(Math.max(target, seg.start + margin), seg.end - margin);
+    const base = wheelRotation + 360 * (5 + Math.floor(Math.random() * 2));
+    wheelRotation = base + ((((-target - base) % 360) + 360) % 360);
+    void wheel.offsetWidth; wheel.style.transition = ''; wheel.style.transform = `rotate(${wheelRotation}deg)`;
+    let lastSeg = segmentAt(-currentWheelAngle(wheel));
+    const tick = () => {
+      const now = segmentAt(-currentWheelAngle(wheel));
+      if (now !== lastSeg) { playBeep(spinOutcomes[now].gold ? 1400 : 950, 18, 'square', 0.03); lastSeg = now; }
+      if (spinningActive) spinRaf = requestAnimationFrame(tick);
+    };
+    spinRaf = requestAnimationFrame(tick);
+    let done = false;
+    const finish = () => {
+      if (done || dialogMode !== 'spin') return; done = true; spinningActive = false;
+      if (spinRaf) cancelAnimationFrame(spinRaf); spinRaf = null;
+      showSpinResult(seg, wrap, wheel, result);
+    };
+    wheel.addEventListener('transitionend', finish, { once: true });
+    spinTimer = setTimeout(finish, 4600);
+  }
+  function showSpinResult(o, wrap, wheel, resultEl) {
+    dialogMode = 'spinfb';
+    let text = o.text;
+    if (o.gold) {
+      wheel.classList.add('gold-win');
+      const burst = document.createElement('div'); burst.className = 'star-burst'; burst.textContent = '★'; wrap.appendChild(burst);
+      if (!S.luckyStar) { S.luckyStar = true; text += '\n\n★ LUCKY STAR FOUND!'; updateHud(); save(); }
+      else text += '\n\nYou already have the lucky star… but what a spin.';
+      sfx.win();
+    } else if (o.effect === 'smoke' || o.effect === 'wisp') {
+      const smoke = document.createElement('div'); smoke.className = 'smoke' + (o.effect === 'wisp' ? ' grey' : '');
+      [-30, 10, -10, 25].forEach(dx => { const p = document.createElement('span'); p.textContent = '☁'; p.style.setProperty('--dx', dx + 'px'); smoke.appendChild(p); });
+      wrap.appendChild(smoke); sfx.spinEnd();
+    } else sfx.spinEnd();
+    resultEl.textContent = ''; setStarText(resultEl, text + '\n\n');
+    const r = document.createElement('span'); r.className = 'reflect'; r.textContent = 'Reflect: ' + o.reflect; resultEl.appendChild(r);
+    dialogHintEl.textContent = 'S: spin again  ·  Enter or Esc: close';
+  }
+
+  // ---------------- Splash, sign-in, resume ----------------
+  const splashEl = $('splash'), onboardEl = $('onboard');
+  const splashTags = ['Wire it.', 'Code it.', 'Lever it.', 'Test it.', 'Record it.', 'Improve it.'];
+  let splashTagIndex = 0;
+  const splashTagTimer = setInterval(() => {
+    const el = $('splashTag'); el.textContent = splashTags[splashTagIndex++ % splashTags.length];
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  }, 900);
+  let savedRun = null;
+  function leaveSplash() {
+    if (viewMode !== 'splash') return;
+    viewMode = 'onboard'; initAudio();
+    playBeep(330, 90, 'square', 0.05); setTimeout(() => playBeep(495, 90, 'square', 0.05), 90); setTimeout(() => playBeep(660, 140, 'square', 0.05), 180);
+    splashEl.classList.add('leaving');
+    setTimeout(() => {
+      splashEl.classList.add('hidden'); clearInterval(splashTagTimer); onboardEl.classList.remove('hidden');
+      savedRun = readSaved();
+      if (savedRun) {
+        $('resumeCard').style.display = ''; $('signCard').style.display = 'none';
+        const n = (savedRun.completed || []).length;
+        $('resumeText').textContent = `${savedRun.player.name} (${savedRun.player.cls}): ${savedRun.done ? 'Step Up finished' : n + ' of ' + coreOrder.length + ' core missions done'} on this device.`;
+        $('resumeBtn').focus();
+      } else showSignIn();
+    }, 520);
+  }
+  function showSignIn() {
+    $('resumeCard').style.display = 'none'; $('signCard').style.display = '';
+    try { const p = JSON.parse(localStorage.getItem(PLAYER_KEY) || 'null'); if (p) { $('obName').value = $('obName').value || p.name || ''; $('obClass').value = $('obClass').value || p.cls || ''; } } catch (e) {}
+    $('obName').focus();
+  }
+  splashEl.addEventListener('click', leaveSplash);
+  $('resumeBtn').addEventListener('click', () => {
+    applyState(savedRun); onboardEl.classList.add('hidden'); viewMode = 'map'; updateHud(); draw();
+    instructionsEl.textContent = `Welcome back, ${S.player.name}! Carry on where you left off.`;
+    if (S.done) showEndScreen();
+  });
+  $('freshBtn').addEventListener('click', () => {
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    savedRun = null; showSignIn();
+  });
+  function setupChoices(id, onPick, multi) {
+    const box = $(id);
+    box.querySelectorAll('.choice-btn').forEach(btn => btn.addEventListener('click', () => {
+      if (multi) {
+        if (btn.dataset.val === 'none') box.querySelectorAll('.choice-btn').forEach(b => b.classList.toggle('on', b === btn));
+        else { box.querySelector('[data-val="none"]').classList.remove('on'); btn.classList.toggle('on'); }
+      } else { box.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('on')); btn.classList.add('on'); }
+      btn.blur(); playBeep(700, 40, 'square', 0.03);
+      onPick(multi ? [...box.querySelectorAll('.choice-btn.on')].map(b => b.dataset.val) : btn.dataset.val);
+    }));
+  }
+  let obTried = [], obConf = 0;
+  setupChoices('obTried', v => { obTried = v; }, true);
+  setupChoices('obConf', v => { obConf = parseInt(v, 10); });
+  setupChoices('confAfter', v => { S.player.confAfter = parseInt(v, 10); save(); if (ppMsgEl.className === 'err') { ppMsgEl.textContent = SHARE_INSTRUCTION; ppMsgEl.className = ''; } });
+  function tryStartGame() {
+    const name = $('obName').value.trim(), cls = $('obClass').value.trim(), missing = [];
+    if (!name) missing.push('first name'); if (!cls) missing.push('class');
+    if (!obTried.length) missing.push('question 1 ("Not yet" is fine)'); if (!obConf) missing.push('question 2');
+    if (missing.length) { $('obMsg').textContent = 'Still needed: ' + missing.join(', ') + '.'; sfx.retry(); return; }
+    S = blankState(); S.started = true;
+    S.player = { name, cls, tried: obTried, confBefore: obConf, confAfter: 0 };
+    visitedTiles = new Set(); completed = new Set(); extras = new Set(); earnedCards = new Set(); checkpointsShown = new Set();
+    randomiseBuildings();
+    try { localStorage.setItem(PLAYER_KEY, JSON.stringify({ name, cls })); } catch (e) {}
+    save();
+    onboardEl.classList.add('hidden'); viewMode = 'map'; updateHud(); draw();
+    instructionsEl.textContent = `Welcome, ${name}! You're at the Welcome Gate. Press Enter to meet Guide Bot.`;
+    sfx.win();
+  }
+  $('startBtn').addEventListener('click', tryStartGame);
+
+  // ---------------- Restart ----------------
+  function requestReset() {
+    const now = Date.now();
+    if (now < resetArmedUntil) { resetArmedUntil = 0; clearTimeout(resetTimer); resetGame(); return; }
+    resetArmedUntil = now + 3000;
+    if (viewMode === 'end') { endHintEl.textContent = 'Press R again within 3 seconds to restart. You will lose your Step Up progress!'; endHintEl.classList.add('warn'); }
+    else updateInstructions();
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => { resetArmedUntil = 0; endHintEl.textContent = 'Esc: back to the map  ·  R twice: restart'; endHintEl.classList.remove('warn'); updateInstructions(); }, 3000);
+  }
+  function resetGame() {
+    const player = Object.assign({}, S.player, { confAfter: 0 });
+    S = blankState(); S.started = true; S.player = player;
+    completed = new Set(); extras = new Set(); earnedCards = new Set(); checkpointsShown = new Set();
+    mission = null; finalRun = null; pendingLeave = false;
+    if (roomAnimInterval) { clearInterval(roomAnimInterval); roomAnimInterval = null; }
+    closeDialog(); roomScreenEl.classList.add('hidden'); endScreenEl.classList.add('hidden');
+    currentBuilding = null; viewMode = 'map';
+    randomiseBuildings(); save(); updateHud(); draw();
+  }
+
+  // ---------------- Input ----------------
+  function handleKey(rawKey) {
+    initAudio();
+    const key = rawKey.length === 1 ? rawKey.toLowerCase() : rawKey;
+    const go = key === 'Enter' || key === ' ';
+    if (viewMode === 'splash') { if (go) leaveSplash(); return; }
+    if (viewMode === 'onboard') {
+      if (key === 'Enter') { if ($('signCard').style.display !== 'none') tryStartGame(); else $('resumeBtn').click(); }
+      return;
+    }
+    if (key === '-' || key === '_') { setZoom(uiZoom - 0.1); return; }
+    if (key === '=' || key === '+') { setZoom(uiZoom + 0.1); return; }
+    if (viewMode === 'end') {
+      if (key === 'Escape') hideEndScreen(); else if (key === 'r') requestReset();
+      return;
+    }
+    if (key === 'g' && (!dialogOpen || dialogMode === 'glossary')) { showGlossary(); return; }
+
+    if (dialogOpen) {
+      const num = /^[1-9]$/.test(key) ? parseInt(key, 10) - 1 : -1;
+      switch (dialogMode) {
+        case 'glossary': case 'info': if (go || key === 'Escape') closeDialog(); return;
+        case 'checkpoint': if (go || key === 'Escape') { closeDialog(); maybeCheckpoint(); } return;
+        case 'spin': if (key === 'Escape') closeDialog(); return;
+        case 'spinfb': if (key === 's') startSpin(); else if (go || key === 'Escape') closeDialog(); return;
+        case 'mq': if (num >= 0) answerChoice(num); else if (key === 'Escape') { mission = null; closeDialog(); } return;
+        case 'classify': if (key === 'Enter') checkClassify(); else if (key === 'Escape') { mission = null; closeDialog(); } return;
+        case 'pick': if (num >= 0) pickOption(num); else if (key === 'Enter') finishPick(); else if (key === 'Escape') { mission = null; closeDialog(); } return;
+        case 'mfb':
+          if (go) { if (mission.lastOk) nextStep(); else renderStep(); }
+          else if (key === 'Escape') { mission = null; closeDialog(); }
+          return;
+        case 'mdone': if (go || key === 'Escape') { closeDialog(); if (pendingLeave) { pendingLeave = false; leaveRoom(); } } return;
+        case 'fq': if (num >= 0 && num < 3) answerFinal(num); else if (key === 'Escape') { finalRun = null; closeDialog(); } return;
+        case 'ffb':
+          if (go) { if (finalRun.queue.length) showFinalQ(); else finishFinal(); }
+          else if (key === 'Escape') { finalRun = null; closeDialog(); }
+          return;
+      }
+      return;
+    }
+
+    if (viewMode === 'room') {
+      const id = currentBuilding.id;
+      if (key === 'Escape') { leaveRoom(); return; }
+      if (go || key === 'n') {
+        if (atEndOfRoom()) {
+          if (id === 'exit') return openExit();
+          if (missions[id]) return startMission(id);
+          if (id === 'spin') return startSpin();
+          if (go) return leaveRoom();
+        }
+        advanceRoomLine(+1); return;
+      }
+      if (key === 'b') { advanceRoomLine(-1); return; }
+      if (key === 's' && id === 'spin') { startSpin(); return; }
+      return;
+    }
+
+    if (viewMode === 'map') {
+      if (key === 'ArrowUp') return move(0, -1);
+      if (key === 'ArrowDown') return move(0, 1);
+      if (key === 'ArrowLeft') return move(-1, 0);
+      if (key === 'ArrowRight') return move(1, 0);
+      if (go) { const b = getBuildingAtPlayer(); if (b) enterRoom(b); return; }
+      if (key === 'r') requestReset();
+    }
+  }
+  document.addEventListener('keydown', e => {
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) { if (e.key === 'Escape') t.blur(); return; }
+    if (t && t.tagName === 'BUTTON' && !t.classList.contains('tbtn') && !t.classList.contains('opt-btn') && (e.key === 'Enter' || e.key === ' ')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'].includes(e.key)) e.preventDefault();
+    if (e.repeat && !e.key.startsWith('Arrow')) return;
+    handleKey(e.key);
+  });
+  dialogEl.addEventListener('click', e => {
+    if (e.target.closest('button, input')) return;
+    if (['mfb', 'mdone', 'checkpoint', 'info', 'glossary', 'ffb', 'spinfb'].includes(dialogMode)) handleKey('Enter');
+  });
+  document.querySelectorAll('#touchControls .tbtn').forEach(btn => btn.addEventListener('click', e => { e.preventDefault(); btn.blur(); handleKey(btn.dataset.key); }));
+  window.addEventListener('beforeunload', () => { if (S.started) save(); });
+
+  // ---------------- Fit to window + text size ----------------
+  // The map tile size is recalculated so the whole campus fits the window (no scrolling),
+  // and A−/A+ (or the - and + keys) scale the text. Saved per device under its own key.
+  const VIEW_KEY = 'seStepUpView';
+  let uiZoom = 1;
+  try { const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null'); if (v && v.zoom) uiZoom = Math.min(1.6, Math.max(0.7, Number(v.zoom))); } catch (e) {}
+  const wrapperEl = $('gameWrapper'), touchEl = $('touchControls');
+  function fitView() {
+    const root = document.documentElement.style;
+    root.setProperty('--ui', uiZoom);
+    $('viewPct').textContent = Math.round(uiZoom * 100) + '%';
+    const small = window.innerWidth <= 600;
+    const maxW = Math.min(window.innerWidth - (small ? 16 : 24), 1600);
+    for (let pass = 0; pass < 2; pass++) {
+      const pad = small ? 26 : 38; // wrapper padding + border
+      const touchH = getComputedStyle(touchEl).display !== 'none' ? touchEl.offsetHeight + 10 : 0;
+      const usedH = hudEl.offsetHeight + 10 + instructionsEl.offsetHeight + 8 + pad + (small ? 20 : 40) + touchH + 20;
+      // phones: fit the width and let the page scroll; bigger screens: fit width AND height
+      const availW = maxW - pad, availH = small ? availW : window.innerHeight - usedH;
+      let gap = 2, tile = Math.floor(Math.min((availW - 19 * gap) / 20, (availH - 19 * gap) / 20));
+      if (tile < 24) { gap = 1; tile = Math.floor(Math.min((availW - 19) / 20, (availH - 19) / 20)); }
+      tile = Math.max(12, Math.min(64, tile));
+      const mapW = 20 * tile + 19 * gap;
+      root.setProperty('--tile', tile + 'px');
+      root.setProperty('--gap', gap + 'px');
+      root.setProperty('--wrapW', (small ? maxW : Math.min(maxW, Math.max(mapW + pad, Math.round(900 * Math.min(uiZoom, 1.2))))) + 'px');
+    }
+  }
+  function setZoom(z) {
+    uiZoom = Math.round(Math.min(1.6, Math.max(0.7, z)) * 10) / 10;
+    try { localStorage.setItem(VIEW_KEY, JSON.stringify({ zoom: uiZoom })); } catch (e) {}
+    fitView();
+  }
+  $('viewMinus').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); setZoom(uiZoom - 0.1); });
+  $('viewPlus').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); setZoom(uiZoom + 0.1); });
+  let fitRaf = 0;
+  const queueFit = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitView); };
+  window.addEventListener('resize', queueFit);
+  window.addEventListener('orientationchange', queueFit);
+  if (window.ResizeObserver) new ResizeObserver(queueFit).observe(hudEl);
+
+  // ---------------- Sanity checks ----------------
+  Object.entries(missions).forEach(([id, m]) => {
+    console.assert(roomData[id], 'Mission without a room: ' + id);
+    m.steps.forEach((s, i) => {
+      if (s.type === 'choice') console.assert(s.opts.filter(o => o.ok).length === 1, `${id} step ${i}: needs exactly one correct option`);
+      if (s.type === 'classify') console.assert(s.items.every(it => s.cats.includes(it.c)), `${id} step ${i}: bad category`);
+    });
+  });
+  buildings.forEach(b => console.assert(roomData[b.id], 'No room data for ' + b.id));
+  ['u1', 'u2', 'both'].forEach(k => console.assert(finalPool.filter(q => q.a === k).length >= 2, 'Final pool too small for ' + k));
+
+  // ---------------- First-time setup ----------------
+  randomiseBuildings();
+  updateHud();
+  draw();
+  fitView();
+</script>
+<script src="lock.js"></script>
+<script>SELocks.guard(LOCK_LEVEL);</script>
+</body>
+</html>

@@ -716,11 +716,40 @@
     #touchControls { width: calc(100vw - 16px); gap: 6px; }
     .dpad { grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); }
   }
+
+  /* ---------- Fit-to-window + adjustable text size ---------- */
+  :root { --ui: 1; }
+  #gameWrapper, #touchControls { width: var(--wrapW, min(900px, calc(100vw - 24px))); }
+  .tile { font-size: calc(var(--tile) * 0.38); }
+  #hud { font-size: calc(14px * var(--ui)); position: relative; }
+  #instructions { font-size: calc(14px * var(--ui)); }
+  #roomTitle { font-size: calc(22px * var(--ui)); }
+  #roomText, #roomArt { font-size: calc(20px * var(--ui)); }
+  #roomHint { font-size: calc(14px * var(--ui)); }
+  #dialog { font-size: calc(16px * var(--ui)); width: min(calc(860px * var(--ui)), calc(100vw - 24px)); }
+  #dialogHint { font-size: calc(13px * var(--ui)); }
+  #endText { font-size: calc(15px * var(--ui)); }
+  #viewCtl { position: absolute; top: 6px; right: 8px; display: flex; gap: 4px; align-items: center; }
+  #viewCtl button { background: #222; color: #eee; border: 1px solid #555; border-radius: 4px; font: bold 13px monospace; padding: 3px 7px; cursor: pointer; }
+  #viewCtl button:hover { border-color: #ff2ecb; }
+  #viewCtl span { font-size: 12px; color: #888; min-width: 3.2em; text-align: center; }
+  @media (max-width: 600px) {
+    .tile { font-size: calc(var(--tile) * 0.42); }
+    #roomText, #roomArt { font-size: calc(16px * var(--ui)); }
+    #dialog { font-size: calc(14px * var(--ui)); width: calc(100vw - 16px); }
+    #endText { font-size: calc(14px * var(--ui)); }
+    #hudTitle { padding-right: 120px; }
+  }
 </style>
 </head>
 <body>
 <div id="gameWrapper">
   <div id="hud">
+    <div id="viewCtl" aria-label="Text size">
+      <button type="button" id="viewMinus" title="Smaller text (−)" aria-label="Smaller text">A−</button>
+      <span id="viewPct">100%</span>
+      <button type="button" id="viewPlus" title="Bigger text (+)" aria-label="Bigger text">A+</button>
+    </div>
     <div id="hudTitle">Orientation Progress</div>
     <div id="hudItems"></div>
   </div>
@@ -3188,6 +3217,54 @@ Answer my bonus question for a star!`
   randomiseBuildings();
   updateHud();
   draw();
+</script>
+<script>
+  // Fit-to-window + text size. Self-contained; saved per device under its own key.
+  (function () {
+    const KEY = 'seOrientationView';
+    const el = id => document.getElementById(id);
+    const hud = el('hud'), instr = el('instructions'), touch = el('touchControls'), pct = el('viewPct');
+    let zoom = 1;
+    try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && v.zoom) zoom = Math.min(1.6, Math.max(0.7, Number(v.zoom))); } catch (e) {}
+    function fit() {
+      const root = document.documentElement.style;
+      root.setProperty('--ui', zoom);
+      pct.textContent = Math.round(zoom * 100) + '%';
+      const small = window.innerWidth <= 600;
+      const maxW = Math.min(window.innerWidth - (small ? 16 : 24), 1600), pad = small ? 26 : 38;
+      for (let pass = 0; pass < 2; pass++) {
+        const touchH = getComputedStyle(touch).display !== 'none' ? touch.offsetHeight + 10 : 0;
+        const usedH = hud.offsetHeight + 10 + instr.offsetHeight + 8 + pad + (small ? 20 : 40) + touchH + 20;
+        const availW = maxW - pad, availH = small ? availW : window.innerHeight - usedH; // phones: fit width, page scrolls
+        let gap = 2, tile = Math.floor(Math.min((availW - 19 * gap) / 20, (availH - 19 * gap) / 20));
+        if (tile < 24) { gap = 1; tile = Math.floor(Math.min((availW - 19) / 20, (availH - 19) / 20)); }
+        tile = Math.max(12, Math.min(64, tile));
+        const mapW = 20 * tile + 19 * gap;
+        root.setProperty('--tile', tile + 'px');
+        root.setProperty('--gap', gap + 'px');
+        root.setProperty('--wrapW', (small ? maxW : Math.min(maxW, Math.max(mapW + pad, Math.round(900 * Math.min(zoom, 1.2))))) + 'px');
+      }
+    }
+    function setZoom(z) {
+      zoom = Math.round(Math.min(1.6, Math.max(0.7, z)) * 10) / 10;
+      try { localStorage.setItem(KEY, JSON.stringify({ zoom })); } catch (e) {}
+      fit();
+    }
+    el('viewMinus').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); setZoom(zoom - 0.1); });
+    el('viewPlus').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); setZoom(zoom + 0.1); });
+    document.addEventListener('keydown', e => {
+      const t = e.target;
+      if ((t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === '-' || e.key === '_') setZoom(zoom - 0.1);
+      else if (e.key === '=' || e.key === '+') setZoom(zoom + 0.1);
+    });
+    let raf = 0;
+    const queue = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(fit); };
+    window.addEventListener('resize', queue);
+    window.addEventListener('orientationchange', queue);
+    if (window.ResizeObserver) new ResizeObserver(queue).observe(hud);
+    fit();
+  })();
 </script>
 <script src="lock.js"></script>
 <script>SELocks.guard(1);</script>

@@ -56,6 +56,9 @@
   .lc h2 { color: #fb923c; }
   .lc .btn { background: linear-gradient(90deg, #fb923c, var(--gold)); color: #000; }
   .done { color: var(--green); font-size: 13px; }
+  .lsu { border-color: #fb923c; box-shadow: 0 0 26px rgba(34,211,238,0.3); }
+  .lsu h2 { color: var(--cyan); }
+  .lsu .btn { background: linear-gradient(90deg, var(--cyan), #fb923c); color: #000; }
   .lvl.locked { border-color: #444 !important; box-shadow: none !important; filter: grayscale(0.85); opacity: 0.6; }
   .lvl.locked .btn { background: #222 !important; color: #999 !important; border: 1px solid #444 !important; pointer-events: none; }
   .lvl .lockmsg { display: none; color: #f87171; font-size: 13px; }
@@ -71,6 +74,7 @@
   <div class="kicker">VCE · UNITS 3 &amp; 4</div>
   <h1>SYSTEMS ENGINEERING</h1>
   <div class="sub">LEVEL SELECT</div>
+  <div style="margin-top:10px;font-size:14px"><a href="#stepup" style="color:var(--cyan)">Year 11 Step Up? Your Units 1 &amp; 2 game is below ↓</a></div>
 
   <div class="levels">
     <div class="lvl l1" data-lock="1">
@@ -115,6 +119,22 @@
     🔒 MORE LEVELS COMING
   </div>
 
+  <!-- Year 11 Step Up: a separate game with its own progress (not part of the Units 3 & 4 levels) -->
+  <div id="stepup" style="margin-top:44px">
+    <div class="kicker">VCE · UNITS 1 &amp; 2</div>
+    <div style="font:bold clamp(24px,5vw,40px) monospace;color:#fff;text-shadow:0 0 3px #000,0 0 12px var(--cyan),0 0 26px #fb923c;margin:6px 0 4px">YEAR 11 STEP UP</div>
+    <div class="levels" style="grid-template-columns:1fr;max-width:620px;margin:18px auto 0">
+      <div class="lvl lsu" data-lock="5">
+        <div class="n">STEP UP · SEPARATE GAME</div>
+        <h2>My Year in Systems</h2>
+        <p>New to Systems Engineering? Explore the Unit 1 electronics zone and the Unit 2 mechanical zone, pick up the habits that work in both, then make your My Year in Systems passport. No experience needed.</p>
+        <div class="done" id="sudone"></div>
+        <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+        <a class="btn" href="step-up.html">PLAY STEP UP ▶</a>
+      </div>
+    </div>
+  </div>
+
 
 </main>
 <script src="lock.js"></script>
@@ -143,6 +163,11 @@
     const q = JSON.parse(localStorage.getItem('evidenceLabProgress') || 'null');
     if (q && q.done) document.getElementById('l3done').textContent = '✓ Plan finished on this device';
     else if (q && q.started) document.getElementById('l3done').textContent = '▶ In progress on this device';
+  } catch (e) {}
+  try {
+    const su = JSON.parse(localStorage.getItem('seStepUpProgress') || 'null');
+    if (su && su.done) document.getElementById('sudone').textContent = '✓ Passport made on this device';
+    else if (su && su.started) document.getElementById('sudone').textContent = '▶ In progress on this device';
   } catch (e) {}
 </script>
 </body>
