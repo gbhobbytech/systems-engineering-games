@@ -111,6 +111,9 @@
   .lstudio { border-color: var(--green); box-shadow: 0 0 26px rgba(74,222,128,0.2); max-width: 900px; margin: 30px auto 0; }
   .lstudio h2 { color: #86efac; }
   .lstudio .btn { background: linear-gradient(90deg, var(--green), var(--cyan)); color: #000; }
+  .lstudio12 { border-color: var(--gold, #facc15); box-shadow: 0 0 26px rgba(250,204,21,0.2); }
+  .lstudio12 h2 { color: #fde68a; }
+  .lstudio12 .btn { background: linear-gradient(90deg, #facc15, #fb923c); color: #000; }
   .su-route { list-style: none; padding: 0; margin: 26px auto 0; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
   .su-route > li { position: relative; display: flex; }
   .su-route > li > .lvl { flex: 1; padding-top: 22px; }
@@ -177,7 +180,7 @@
     </a>
   </nav>
 
-  <!-- ================= YEAR 12 SAT JOURNEY (lock ids 1, 2, 4, 3) ================= -->
+  <!-- ================= YEAR 12 SAT JOURNEY (lock ids 1, 2, 4, 3; SAT Evidence Studio 9) ================= -->
   <section id="sat" aria-labelledby="satH">
     <div class="kicker">YEAR 12 · UNITS 3 &amp; 4</div>
     <h2 class="sec-title" id="satH">SAT JOURNEY</h2>
@@ -220,6 +223,17 @@
         <a class="btn" href="evidence-lab.html">PLAY LEVEL 3 ▶</a>
       </div></li>
     </ol>
+    <!-- Year 12 SAT record of evidence tool (lock id 9) -->
+    <div class="lvl lstudio lstudio12" data-lock="9">
+      <div class="badge">NEW</div>
+      <div class="n">YEAR 12 · USE ALL YEAR</div>
+      <h2>Evidence Studio: SAT</h2>
+      <div class="tags"><span>Units 3 &amp; 4</span><span>Criteria 1–8</span><span>Your style</span></div>
+      <p>Make every criterion easy to find and impossible to doubt. Fix eight weak entries (one per criterion), design your criterion badges and test card, then build your criteria index cover page and a weekly self-audit for Teams.</p>
+      <div class="done" id="es12done"></div>
+      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+      <a class="btn" href="evidence-studio-sat.html">OPEN THE SAT STUDIO ▶</a>
+    </div>
     <div class="more">🔒 MORE LEVELS COMING</div>
     <a class="top" href="#top">▲ back to the top</a>
   </section>
@@ -266,8 +280,8 @@
     <a class="top" href="#top">▲ back to the top</a>
   </section>
 
-  <!-- ================= RESEARCH MISSIONS (reusable, own progress; lock id 6, then 9 and up: 7 is Step Up Part 2, 8 is the Evidence Studio) =================
-       To add a mission: copy the .lvl.lcc card into .missions, give it the next free data-lock id (9+) and a unique *done id,
+  <!-- ================= RESEARCH MISSIONS (reusable, own progress; lock id 6, then 10 and up: 7 is Step Up Part 2, 8 and 9 are the Evidence Studios) =================
+       To add a mission: copy the .lvl.lcc card into .missions, give it the next free data-lock id (10+) and a unique *done id,
        then add its progress key to RESEARCH below. -->
   <section id="research" aria-labelledby="rmH">
     <div class="kicker">ANY YEAR · WITH WORKSHEETS</div>
@@ -324,6 +338,7 @@
   ];
   const su = status('seStepUpProgress', 'sudone', '✓ Passport made on this device');
   const su2 = status('seStepUp2Progress', 'su2done', '✓ Case closed · Report made on this device');
+  status('seEvidenceStudioSAT', 'es12done', '✓ Makeover, signature and a weekly drop done on this device');
   status('seEvidenceStudio11', 'esdone', '✓ Makeover, signature and a weekly drop done on this device');
   const RESEARCH = [['seControllerChallengeProgress', 'ccdone', '✓ All four missions complete on this device']];
   const rm = RESEARCH.map(r => status(...r));
