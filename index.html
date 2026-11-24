@@ -108,6 +108,9 @@
   .lsu2 h2 { color: #f9a8d4; }
   .lsu2 .btn { background: linear-gradient(90deg, var(--orange), var(--pink)); color: #000; }
   .lsu2 .stop { background: var(--pink); }
+  .lstudio { border-color: var(--green); box-shadow: 0 0 26px rgba(74,222,128,0.2); max-width: 900px; margin: 30px auto 0; }
+  .lstudio h2 { color: #86efac; }
+  .lstudio .btn { background: linear-gradient(90deg, var(--green), var(--cyan)); color: #000; }
   .su-route { list-style: none; padding: 0; margin: 26px auto 0; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
   .su-route > li { position: relative; display: flex; }
   .su-route > li > .lvl { flex: 1; padding-top: 22px; }
@@ -249,11 +252,22 @@
         <a class="btn" href="step-up-circuit-rescue.html">PLAY PART 2 ▶</a>
       </div></li>
     </ol>
+    <!-- Year 11 folio tool (lock id 8) -->
+    <div class="lvl lstudio" data-lock="8">
+      <div class="badge">NEW</div>
+      <div class="n">YEAR 11 · RECORD OF EVIDENCE</div>
+      <h2>Evidence Studio: Build &amp; Test</h2>
+      <div class="tags"><span>Units 1 &amp; 2</span><span>Use all project</span><span>Your style</span></div>
+      <p>Prove what you built and how you know it works, in your own style. Play the Evidence Makeover, design your own decision stamp, fault ticket and test card, then keep a weekly self-audit you can post on Teams.</p>
+      <div class="done" id="esdone"></div>
+      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+      <a class="btn" href="evidence-studio.html">OPEN THE STUDIO ▶</a>
+    </div>
     <a class="top" href="#top">▲ back to the top</a>
   </section>
 
-  <!-- ================= RESEARCH MISSIONS (reusable, own progress; lock id 6, then 8 and up: 7 is Step Up Part 2) =================
-       To add a mission: copy the .lvl.lcc card into .missions, give it the next free data-lock id (8+) and a unique *done id,
+  <!-- ================= RESEARCH MISSIONS (reusable, own progress; lock id 6, then 9 and up: 7 is Step Up Part 2, 8 is the Evidence Studio) =================
+       To add a mission: copy the .lvl.lcc card into .missions, give it the next free data-lock id (9+) and a unique *done id,
        then add its progress key to RESEARCH below. -->
   <section id="research" aria-labelledby="rmH">
     <div class="kicker">ANY YEAR · WITH WORKSHEETS</div>
@@ -310,6 +324,7 @@
   ];
   const su = status('seStepUpProgress', 'sudone', '✓ Passport made on this device');
   const su2 = status('seStepUp2Progress', 'su2done', '✓ Case closed · Report made on this device');
+  status('seEvidenceStudio11', 'esdone', '✓ Makeover, signature and a weekly drop done on this device');
   const RESEARCH = [['seControllerChallengeProgress', 'ccdone', '✓ All four missions complete on this device']];
   const rm = RESEARCH.map(r => status(...r));
 
