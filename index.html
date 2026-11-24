@@ -100,9 +100,18 @@
   .more { margin-top: 18px; padding: 10px; border: 2px dashed #555; border-radius: 10px; color: #888; font-weight: bold; letter-spacing: 2px; font-size: 13px; }
 
   /* ---------- Step Up ---------- */
-  .lsu { border-color: var(--orange); box-shadow: 0 0 26px rgba(34,211,238,0.25); max-width: 680px; margin: 22px auto 0; }
+  .lsu { border-color: var(--orange); box-shadow: 0 0 26px rgba(34,211,238,0.25); }
   .lsu h2 { color: var(--cyan); }
   .lsu .btn { background: linear-gradient(90deg, var(--cyan), var(--orange)); color: #000; }
+  .lsu .stop { background: var(--orange); }
+  .lsu2 { border-color: var(--pink); box-shadow: 0 0 26px rgba(255,78,207,0.22); }
+  .lsu2 h2 { color: #f9a8d4; }
+  .lsu2 .btn { background: linear-gradient(90deg, var(--orange), var(--pink)); color: #000; }
+  .lsu2 .stop { background: var(--pink); }
+  .su-route { list-style: none; padding: 0; margin: 26px auto 0; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  .su-route > li { position: relative; display: flex; }
+  .su-route > li > .lvl { flex: 1; padding-top: 22px; }
+  .su-route > li:first-child::after { content: '▶'; position: absolute; right: -23px; top: 50%; transform: translateY(-50%); color: var(--orange); font-size: 16px; text-shadow: 0 0 8px var(--orange); }
 
   /* ---------- Research missions: a growing grid ---------- */
   .missions { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; margin-top: 24px; }
@@ -126,6 +135,8 @@
     .route { grid-template-columns: 1fr; row-gap: 34px; }
     .route > li:not(:last-child)::after { content: '▼'; right: auto; left: 50%; top: auto; bottom: -27px; transform: translateX(-50%); }
     .route > li:nth-child(2)::after { content: '▼'; }
+    .su-route { grid-template-columns: 1fr; row-gap: 34px; }
+    .su-route > li:first-child::after { content: '▼'; right: auto; left: 50%; top: auto; bottom: -27px; transform: translateX(-50%); }
   }
 </style>
 </head>
@@ -149,7 +160,7 @@
       <span class="ic" aria-hidden="true">🚀</span>
       <span class="who">YEAR 11 · UNITS 1 &amp; 2</span>
       <b>Step Up</b>
-      <span class="d">New to the subject? Explore electronics and mechanical systems and make your passport.</span>
+      <span class="d">New to the subject? Two games in order: My Year in Systems, then Ohmbot's Circuit Rescue.</span>
       <span class="prog" id="suProg"></span>
       <span class="go">GO ↓</span>
     </a>
@@ -210,25 +221,39 @@
     <a class="top" href="#top">▲ back to the top</a>
   </section>
 
-  <!-- ================= YEAR 11 STEP UP (separate game, lock id 5) ================= -->
+  <!-- ================= YEAR 11 STEP UP (separate games: Part 1 lock id 5, Part 2 lock id 7) ================= -->
   <section id="stepup" aria-labelledby="suH">
     <div class="kicker">YEAR 11 · UNITS 1 &amp; 2</div>
     <h2 class="sec-title" id="suH">STEP UP</h2>
-    <p class="sec-lead">A separate game with its own progress. It isn't part of the Units 3 &amp; 4 levels.</p>
-    <div class="lvl lsu" data-lock="5">
-      <div class="n">STEP UP · SEPARATE GAME</div>
-      <h2>My Year in Systems</h2>
-      <div class="tags"><span>Year 11</span><span>No experience needed</span><span>Electronics + mechanical</span></div>
-      <p>New to Systems Engineering? Explore the Unit 1 electronics zone and the Unit 2 mechanical zone, pick up the habits that work in both, then make your My Year in Systems passport.</p>
-      <div class="done" id="sudone"></div>
-      <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
-      <a class="btn" href="step-up.html">PLAY STEP UP ▶</a>
-    </div>
+    <p class="sec-lead">Two games, played in order. Each keeps its own progress, separate from the Units 3 &amp; 4 levels.</p>
+    <ol class="su-route">
+      <li><div class="lvl lsu" data-lock="5">
+        <span class="stop" aria-hidden="true">1</span>
+        <div class="n">STEP UP · PART 1</div>
+        <h2>My Year in Systems</h2>
+        <div class="tags"><span>Year 11</span><span>No experience needed</span><span>Electronics + mechanical</span></div>
+        <p>Introduction to VCE Systems Engineering Units 1 &amp; 2. Explore the Unit 1 electronics zone and the Unit 2 mechanical zone, pick up the habits that work in both, then make your My Year in Systems passport.</p>
+        <div class="done" id="sudone"></div>
+        <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+        <a class="btn" href="step-up.html">PLAY PART 1 ▶</a>
+      </div></li>
+      <li><div class="lvl lsu2" data-lock="7">
+        <div class="badge">NEW</div>
+        <span class="stop" aria-hidden="true">2</span>
+        <div class="n">STEP UP · PART 2</div>
+        <h2>Ohmbot's Circuit Rescue</h2>
+        <div class="tags"><span>Year 11</span><span>After the LED practical</span><span>Breadboard + faults</span></div>
+        <p>Understanding circuits, breadboard connections and electrical faults. Read the schematic, wire a virtual mini breadboard, then track down reversed parts, broken connections and short circuits. Finish with your Circuit Investigator Report.</p>
+        <div class="done" id="su2done"></div>
+        <div class="lockmsg">🔒 Locked: your teacher will open this when it's time.</div>
+        <a class="btn" href="step-up-circuit-rescue.html">PLAY PART 2 ▶</a>
+      </div></li>
+    </ol>
     <a class="top" href="#top">▲ back to the top</a>
   </section>
 
-  <!-- ================= RESEARCH MISSIONS (reusable, own progress; lock ids from 6) =================
-       To add a mission: copy the .lvl.lcc card into .missions, give it the next free data-lock id and a unique *done id,
+  <!-- ================= RESEARCH MISSIONS (reusable, own progress; lock id 6, then 8 and up: 7 is Step Up Part 2) =================
+       To add a mission: copy the .lvl.lcc card into .missions, give it the next free data-lock id (8+) and a unique *done id,
        then add its progress key to RESEARCH below. -->
   <section id="research" aria-labelledby="rmH">
     <div class="kicker">ANY YEAR · WITH WORKSHEETS</div>
@@ -284,13 +309,15 @@
     status('evidenceLabProgress', 'l3done', '✓ Plan finished on this device')
   ];
   const su = status('seStepUpProgress', 'sudone', '✓ Passport made on this device');
+  const su2 = status('seStepUp2Progress', 'su2done', '✓ Case closed · Report made on this device');
   const RESEARCH = [['seControllerChallengeProgress', 'ccdone', '✓ All four missions complete on this device']];
   const rm = RESEARCH.map(r => status(...r));
 
   const n = (arr, v) => arr.filter(x => x === v).length;
   if (n(sat, 'done')) document.getElementById('satProg').textContent = `✓ ${n(sat, 'done')} of 3 tracked stops done on this device`;
   else if (n(sat, 'started')) document.getElementById('satProg').textContent = '▶ In progress on this device';
-  if (su) document.getElementById('suProg').textContent = su === 'done' ? '✓ Passport made' : '▶ In progress on this device';
+  const suDone = [su, su2].filter(x => x === 'done').length;
+  if (su || su2) document.getElementById('suProg').textContent = suDone ? `✓ ${suDone} of 2 parts done on this device` : '▶ In progress on this device';
   if (n(rm, 'done') || n(rm, 'started')) document.getElementById('rmProg').textContent = n(rm, 'done') ? `✓ ${n(rm, 'done')} of ${RESEARCH.length} complete on this device` : '▶ In progress on this device';
 </script>
 </body>
