@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Evidence Studio – Year 12 SAT – Systems Engineering</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --orange: #fb923c; --red: #f87171; --violet: #a78bfa; --panel: rgba(0,0,0,0.86); --ui: 1; }
+  html { background: #000; }
+  body { margin: 0; min-height: 100vh; color: #eee; font-family: monospace; font-size: calc(14px * var(--ui)); background: radial-gradient(ellipse at 50% 0%, #2a0a3d 0%, #0b0218 55%, #000 100%); }
+  button, input, textarea, select { font-family: monospace; font-size: inherit; }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .hidden { display: none !important; }
+  a { color: var(--cyan); }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 14px; border-bottom: 2px solid #2b1740; background: rgba(0,0,0,0.75); position: sticky; top: 0; z-index: 20; }
+  .brand { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand small { color: var(--gold); letter-spacing: 3px; font-weight: bold; font-size: 11px; }
+  .brand b { color: #fff; font-size: 17px; text-shadow: 0 0 10px var(--pink); }
+  #tabs { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; justify-content: center; }
+  .tab { border: 1px solid #555; background: #111; color: #ccc; border-radius: 6px; padding: 5px 9px; font-size: calc(12px * var(--ui)); cursor: pointer; }
+  .tab.on { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
+  .tab .tk { color: var(--green); } .tab.on .tk { color: #064e3b; }
+  .tools { display: flex; gap: 5px; align-items: center; }
+  .tools button, .tools a { background: #1b1b22; color: #eee; border: 1px solid #555; border-radius: 5px; padding: 4px 8px; font: bold 12px monospace; cursor: pointer; text-decoration: none; }
+  .tools span { font-size: 11px; color: #888; }
+  main { max-width: 1200px; margin: 0 auto; padding: 14px; }
+  .panel { background: var(--panel); border: 2px solid #3a3a46; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  h1 { margin: 4px 0 6px; font-size: calc(26px * var(--ui)); color: #fff; text-shadow: 0 0 10px var(--gold); }
+  h2 { margin: 0 0 8px; font-size: calc(19px * var(--ui)); color: #fff; }
+  h3 { margin: 12px 0 6px; font-size: calc(15px * var(--ui)); color: var(--gold); letter-spacing: 1px; }
+  p { line-height: 1.5; margin: 6px 0; }
+  .kick { color: var(--pink); letter-spacing: 3px; font-weight: bold; font-size: calc(11px * var(--ui)); }
+  .muted { color: #9ca3af; }
+  .act { padding: 9px 13px; border: none; border-radius: 6px; background: var(--gold); color: #000; font-weight: bold; cursor: pointer; }
+  .act.alt { background: #222; color: #eee; border: 1px solid #555; }
+  .act.small { padding: 5px 9px; font-size: calc(12px * var(--ui)); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=text], input[type=date], textarea, select { background: #111; color: #eee; border: 1px solid #555; border-radius: 5px; padding: 6px 8px; }
+  textarea { width: 100%; resize: vertical; }
+  .bot { display: flex; gap: 10px; align-items: flex-start; }
+  .ohm { margin: 0; color: var(--cyan); font-size: 11px; line-height: 1.1; text-shadow: 0 0 6px var(--cyan); flex: none; }
+  .bubble { flex: 1; border: 1px solid #444; border-radius: 8px; padding: 9px 11px; background: #0d0d14; line-height: 1.5; }
+  .bubble b { color: var(--gold); }
+  .rule { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+  .rule div { border: 2px solid; border-radius: 8px; padding: 8px 9px; background: #0b0b12; line-height: 1.4; }
+  .rule b { display: block; font-size: calc(16px * var(--ui)); margin-bottom: 3px; }
+  .c1 { border-color: var(--cyan) !important; } .c1 b { color: var(--cyan); }
+  .c2 { border-color: var(--gold) !important; } .c2 b { color: var(--gold); }
+  .c3 { border-color: var(--pink) !important; } .c3 b { color: var(--pink); }
+  .c4 { border-color: var(--green) !important; } .c4 b { color: var(--green); }
+  @media (max-width: 760px) { .rule { grid-template-columns: 1fr 1fr; } }
+  .units { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+  .unitbox { border: 2px solid #444; border-radius: 8px; padding: 9px 11px; background: #0b0b12; line-height: 1.45; }
+  .unitbox b { color: #fff; }
+  .u3 { border-color: var(--cyan); } .u4 { border-color: var(--orange); }
+  @media (max-width: 760px) { .units { grid-template-columns: 1fr; } }
+  .cb-badge { display: inline-block; min-width: 2.4em; text-align: center; font-weight: bold; border-radius: 6px; padding: 2px 6px; color: #000; margin-right: 4px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+  .tile { text-align: left; background: #0d0d16; border: 2px solid #3a3a46; border-radius: 10px; padding: 12px; color: #eee; cursor: pointer; line-height: 1.4; }
+  .tile:hover { border-color: var(--gold); }
+  .tile .n { color: var(--pink); font-weight: bold; letter-spacing: 2px; font-size: calc(11px * var(--ui)); }
+  .tile b { display: block; color: #fff; font-size: calc(16px * var(--ui)); margin: 3px 0; }
+  .tile .st { margin-top: 6px; font-size: calc(12px * var(--ui)); color: var(--green); }
+  /* makeover */
+  .mk { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.1fr); gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .mk { grid-template-columns: 1fr; } }
+  .slide { background: #fff; color: #111; border-radius: 6px; padding: 14px; font-family: Arial, Helvetica, sans-serif; box-shadow: 0 0 0 3px #333, 0 0 18px rgba(250,204,21,0.25); }
+  .slide .sh { font-size: 11px; letter-spacing: 1px; color: #92400e; font-weight: bold; }
+  .slide h4 { margin: 2px 0 8px; font-size: 18px; }
+  .slide .pic { background: #e5e7eb; border: 1px dashed #9ca3af; border-radius: 4px; min-height: 100px; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 13px; text-align: center; padding: 6px; }
+  .slide .cap { margin-top: 8px; font-size: 15px; line-height: 1.45; white-space: pre-line; }
+  .slide table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 6px; }
+  .slide td, .slide th { border: 1px solid #cbd5e1; padding: 3px 6px; text-align: left; }
+  .slide th { background: #fef3c7; }
+  .opt { display: block; width: 100%; text-align: left; margin: 6px 0 0; padding: 8px 10px; background: #111; color: #eee; border: 1px solid #555; border-radius: 6px; cursor: pointer; line-height: 1.4; }
+  .opt:hover { border-color: var(--gold); }
+  .opt.on { border-color: var(--cyan); background: #062a33; }
+  .opt.right { border-color: var(--green); background: #062012; }
+  .opt[disabled] { opacity: 0.5; cursor: default; }
+  .opt.struck { text-decoration: line-through; opacity: 0.45; }
+  #mkFeedback { min-height: 1.4em; line-height: 1.5; margin-top: 8px; }
+  .ok { color: var(--green); font-weight: bold; } .no { color: var(--gold); font-weight: bold; } .cbk { color: var(--pink); font-weight: bold; }
+  .dots { display: flex; gap: 4px; margin: 6px 0; } .dots i { width: 22px; height: 6px; border-radius: 3px; background: #333; } .dots i.d { background: var(--green); } .dots i.c { background: var(--gold); }
+  /* criteria guide */
+  .crit { background: #0d0d16; border: 1px solid #3a3a46; border-left: 6px solid var(--gold); border-radius: 8px; padding: 12px; margin-bottom: 10px; line-height: 1.45; scroll-margin-top: 90px; }
+  .crit h3 { margin: 0 0 4px; color: #fff; font-size: calc(17px * var(--ui)); }
+  .crit .lbl { font-size: calc(11px * var(--ui)); letter-spacing: 1px; font-weight: bold; margin-top: 8px; }
+  .crit .lbl.m { color: var(--cyan); } .crit .lbl.s { color: var(--green); } .crit .lbl.t { color: var(--gold); }
+  .crit ul { margin: 4px 0; padding-left: 18px; }
+  .claimbox { background: #14120a; border-left: 3px solid var(--gold); padding: 6px 9px; margin-top: 4px; color: #fde68a; }
+  .chip { display: inline-block; border: 1px solid #555; border-radius: 12px; padding: 2px 8px; margin: 3px 4px 0 0; font-size: calc(12px * var(--ui)); background: #15151f; color: #ddd; cursor: pointer; }
+  .chip:hover { border-color: var(--gold); }
+  .filter { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .filter button { border: 1px solid #555; background: #111; color: #ddd; border-radius: 16px; padding: 4px 10px; cursor: pointer; }
+  .filter button.on { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
+  /* moves */
+  .moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .move { background: #0d0d16; border: 1px solid #3a3a46; border-radius: 8px; padding: 10px 12px; line-height: 1.45; scroll-margin-top: 90px; }
+  .move.flash { border-color: var(--gold); box-shadow: 0 0 14px rgba(250,204,21,0.5); }
+  .move h4 { margin: 0 0 4px; color: #fff; font-size: calc(15px * var(--ui)); }
+  .move .ic { font-size: 20px; margin-right: 4px; }
+  .move .sig { font-size: calc(11px * var(--ui)); color: var(--pink); font-weight: bold; letter-spacing: 1px; }
+  /* signature */
+  .sigwrap { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .sigwrap { grid-template-columns: 1fr; } }
+  .styles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stl { background: #111; color: #eee; border: 2px solid #444; border-radius: 6px; padding: 7px; cursor: pointer; text-align: left; line-height: 1.3; }
+  .stl.on { border-color: var(--gold); background: #2a2306; }
+  .stl small { color: #9ca3af; display: block; }
+  .sw { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #222; cursor: pointer; }
+  .sw.on { outline: 3px solid #fff; }
+  .field { margin: 8px 0; } .field label { display: block; color: #cbd5e1; margin-bottom: 3px; font-size: calc(12px * var(--ui)); }
+  .field input[type=text] { width: 100%; }
+  .devs { display: grid; gap: 12px; }
+  .dev { background: #1b1b24; border-radius: 8px; padding: 10px; }
+  .dev svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .dev .row { margin-top: 6px; }
+  /* index & audit */
+  .cblock { border: 1px solid #3a3a46; border-left: 6px solid var(--gold); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: #0d0d16; }
+  .cblock h3 { margin: 0; color: #fff; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ready { font-size: calc(12px * var(--ui)); font-weight: bold; border-radius: 12px; padding: 2px 8px; border: 1px solid; }
+  .ready.r0 { color: #888; border-color: #555; } .ready.r1 { color: var(--gold); border-color: var(--gold); } .ready.r2 { color: #000; background: var(--green); border-color: var(--green); }
+  .reqs { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .reqs td { border-bottom: 1px solid #262630; padding: 5px 4px; vertical-align: top; }
+  .reqs input[type=text] { width: 100%; min-width: 80px; }
+  .tick { border: 2px solid #444; background: #111; color: #888; border-radius: 5px; padding: 3px 7px; font-weight: bold; cursor: pointer; white-space: nowrap; font-size: calc(12px * var(--ui)); }
+  .tick.on { border-color: var(--green); background: var(--green); color: #000; }
+  .ffchecks { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .ff { border: 2px solid #444; background: #111; color: #888; border-radius: 5px; padding: 3px 7px; font-weight: bold; font-size: calc(11px * var(--ui)); }
+  .ff.on { border-color: var(--cyan); background: var(--cyan); color: #000; }
+  button.ff { cursor: pointer; }
+  .bars { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 8px 0; }
+  .bar { background: #0d0d16; border: 1px solid #333; border-radius: 6px; padding: 6px 8px; font-size: calc(12px * var(--ui)); }
+  .bar .tr { height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .bar .tr i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--green)); }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #052e16; color: var(--green); border: 2px solid var(--green); border-radius: 8px; padding: 8px 14px; font-weight: bold; z-index: 60; max-width: 90vw; }
+  .overlay { position: fixed; inset: 0; z-index: 50; background: radial-gradient(ellipse at 50% 30%, #2a0a3d 0%, #0b0218 60%, #000 100%); overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: 30px 14px; }
+  .ob { width: 100%; max-width: 640px; border: 2px solid var(--gold); border-radius: 10px; padding: 18px; background: rgba(0,0,0,0.88); box-shadow: 0 0 26px rgba(250,204,21,0.25); }
+  .ob label { display: block; margin: 12px 0 4px; }
+  .ob input[type=text] { width: 100%; padding: 8px 9px; font-size: 15px; }
+  .fmts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+  .fmt { background: #111; color: #eee; border: 2px solid #444; border-radius: 6px; padding: 7px; cursor: pointer; text-align: left; }
+  .fmt.on { border-color: var(--gold); background: #2a2306; }
+  @media (max-width: 600px) { .fmts { grid-template-columns: 1fr 1fr; } }
+  #obMsg { color: var(--red); min-height: 1.2em; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="startOverlay" class="overlay">
+  <div class="ob">
+    <div class="kick" style="color:var(--gold)">YEAR 12 · UNITS 3 &amp; 4 · SCHOOL-ASSESSED TASK</div>
+    <h1>EVIDENCE STUDIO: SAT</h1>
+    <div style="color:var(--green);letter-spacing:3px;font-weight:bold">8 CRITERIA · 1 RECORD · YOUR STYLE</div>
+    <pre class="ohm" aria-hidden="true" style="font-size:14px;margin:12px 0">  .-----.
+  | o o |   "Your assessor has 8 criteria to score.
+  |  =  |    Make every one easy to find, and
+  '--+--'    impossible to doubt."
+   [###]
+  Ohmbot</pre>
+    <div id="resumeCard" class="hidden"><p id="resumeText"></p><div class="row"><button class="act" id="resumeBtn">CONTINUE ▶</button><button class="act alt" id="freshBtn">Start again</button></div></div>
+    <div id="signCard">
+      <label for="obName">First name</label><input type="text" id="obName" maxlength="40" autocomplete="given-name" />
+      <label for="obClass">Class</label><input type="text" id="obClass" maxlength="20" />
+      <div id="obNote" class="muted" style="font-size:12px;margin-top:4px"></div>
+      <label for="obSystem">Your integrated and controlled system, in a few words</label><input type="text" id="obSystem" maxlength="70" placeholder="e.g. automated greenhouse vent" />
+      <label>Where is your record of evidence?</label>
+      <div class="fmts" id="fmts" role="group" aria-label="Format"></div>
+      <label>Where are you up to?</label>
+      <div class="fmts" id="phases" role="group" aria-label="Unit" style="grid-template-columns:1fr 1fr"></div>
+      <div class="row" style="margin-top:14px"><button class="act" id="startBtn" style="flex:1;padding:12px">ENTER THE STUDIO ▶</button></div>
+      <div id="obMsg" role="alert"></div>
+    </div>
+    <p class="muted" style="font-size:12px">Saved in this browser only. <a href="index.html">◀ Game hub</a></p>
+  </div>
+</div>
+
+<header>
+  <div class="brand"><small>YEAR 12 · SAT</small><b>EVIDENCE STUDIO</b></div>
+  <nav id="tabs" aria-label="Studio sections"></nav>
+  <div class="tools"><span id="who"></span><button id="zMinus" aria-label="Smaller text">A−</button><button id="zPlus" aria-label="Bigger text">A+</button><button id="muteBtn" aria-pressed="false" title="Sound on/off">🔊</button><button id="restartBtn" title="Clear my studio">↺</button><a href="index.html">HUB</a></div>
+</header>
+<main id="main"></main>
+<div id="toast" class="hidden" role="status"></div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const STORE_KEY = 'seEvidenceStudioSAT', VIEW_KEY = 'seEvidenceStudioSATView';
+  const NAME_KEYS = ['seEvidenceStudio11', 'seStepUp2Player', 'seStepUpPlayer'];
+
+  let audioCtx = null, muted = false;
+  function beep(f, d, type, vol) { if (muted) return; try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = type || 'square'; o.frequency.value = f; g.gain.value = vol || 0.035; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + d / 1000); } catch (e) {} }
+  const sfx = { click: () => beep(700, 30, 'square', 0.02), good: () => { beep(660, 80); setTimeout(() => beep(880, 80), 80); }, retry: () => beep(240, 150, 'triangle', 0.05), win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 110), i * 100)), cb: () => { beep(523, 70); setTimeout(() => beep(784, 70), 70); setTimeout(() => beep(1047, 120), 140); } };
+
+  // =====================================================================
+  //  CONTENT
+  // =====================================================================
+  // Per-entry quality rule (same as Year 11) and the whole-record "find it fast" rule (new in Year 12).
+  const RULE = [
+    { k: 'show', t: 'SHOW', d: 'Dated photo, video, data or drawing from <i>your</i> project.' },
+    { k: 'say', t: 'SAY', d: 'What you did or decided: specific names, numbers, SI units.' },
+    { k: 'why', t: 'WHY', d: 'The reason, backed by your criteria, research or test data.' },
+    { k: 'next', t: 'NEXT', d: 'What it means for the next step.' }
+  ];
+  const FF = [
+    { k: 'tag', t: 'TAG', d: 'Every section wears its criterion badge (C1–C8) in the same spot.' },
+    { k: 'index', t: 'INDEX', d: 'A criteria index up front says exactly where each criterion is.' },
+    { k: 'claim', t: 'CLAIM', d: 'Each criterion section opens with one line: "This shows C6…"' },
+    { k: 'date', t: 'DATE', d: 'All notes, photos, audio and video are dated or time-stamped.' }
+  ];
+  const FORMATS = {
+    slides: { icon: '🖥️', name: 'PowerPoint / slides', unit: 'Slide' }, website: { icon: '🌐', name: 'Website / Notion', unit: 'Page' },
+    folio: { icon: '📘', name: 'OneNote / document', unit: 'Page' }, canva: { icon: '🎨', name: 'Canva / design', unit: 'Page' },
+    video: { icon: '🎬', name: 'Video / multimodal', unit: 'Chapter' }, paper: { icon: '📓', name: 'Physical folio', unit: 'Page' }
+  };
+  const CCOL = ['#22d3ee', '#38bdf8', '#818cf8', '#fb923c', '#f472b6', '#facc15', '#4ade80', '#a78bfa'];
+  // The eight SAT criteria. Unit 3 submits C1–3; Unit 4 submits C4–8 alongside C1–3.
+  // Requirements are the 2026 VCAA "must include" list for the multimodal record of evidence, organised by criterion.
+  const CRITERIA = [
+    { n: 1, unit: 3, t: 'Investigating and defining', about: 'Define the ethical problem, write the design brief, investigate what already exists, and set your evaluation criteria.',
+      req: ['A design brief that defines an ethical problem (environmental, economic, social, psychological or accountability)', 'The factors that influence the system\'s creation and use, explained', 'Investigation of existing components, circuits, subsystems and systems that could answer the brief', 'How those existing items function and operate (concepts and principles)', 'Evaluation criteria for the system AND for your use of the systems engineering process: linked to the brief and constraints, justified, with how each will be tested', 'Planned research with all sources accurately cited'],
+      strong: ['Explains the problem and factors, not just describes them', 'Each evaluation criterion is measurable, linked to the brief and a factor, justified, and has a test method', 'Includes criteria for your process, not only the product'],
+      moves: ['claim', 'table', 'annotated', 'index'], claim: 'This section shows C1: the ethical problem I\'m solving, my design brief, what already exists, and the evaluation criteria I\'ll test against.' },
+    { n: 2, unit: 3, t: 'Generating and designing', about: 'Generate around three genuinely different options, model them, and justify your choice.',
+      req: ['Design ideas generated and evaluated against factors (function, users, materials, safety, waste and energy, cost, standards, durability, maintenance…)', 'About three options with drawings, and a clearly justified preferred option', 'Drawings to Australian engineering drawing standards; schematics with standard symbols', 'Modelling: simulations, sketches, IPO and flow diagrams, working drawings, annotations, programming', 'Function and operation of the mechanical and electrotechnological components, including control', 'Components, materials and tools compared: function, properties, source, cost, social / environmental / economic impact'],
+      strong: ['The options are genuinely different, not three versions of one idea', 'The choice is justified against YOUR evaluation criteria (e.g. a weighted decision matrix)', 'Modelling is used to make decisions, not just to decorate'],
+      moves: ['matrix', 'sketch', 'decision', 'claim'], claim: 'This section shows C2: three options I modelled, how they compare against my evaluation criteria, and why I chose option __.' },
+    { n: 3, unit: 3, t: 'Planning', about: 'Plan how you\'ll make, test and manage the system safely.',
+      req: ['Risk assessment and management using the hierarchy of control', 'Proposed diagnostic testing methods for troubleshooting', 'Timeline with sequenced steps and milestones', 'Work plan: operations, tools, testing, budget, time and efficiency, with risk assessments for production and testing'],
+      strong: ['Hazards are tied to specific steps, and controls go up the hierarchy (eliminate, substitute, engineer) before PPE', 'Tests are planned before building, with what each one checks', 'Someone else could follow your plan'],
+      moves: ['risk', 'gantt', 'testcard', 'claim'], claim: 'This section shows C3: my work plan, timeline and milestones, risk controls, and the tests I\'ll use to troubleshoot.' },
+    { n: 4, unit: 4, t: 'Implementing (processes, tools, components, materials)', about: 'Show HOW you made it: processes, tools, materials and components, used safely and well.',
+      req: ['A dated photo / video record of production: processes, tools, materials and components', 'Notes on decisions and modifications, each with a reason', 'Safe and appropriate use of tools and processes (your teacher\'s observations count too)'],
+      strong: ['Each key process: dated photo + what you did + why you did it that way', 'Modifications are linked to evidence (a measurement, a fault, a test)'],
+      moves: ['annotated', 'video', 'beforeafter', 'decision'], claim: 'This section shows C4: the processes, tools, components and materials I used to produce my system, with dated evidence and my decisions.' },
+    { n: 5, unit: 4, t: 'Realisation', about: 'Prove the finished integrated and controlled system works as intended.',
+      req: ['The completed integrated and controlled system (photos, final drawings)', 'A demonstration of operation: input → control → output (captioned video)', 'How the realised system meets the design brief'],
+      strong: ['The caption tells the assessor what to watch, with timestamps', 'It shows mechanical and electrotechnological subsystems working together under control', 'It links directly back to the brief'],
+      moves: ['video', 'annotated', 'claim'], claim: 'This section shows C5: my completed system operating as an integrated, controlled system, and how it meets the brief.' },
+    { n: 6, unit: 4, t: 'Diagnostic testing', about: 'Test, interpret the data, and use it to improve the system.',
+      req: ['Ongoing diagnostics and adjustments during production', 'At least one test of the completed system with its control device', 'For each test: purpose, procedure (with risk assessment), formulas, expected and actual results in SI units, and an explanation', 'Modifications or repairs justified by test data'],
+      strong: ['Tests are numbered, dated and build on each other ("Because Test 4 showed…")', 'Every result has a formula, SI units, and expected vs actual', 'The data drives the next change'],
+      moves: ['testcard', 'table', 'faultticket', 'video'], claim: 'This section shows C6: my diagnostic tests, what the data showed, and the changes it led to.' },
+    { n: 7, unit: 4, t: 'Project management', about: 'Show you followed, tracked and adjusted your work plan.',
+      req: ['Work plan followed and updated: planned vs actual timeline', 'Changes to the plan justified, with their effect', 'Budget and time tracked', 'Dated progress records'],
+      strong: ['Planned vs actual, side by side', 'Every delay or change has a cause, an action and an effect', 'Hard calls are explained (e.g. cutting a feature to protect the core system)'],
+      moves: ['gantt', 'selfaudit', 'decision', 'claim'], claim: 'This section shows C7: how I followed my work plan, what changed and why, and how I kept to time and budget.' },
+    { n: 8, unit: 4, t: 'Evaluating', about: 'Judge the system AND your process against your criteria, and explain improvements.',
+      req: ['The system evaluated against your evaluation criteria, using test data', 'Your application of the systems engineering process evaluated', 'How the factors were addressed', 'Relevant engineering concepts explained', 'Modifications and improvements proposed and explained'],
+      strong: ['Every evaluation criterion is judged with data; anything untested is marked "not verified"', 'Improvements are explained (why they would work), not just listed', 'The process is evaluated honestly, not just the product'],
+      moves: ['table', 'selfaudit', 'decision', 'claim'], claim: 'This section shows C8: how my system performed against each evaluation criterion, how well I applied the process, and improvements I\'d make.' }
+  ];
+  const MOVES = {
+    badge: { ic: '🏷️', n: 'Criterion badge', what: 'A C1–C8 badge in the same corner of every section.', strong: 'Same place, every time, so the assessor can flick through and spot it.', sig: true, crit: [1, 2, 3, 4, 5, 6, 7, 8] },
+    claim: { ic: '📣', n: 'Claim banner', what: 'One line at the top of each criterion section: "This section shows C6: …"', strong: 'It names the criterion and says what the evidence below proves.', sig: true },
+    index: { ic: '🧭', n: 'Criteria index', what: 'A front page: each criterion → exactly where it is (slide, page, chapter).', strong: 'Specific locations ("Slides 14–19"), updated before each submission.' },
+    annotated: { ic: '📷', n: 'Annotated photo', what: 'A dated photo with labels on what matters and why.', strong: 'Labels explain decisions, not just name parts.' },
+    beforeafter: { ic: '↔️', n: 'Before / after pair', what: 'The same view before and after a change, with the measured effect.', strong: 'Effect in numbers and SI units.' },
+    video: { ic: '🎬', n: 'Captioned video', what: 'A short clip, plus a caption with timestamps of what to watch.', strong: '"0:12 controller switches the actuator; 0:41 fully open (EC1 ✓)".' },
+    sketch: { ic: '✏️', n: 'Annotated sketch / drawing', what: 'Option sketches and working drawings with annotations.', strong: 'Annotations explain function and decisions; drawings follow AS conventions.' },
+    matrix: { ic: '▦', n: 'Weighted decision matrix', what: 'Options scored against your evaluation criteria, weighted.', strong: 'The weights come from your brief, and the winner is explained.' },
+    risk: { ic: '⚠️', n: 'Risk table (hierarchy of control)', what: 'Step → hazard → rating → controls by hierarchy level → residual risk.', strong: 'Engineering and administrative controls before PPE.' },
+    gantt: { ic: '🗓️', n: 'Planned vs actual timeline', what: 'Your original plan with actual progress overlaid.', strong: 'Each change has a cause, an action and an effect.' },
+    table: { ic: '📊', n: 'Results / criteria table', what: 'Criterion · target · result (SI units) · met? · evidence.', strong: 'Every claim points to a test; untested = "not verified".' },
+    testcard: { ic: '🧪', n: 'Test card (VCAA fields)', what: 'Test # · date · purpose · procedure + risk · formula · expected · actual (SI) · explanation · modification.', strong: 'Numbered, dated, and each test builds on the last.', sig: true },
+    faultticket: { ic: '🎫', n: 'Fault ticket', what: 'Problem → suspected cause → test → result → action.', strong: 'Shows your reasoning, including the wrong first guess.', sig: true },
+    decision: { ic: '🔖', n: 'Decision stamp', what: 'I chose ___ instead of ___ because ___ (evidence). Dated.', strong: 'Every real choice, especially changes to the plan.', sig: true },
+    selfaudit: { ic: '📋', n: 'Self-audit', what: 'Have / still need, for each criterion.', strong: 'Honest, and updated each week.' }
+  };
+  // Makeover: a fictional student, Riley, building an automated greenhouse vent.
+  const ROUNDS = [
+    { c: 1, title: 'Evaluation criteria', table: [['Evaluation criteria'], ['The vent should work well'], ['It should be safe'], ['It should look good']],
+      probs: [{ t: 'None of them is measurable or has a target', ok: true }, { t: 'Not linked to the design brief or the factors', ok: true }, { t: 'No justification and no test method', ok: true }, { t: 'There should be at least ten criteria', ok: false, fb: 'Quantity isn\'t the problem. A few measurable, justified criteria beat a long vague list.' }],
+      ups: [{ t: 'The vent should work really well, be very safe, and look professional.', fb: 'Same three ideas, still not measurable or linked to the brief.' },
+        { t: 'EC1 Response (brief: protect seedlings from overheating; factor: environment): vent fully open within 60 s of reaching 28 °C. Why: seedlings are stressed above 30 °C. Test: heat gun on the sensor, stopwatch, 5 trials. EC6 (process): each subsystem tested before integration, recorded in my test log.', ok: true },
+        { t: 'EC1: Speed. EC2: Safety. EC3: Cost. EC4: Appearance.', fb: 'Headings only: no targets, no links to the brief, no tests.' }],
+      win: 'Measurable target · linked to the brief AND a factor · justified · test method. And there\'s a criterion for the PROCESS too.' },
+    { c: 2, title: 'Design options', pic: '3 small sketches, no labels', cap: 'Option 3 is the best so I chose it.',
+      probs: [{ t: 'No comparison against the evaluation criteria', ok: true }, { t: 'No reason for the choice', ok: true }, { t: 'The sketches aren\'t annotated', ok: true }, { t: 'Three options isn\'t enough', ok: false, fb: 'About three options is expected. The issue is that we can\'t see how they were compared.' }],
+      ups: [{ t: 'I chose option 1 because it looks the coolest and I like linear actuators.', fb: 'Personal preference isn\'t a justification. How does it score against your criteria?' },
+        { t: 'Option 1 is a linear actuator, Option 2 is a servo with a linkage, and Option 3 is a wax piston. All three would work in a greenhouse and each has good and bad points.', fb: 'It describes the options but never decides between them using evidence.' },
+        { t: 'Weighted matrix (EC1–EC5): Option 1 linear actuator 41/50, Option 2 servo + linkage 36/50, Option 3 wax piston 29/50. Chose Option 1: the only one that met EC1 (open in under 60 s) in my Tinkercad timing model. It costs $18 more than Option 2 but is within budget (EC4).', ok: true }],
+      win: 'Options scored against YOUR criteria, modelling used to decide, and the trade-off (cost) acknowledged.' },
+    { c: 3, title: 'Risk assessment', table: [['Hazard', 'Control'], ['Soldering iron', 'Be careful'], ['Drill', 'Wear goggles'], ['Hot glue', 'Don\'t touch it']],
+      probs: [{ t: 'Controls rely on PPE or "be careful": the bottom of the hierarchy', ok: true }, { t: 'No rating of likelihood and consequence', ok: true }, { t: 'Hazards aren\'t linked to steps in the work plan', ok: true }, { t: 'Risk assessments belong in Unit 4, not Unit 3', ok: false, fb: 'Unit 3 needs risk assessment and management for production and testing: plan it before you build.' }],
+      ups: [{ t: 'All tools are dangerous, so I will be very careful at all times and follow the workshop rules.', fb: 'General, not tied to any step, and no controls above "be careful".' },
+        { t: 'Step 7, drilling the vent frame (3 mm aluminium): hazards are swarf and a grabbing bit. Likely × moderate = HIGH. Controls: (engineering) clamp in the drill-press vice, guard down; (admin) clear bench, one person at the press; (PPE) safety glasses. Residual: LOW.', ok: true },
+        { t: 'Hazards: soldering iron, drill, hot glue gun, saw, file, multimeter, power supply.', fb: 'A list of tools isn\'t a risk assessment. Where are the ratings and controls?' }],
+      win: 'Tied to a step in the plan · rated · controls by hierarchy level, PPE last · residual risk.' },
+    { c: 4, title: 'Production photos', pic: '📁 38 photos · no captions · no dates', cap: '',
+      probs: [{ t: 'Undated, with no captions', ok: true }, { t: 'No processes or decisions explained', ok: true }, { t: 'No criterion badge or claim, so the assessor has to hunt', ok: true }, { t: 'Photos can\'t count as evidence', ok: false, fb: 'They can: dated photo, audio and video are accepted evidence. They just need context.' }],
+      ups: [{ t: 'Here are all my photos from the build, enjoy! [38 photos]', fb: 'Still a photo dump: no dates, no processes, no criterion.' },
+        { t: '🏷 C4 · Production log · 📅 14/6 [photo] Riveted the vent frame: drilled 3.2 mm pilots, 4 pop rivets per corner. Chose rivets over bolts because there are no nuts to vibrate loose (decision stamp 6). Checked square: diagonals 412 / 413 mm.', ok: true },
+        { t: 'C4: I used lots of tools and processes safely and well throughout my project.', fb: 'It has the badge but no evidence. Claims need dated proof underneath.' }],
+      win: 'Badge (assessor finds it instantly) · dated · process · decision with a reason · a measured check.' },
+    { c: 5, title: 'Finished system', pic: '📷 photo: finished greenhouse vent', cap: 'Finished!! 🎉',
+      probs: [{ t: 'It doesn\'t show the system operating', ok: true }, { t: 'It doesn\'t show input → control → output working together', ok: true }, { t: 'No link back to the design brief', ok: true }, { t: 'The photo should be professionally lit', ok: false, fb: 'Presentation polish isn\'t the issue. Proof of integrated, controlled operation is.' }],
+      ups: [{ t: '[photo] My finished vent. It looks great and works perfectly.', fb: '"Works perfectly" with no demonstration is just a claim.' },
+        { t: '[video, no caption] Final demo', fb: 'Better, but the assessor doesn\'t know what to watch for, or how it links to the brief.' },
+        { t: '🏷 C5 · [45 s video] 0:05 heat gun warms the sensor → 0:12 display reads 28.1 °C → 0:13 controller drives the actuator → 0:41 vent fully open (EC1: under 60 s ✓). 0:44 sensor cools → vent closes. Shows the brief\'s "automatic venting without user input".', ok: true }],
+      win: 'A captioned demo with timestamps: input → control → output, tied to EC1 and the brief.' },
+    { c: 6, title: 'Test 4', pic: '(no photo)', cap: 'Test 4: the motor worked fine at full speed.',
+      probs: [{ t: 'No purpose or procedure (with risk assessment)', ok: true }, { t: 'No formula, and no expected vs actual in SI units', ok: true }, { t: 'No explanation of the result', ok: true }, { t: 'Tests only count on the finished system', ok: false, fb: 'Ongoing tests during production count. You ALSO need at least one test of the completed system.' }],
+      ups: [{ t: 'Test 4 ✅ Passed.', fb: 'A tick isn\'t data. What was measured, against what?' },
+        { t: '🧪 Test 4 · 18/7 · C6. Purpose: check the actuator current stays under the driver\'s 2 A limit. Procedure: 12 V bench supply, inline ammeter, full open/close cycle ×3, hands clear of the hinge. Formula: P = VI. Expected ≤ 1.2 A (14.4 W). Actual: 1.45 A at 12.1 V (17.5 W) when stalled at end of travel. Explanation: it stalls at full extension. Modification: limit switch cuts power at end of travel (see Test 5).', ok: true },
+        { t: 'I tested the motor lots of times and it was good, apart from when it got a bit warm, which is normal.', fb: '"A bit warm" is a clue, but there\'s no measurement, formula or explanation.' }],
+      win: 'Purpose · procedure + risk · formula · expected vs actual in SI · explanation · data-driven modification. The full VCAA test checklist.' },
+    { c: 7, title: 'Progress update', pic: '(no photo)', cap: 'I\'m a bit behind on my timeline but it should be fine.',
+      probs: [{ t: 'No planned vs actual comparison', ok: true }, { t: 'No cause or effect given', ok: true }, { t: 'No adjusted plan', ok: true }, { t: 'Being behind loses marks automatically', ok: false, fb: 'Changes happen. What\'s assessed is how you manage them, and whether you justify them.' }],
+      ups: [{ t: 'Timeline: everything is going OK, just a few small delays here and there.', fb: 'Still vague. Which task? Why? What did you change?' },
+        { t: '🏷 C7 · Week 6 · Planned: casing complete in week 5. Actual: 1 week late because the actuator was back-ordered. Action: swapped weeks 6 and 7 (coded the controller first), so the final test date is unchanged. Budget: $142 of $180.', ok: true },
+        { t: '[Gantt chart of the original plan only]', fb: 'A plan without the actual progress doesn\'t show management. Overlay what really happened.' }],
+      win: 'Planned vs actual · cause · action · effect on the final date · budget tracked.' },
+    { c: 8, title: 'Final evaluation', pic: '(no photo)', cap: 'Overall my project went well and I learned a lot.',
+      probs: [{ t: 'Not judged against the evaluation criteria with data', ok: true }, { t: 'The systems engineering process isn\'t evaluated', ok: true }, { t: 'No improvements explained', ok: true }, { t: 'An evaluation should only include strengths', ok: false, fb: 'Honest limitations, with explained improvements, are what a strong evaluation looks like.' }],
+      ups: [{ t: 'Everything met my criteria and I\'m really proud of the result.', fb: 'Claims every criterion was met, with no data. Was every one even tested?' },
+        { t: 'Improvements: a better actuator, a better sensor, a nicer casing.', fb: 'A list, not an explanation. Why would each change work? What evidence says it\'s needed?' },
+        { t: 'EC1 response: met (average 47 s, Test 7). EC3 (a week on one battery): NOT verified, as it wasn\'t tested. Process: testing each subsystem first caught the stall current early (Test 4). Improvement: replace the timed cutoff with a current-sensing driver, because Test 4 showed 1.45 A at stall. That protects the actuator if the limit switch fails.', ok: true }],
+      win: 'Each criterion judged with data · the untested one marked "not verified" · the process evaluated · the improvement explained with evidence.' }
+  ];
+  const STYLES = {
+    blueprint: { n: 'Blueprint', d: 'grid, white ink', bg: '#0b3a6e', ink: '#e0f2fe', line: '#7dd3fc', font: '"Courier New", Courier, monospace', grid: true },
+    notebook: { n: 'Lab notebook', d: 'ruled paper', bg: '#fffef5', ink: '#1f2937', line: '#93c5fd', font: 'Georgia, "Times New Roman", serif', ruled: true },
+    neon: { n: 'Neon arcade', d: 'dark and bright', bg: '#0b0218', ink: '#f5f5f5', line: '#ff4ecf', font: '"Courier New", Courier, monospace', glow: true },
+    sticky: { n: 'Sticky note', d: 'casual, bold', bg: '#fef08a', ink: '#1c1917', line: '#a16207', font: '"Trebuchet MS", Arial, sans-serif', tilt: true },
+    clean: { n: 'Clean minimal', d: 'white space', bg: '#ffffff', ink: '#111827', line: '#d1d5db', font: 'Arial, Helvetica, sans-serif' },
+    field: { n: 'Field journal', d: 'warm, rugged', bg: '#f3e9d2', ink: '#3f2d1a', line: '#8b6b3f', font: 'Georgia, "Times New Roman", serif', dashed: true }
+  };
+  const ACCENTS = ['#facc15', '#22d3ee', '#ff4ecf', '#4ade80', '#fb923c', '#a78bfa', '#ef4444', '#2563eb'];
+  const ICONS = ['⚡', '🔧', '🧪', '🤖', '🌱', '🚀', '🎯', '🛠️', '💡', '⚙️'];
+  const DEVICES = {
+    test: { def: 'TEST', fields: ['Test # · date · criterion', 'Purpose', 'Procedure + risk controls', 'Formula', 'Expected (SI units)', 'Actual (SI units)', 'Explanation', 'Modification / repair (why)'] },
+    decision: { def: 'DECISION', fields: ['I chose', 'Instead of', 'Because (evidence / criteria)', 'Date · criterion'] },
+    fault: { def: 'FAULT TICKET', fields: ['Problem', 'Suspected cause', 'What I tested', 'Result', 'Action'] }
+  };
+  const SAMPLES = {
+    test: ['Test 4 · 18/7 · C6', 'Actuator current stays under the 2 A driver limit', '12 V supply, inline ammeter, 3 cycles, hands clear of hinge', 'P = VI', '≤ 1.2 A · ≤ 14.4 W', '1.45 A at 12.1 V · 17.5 W (stalled)', 'Stalls at full extension', 'Limit switch at end of travel (Test 5)'],
+    decision: ['Pop rivets', 'M4 bolts', 'No nuts to vibrate loose; stronger frame (EC5)', '14/6 · C4'],
+    fault: ['Vent opens but won\'t close', 'Code: wrong threshold?', 'Printed temperature + state each loop', 'Stuck in OPEN: no hysteresis band', 'Added 2 °C band: closes at 26 °C']
+  };
+
+  // =====================================================================
+  //  STATE
+  // =====================================================================
+  function blank() { return { v: 1, started: false, done: false, player: { name: '', cls: '' }, system: '', format: 'slides', phase: 3, seen: {}, mk: { round: 0, done: false, firstTry: 0, comebacks: 0, finished: [] }, sig: { style: 'clean', accent: '#facc15', icon: '⚡', titles: {}, tag: '', made: false }, crit: {}, drops: [] }; }
+  let S = blank();
+  function save() { S.done = !!(S.mk.done && S.sig.made && S.drops.length); try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+  function load() { try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && s.v === 1 && s.started) { const b = blank(); return Object.assign(b, s, { mk: Object.assign(b.mk, s.mk), sig: Object.assign(b.sig, s.sig) }); } } catch (e) {} return null; }
+  const unit = () => (FORMATS[S.format] || FORMATS.slides).unit;
+  function cs(n) { return S.crit[n] || (S.crit[n] = { claim: '', where: '', have: {}, rwhere: {}, need: '', tag: false, date: false }); }
+  function toast(t) { const el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.add('hidden'), 2800); }
+  const ohm = (html, face, id) => `<div class="bot"><pre class="ohm" aria-hidden="true">  .-----.\n  | ${face || 'o o'} |\n  |  =  |\n  '--+--'\n   [###]\n  Ohmbot</pre><div class="bubble"${id ? ` id="${id}"` : ''}>${html}</div></div>`;
+  const ruleHtml = (list, title) => `<div class="kick" style="margin-top:8px">${title}</div><div class="rule">${list.map((r, i) => `<div class="c${i + 1}"><b>${r.t}</b>${r.d}</div>`).join('')}</div>`;
+  const short = c => c.t.split(' (')[0].replace(' and ', ' & ');
+  const badge = n => `<span class="cb-badge" style="background:${CCOL[n - 1]}">C${n}</span>`;
+  const critsFor = u => CRITERIA.filter(c => u === 'all' || c.unit === u);
+
+  // Readiness: requirements covered, and the four "find it fast" checks.
+  function reqCount(n) { const c = CRITERIA[n - 1], s = cs(n); return c.req.filter((_, i) => s.have[i]).length; }
+  function ffState(n) { const s = cs(n); return { tag: !!s.tag, index: !!s.where.trim(), claim: s.claim.trim().length >= 15, date: !!s.date }; }
+  function readiness(n) { const f = ffState(n), all = Object.values(f).every(Boolean), r = reqCount(n), t = CRITERIA[n - 1].req.length; return all && r === t ? 2 : (r || Object.values(f).some(Boolean)) ? 1 : 0; }
+  const READY = ['○ Not started', '◐ In progress', '● Assessor-ready'];
+
+  // =====================================================================
+  //  TABS
+  // =====================================================================
+  const TABS = [
+    { id: 'home', label: '🏠 Studio' }, { id: 'makeover', label: '① Makeover', done: () => S.mk.done },
+    { id: 'signature', label: '② My signature', done: () => S.sig.made }, { id: 'criteria', label: '③ Criteria guide' },
+    { id: 'moves', label: '④ Evidence moves' }, { id: 'index', label: '⑤ Index & self-audit', done: () => S.drops.length > 0 }
+  ];
+  let current = 'home';
+  function drawTabs() {
+    $('tabs').innerHTML = TABS.map(t => `<button class="tab${current === t.id ? ' on' : ''}" data-tab="${t.id}" ${current === t.id ? 'aria-current="page"' : ''}>${t.label}${t.done && t.done() ? ' <span class="tk">✓</span>' : ''}</button>`).join('');
+    $('who').textContent = S.player.name ? `${S.player.name} · Unit ${S.phase}` : '';
+  }
+  $('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) { sfx.click(); go(b.dataset.tab); } });
+  function go(id, opts) {
+    current = id; S.seen[id] = true; save(); drawTabs();
+    ({ home: renderHome, makeover: renderMakeover, signature: renderSignature, criteria: renderCriteria, moves: renderMoves, index: renderIndex })[id](opts || {});
+    if (!(opts && (opts.focus || opts.crit))) window.scrollTo(0, 0);
+  }
+
+  // ---------------- HOME ----------------
+  function renderHome() {
+    const ready = CRITERIA.filter(c => readiness(c.n) === 2).length;
+    $('main').innerHTML = `<div class="panel">${ohm(`Hi <b>${esc(S.player.name)}</b>. Your SAT is scored against <b>eight criteria</b>. Your assessor will look for each one in your record of evidence, so <b>make every criterion easy to find and impossible to doubt</b>. Your style is up to you; these two tests aren't:`)}
+      ${ruleHtml(RULE, 'EVERY ENTRY · THE EVIDENCE TEST')}${ruleHtml(FF, 'YOUR WHOLE RECORD · THE FIND-IT-FAST TEST')}
+      <div class="units"><div class="unitbox u3"><b>UNIT 3 submission</b><br>${[1, 2, 3].map(badge).join('')}<br>Investigating, designing and planning. Submitted at the end of Unit 3.</div>
+      <div class="unitbox u4"><b>UNIT 4 submission</b><br>${[4, 5, 6, 7, 8].map(badge).join('')} + ${[1, 2, 3].map(badge).join('')}<br>Production, testing, project management and evaluation, submitted <i>alongside</i> C1–C3. Keep C1–C3 findable!</div></div></div>
+      <div class="tiles">
+        <button class="tile" data-go="makeover"><span class="n">① 8 ROUNDS · ONE PER CRITERION</span><b>Evidence Makeover</b>Riley's SAT evidence is weak. Spot the problems and pick the assessor-ready upgrade.<div class="st">${S.mk.done ? `✓ Done · ${S.mk.firstTry}/8 first try` : S.mk.round ? `▶ Round ${S.mk.round + 1} of 8` : ''}</div></button>
+        <button class="tile" data-go="signature"><span class="n">② YOUR STYLE</span><b>My signature</b>Your criterion badges, claim banner, test card, decision stamp and fault ticket.<div class="st">${S.sig.made ? '✓ Signature made' : ''}</div></button>
+        <button class="tile" data-go="criteria"><span class="n">③ REFERENCE</span><b>Criteria guide</b>What each criterion needs (from the VCAA list), what makes it strong, and a claim line to adapt.</button>
+        <button class="tile" data-go="moves"><span class="n">④ REFERENCE</span><b>Evidence moves</b>${Object.keys(MOVES).length} ways to show evidence, including the signposting moves.</button>
+        <button class="tile" data-go="index"><span class="n">⑤ EVERY WEEK</span><b>Index & self-audit</b>Build your criteria index cover page, check what's missing, and make a weekly drop for Teams.<div class="st">${ready}/8 assessor-ready${S.drops.length ? ` · ${S.drops.length} drop${S.drops.length > 1 ? 's' : ''}` : ''}</div></button>
+      </div>`;
+    $('main').querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { sfx.click(); go(b.dataset.go); }));
+  }
+
+  // ---------------- MAKEOVER ----------------
+  let mkStage = 'probs', mkPicked = new Set(), mkWrong = 0;
+  function renderMakeover(opts) {
+    if (S.mk.done && !opts.replay && S.mk.round >= ROUNDS.length) return renderMakeoverEnd();
+    if (opts.replay) { S.mk.round = 0; S.mk.finished = []; save(); }
+    const r = ROUNDS[S.mk.round], c = CRITERIA[r.c - 1];
+    mkStage = 'probs'; mkPicked = new Set(); mkWrong = 0;
+    const slide = `<div class="slide" aria-label="Riley's entry"><div class="sh">UNIT ${c.unit} · CRITERION ${c.n}: ${esc(c.t.toUpperCase())}</div><h4>${esc(r.title)}</h4>
+      ${r.table ? `<table>${r.table.map((row, i) => `<tr>${row.map(x => i ? `<td>${esc(x)}</td>` : `<th>${esc(x)}</th>`).join('')}</tr>`).join('')}</table>` : `<div class="pic">${esc(r.pic)}</div>${r.cap ? `<div class="cap">${esc(r.cap)}</div>` : ''}`}</div>`;
+    $('main').innerHTML = `<div class="panel"><div class="kick">EVIDENCE MAKEOVER · ${badge(c.n)} ROUND ${S.mk.round + 1} OF ${ROUNDS.length}</div>
+      <div class="dots">${ROUNDS.map((_, i) => `<i class="${i < S.mk.round ? 'd' : i === S.mk.round ? 'c' : ''}"></i>`).join('')}</div>
+      <div class="mk"><div><p class="muted" style="margin-top:0">Riley (Year 12) is building an <b style="color:#fff">automated greenhouse vent</b>. Here's Riley's evidence for ${badge(c.n)}:</p>${slide}
+        <p class="muted" style="font-size:12px">${esc(c.about)}</p></div>
+        <div>${ohm('', 'o o', 'mkSay')}<div id="mkArea"></div><div id="mkFeedback" aria-live="polite"></div><div class="row" style="margin-top:8px"><button class="act hidden" id="mkNext">NEXT ▶</button></div></div></div></div>`;
+    drawMkStage();
+    $('mkNext').addEventListener('click', () => {
+      sfx.click();
+      if (mkStage === 'probs') { mkStage = 'ups'; mkWrong = 0; drawMkStage(); return; }
+      S.mk.round++; save();
+      if (S.mk.round >= ROUNDS.length) { S.mk.done = true; save(); drawTabs(); sfx.win(); renderMakeoverEnd(); } else renderMakeover({});
+      window.scrollTo(0, 0);
+    });
+  }
+  function drawMkStage() {
+    const r = ROUNDS[S.mk.round];
+    $('mkNext').classList.add('hidden'); $('mkFeedback').innerHTML = '';
+    if (mkStage === 'probs') {
+      $('mkSay').innerHTML = `<b>Step 1: you're the assessor.</b> Select <b>every</b> real problem, then check. One option isn't actually a problem.`;
+      $('mkArea').innerHTML = r.probs.map((p, i) => `<button class="opt" data-p="${i}" aria-pressed="false">☐ ${esc(p.t)}</button>`).join('') + `<button class="act" id="mkCheck" style="margin-top:8px;width:100%">CHECK</button>`;
+      $('mkArea').querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => {
+        const i = Number(b.dataset.p); if (mkPicked.has(i)) mkPicked.delete(i); else mkPicked.add(i);
+        b.classList.toggle('on', mkPicked.has(i)); b.setAttribute('aria-pressed', String(mkPicked.has(i))); b.textContent = (mkPicked.has(i) ? '☑ ' : '☐ ') + r.probs[i].t; sfx.click();
+      }));
+      $('mkCheck').addEventListener('click', () => {
+        const right = r.probs.map((p, i) => p.ok ? i : -1).filter(i => i >= 0);
+        const wrongPick = [...mkPicked].find(i => !r.probs[i].ok), missed = right.filter(i => !mkPicked.has(i));
+        if (wrongPick !== undefined) { mkWrong++; sfx.retry(); $('mkFeedback').innerHTML = `<span class="no">✗ Not quite.</span> ${esc(r.probs[wrongPick].fb)}`; return; }
+        if (missed.length) { mkWrong++; sfx.retry(); $('mkFeedback').innerHTML = `<span class="no">✗ Good so far, but you've missed ${missed.length} problem${missed.length > 1 ? 's' : ''}.</span> Check it against the Evidence Test and the criterion's requirements.`; return; }
+        finishStage('All the real problems found.');
+        $('mkArea').querySelectorAll('[data-p]').forEach(b => { b.disabled = true; const i = Number(b.dataset.p); b.classList.add(r.probs[i].ok ? 'right' : 'struck'); });
+        $('mkCheck').remove();
+      });
+    } else {
+      $('mkSay').innerHTML = `<b>Step 2: pick the assessor-ready upgrade.</b>`;
+      $('mkArea').innerHTML = r.ups.map((u, i) => `<button class="opt" data-u="${i}">${esc(u.t)}</button>`).join('');
+      $('mkArea').querySelectorAll('[data-u]').forEach(b => b.addEventListener('click', () => {
+        const u = r.ups[Number(b.dataset.u)];
+        if (!u.ok) { mkWrong++; sfx.retry(); b.disabled = true; b.classList.add('struck'); $('mkFeedback').innerHTML = `<span class="no">✗</span> ${esc(u.fb)}`; return; }
+        b.classList.add('right'); $('mkArea').querySelectorAll('[data-u]').forEach(x => x.disabled = true);
+        finishStage(esc(r.win), true);
+      }));
+    }
+  }
+  function finishStage(msg, last) {
+    const cb = mkWrong > 0;
+    if (cb) { S.mk.comebacks++; sfx.cb(); } else sfx.good();
+    if (last) { if (!S.mk.finished.includes(S.mk.round) && !cb && !S.mk.roundWrong) S.mk.firstTry++; S.mk.finished.push(S.mk.round); S.mk.roundWrong = false; }
+    else if (cb) S.mk.roundWrong = true;
+    save();
+    $('mkFeedback').innerHTML = `${cb ? '<span class="cbk">🔁 COMEBACK!</span> ' : '<span class="ok">✓</span> '}${msg}`;
+    const nb = $('mkNext'); nb.classList.remove('hidden'); nb.textContent = !last ? 'STEP 2 ▶' : S.mk.round < ROUNDS.length - 1 ? 'NEXT ROUND ▶' : 'FINISH ▶'; nb.focus({ preventScroll: true });
+  }
+  function renderMakeoverEnd() {
+    $('main').innerHTML = `<div class="panel">${ohm(`<b>Makeover complete:</b> all eight criteria${S.mk.firstTry ? `, ${S.mk.firstTry} on the first try` : ''}${S.mk.comebacks ? `, with ${S.mk.comebacks} comeback${S.mk.comebacks > 1 ? 's' : ''}` : ''}.<br><br>Every strong answer did two things: it <b>passed the Evidence Test</b>, and it made the criterion <b>obvious</b> (a badge, a claim, the VCAA requirement met in plain sight). Do both, in your own style.`, '^ ^')}${ruleHtml(FF, 'THE FIND-IT-FAST TEST')}
+      <div class="row"><button class="act" id="toSig">NEXT: DESIGN MY SIGNATURE ▶</button><button class="act alt" id="replay">Play again</button></div></div>`;
+    $('toSig').addEventListener('click', () => go('signature'));
+    $('replay').addEventListener('click', () => { S.mk.firstTry = 0; S.mk.comebacks = 0; go('makeover', { replay: true }); });
+  }
+
+  // ---------------- SIGNATURE ----------------
+  function lum(h) { const n = parseInt(h.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+  const onCol = h => lum(h) > 0.35 ? '#000' : '#fff';
+  function deco(st, W, H, top) {
+    let s = '';
+    if (st.grid) { for (let x = 0; x <= W; x += 20) s += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#fff" stroke-opacity="0.07"/>`; for (let y = 0; y <= H; y += 20) s += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="#fff" stroke-opacity="0.07"/>`; }
+    if (st.ruled) for (let y = top + 10; y < H; y += 18) s += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="${st.line}" stroke-opacity="0.35"/>`;
+    return s;
+  }
+  function trunc(t, n) { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
+  function deviceSVG(kind, opt) {
+    opt = opt || {};
+    const st = STYLES[S.sig.style], acc = S.sig.accent, d = DEVICES[kind], title = (S.sig.titles[kind] || d.def).toUpperCase(), f = st.font;
+    const W = 640, rowH = 50, top = 70, H = top + d.fields.length * rowH + (S.sig.tag ? 34 : 14);
+    const labelCol = lum(st.bg) > 0.5 ? st.ink : acc;
+    const rows = d.fields.map((fl, i) => { const y = top + i * rowH; return `<rect x="22" y="${y + 6}" width="5" height="15" fill="${acc}"/><text x="33" y="${y + 18}" font-family='${f}' font-size="14" font-weight="bold" fill="${labelCol}">${esc(fl.toUpperCase())}</text>
+      <line x1="22" y1="${y + rowH - 6}" x2="${W - 22}" y2="${y + rowH - 6}" stroke="${st.line}" stroke-width="1.5" ${st.dashed ? 'stroke-dasharray="4 4"' : ''}/>${opt.sample ? `<text x="22" y="${y + 37}" font-family='${f}' font-size="14" fill="${st.ink}" fill-opacity="0.75">${esc(trunc(opt.sample[i], 72))}</text>` : ''}`; }).join('');
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(title)} template">
+      <rect x="3" y="3" width="${W - 6}" height="${H - 6}" rx="${st.tilt ? 4 : 12}" fill="${st.bg}" stroke="${acc}" stroke-width="4" ${st.dashed ? 'stroke-dasharray="8 5"' : ''}/>${deco(st, W, H, top)}
+      <rect x="3" y="3" width="${W - 6}" height="52" rx="${st.tilt ? 4 : 12}" fill="${acc}"/><rect x="3" y="40" width="${W - 6}" height="15" fill="${acc}"/>
+      <text x="22" y="38" font-family='${f}' font-size="24" font-weight="bold" fill="${onCol(acc)}">${esc(S.sig.icon)} ${esc(title)}</text>
+      <text x="${W - 22}" y="36" text-anchor="end" font-family='${f}' font-size="14" fill="${onCol(acc)}" fill-opacity="0.85">${esc(S.player.name.toUpperCase())}</text>
+      ${rows}${S.sig.tag ? `<text x="${W - 22}" y="${H - 14}" text-anchor="end" font-family='${f}' font-size="13" font-style="italic" fill="${st.ink}" fill-opacity="0.7">${esc(S.sig.tag)}</text>` : ''}</svg>`;
+  }
+  // Criterion badges: one colour per criterion so they're instantly distinguishable, drawn in the student's style.
+  function badgeSVG(n) {
+    const st = STYLES[S.sig.style], c = CRITERIA[n - 1], col = CCOL[n - 1], f = st.font;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 80" width="300" height="80" role="img" aria-label="Criterion ${n} badge">
+      <rect x="2" y="2" width="296" height="76" rx="${st.tilt ? 3 : 14}" fill="${st.bg}" stroke="${col}" stroke-width="4" ${st.dashed ? 'stroke-dasharray="7 4"' : ''}/>
+      <rect x="2" y="2" width="84" height="76" rx="${st.tilt ? 3 : 14}" fill="${col}"/><rect x="60" y="2" width="26" height="76" fill="${col}"/>
+      <text x="44" y="53" text-anchor="middle" font-family='${f}' font-size="34" font-weight="bold" fill="${onCol(col)}">C${n}</text>
+      <text x="98" y="34" font-family='${f}' font-size="12.5" font-weight="bold" fill="${st.ink}">${esc(trunc(short(c), 25))}</text>
+      <text x="98" y="58" font-family='${f}' font-size="12" fill="${st.ink}" fill-opacity="0.75">Unit ${c.unit} · ${esc(S.sig.icon)} ${esc(trunc(S.player.name, 18))}</text></svg>`;
+  }
+  function claimSVG(n, text) {
+    const st = STYLES[S.sig.style], col = CCOL[n - 1], f = st.font, lines = wrapText(text || `This section shows C${n}: …`, 72).slice(0, 2);
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 ${lines.length > 1 ? 104 : 80}" width="900" height="${lines.length > 1 ? 104 : 80}" role="img" aria-label="Claim banner C${n}">
+      <rect x="2" y="2" width="896" height="${lines.length > 1 ? 100 : 76}" rx="${st.tilt ? 3 : 10}" fill="${st.bg}" stroke="${col}" stroke-width="3"/>
+      <rect x="2" y="2" width="14" height="${lines.length > 1 ? 100 : 76}" fill="${col}"/>
+      ${lines.map((l, i) => `<text x="34" y="${36 + i * 28}" font-family='${f}' font-size="20" font-weight="${i ? 'normal' : 'bold'}" fill="${st.ink}">${esc(l)}</text>`).join('')}</svg>`;
+  }
+  function renderSignature() {
+    const s = S.sig;
+    $('main').innerHTML = `<div class="panel">${ohm(`Your <b>signature</b> makes your record recognisable and easy to navigate. You get <b>criterion badges</b> (C1–C8, one colour each, in your style) for the corner of every section, a <b>claim banner</b> to open each criterion, and three evidence devices.<br><br>Download as <b>SVG</b> (PowerPoint: Insert → Pictures, then right-click → <b>Convert to Shape</b> to edit), or as <b>PNG</b> for Canva, Notion or print.`)}</div>
+      <div class="sigwrap"><div class="panel">
+        <h3 style="margin-top:0">1 · STYLE</h3><div class="styles">${Object.entries(STYLES).map(([k, v]) => `<button class="stl${s.style === k ? ' on' : ''}" data-style="${k}" aria-pressed="${s.style === k}"><b>${v.n}</b><small>${v.d}</small></button>`).join('')}</div>
+        <h3>2 · ACCENT COLOUR</h3><div class="row">${ACCENTS.map(c => `<button class="sw${s.accent === c ? ' on' : ''}" data-acc="${c}" style="background:${c}" aria-label="Accent colour ${c}" aria-pressed="${s.accent === c}"></button>`).join('')}</div>
+        <p class="muted" style="font-size:12px">Badges keep one fixed colour per criterion, so C6 always looks like C6.</p>
+        <h3>3 · ICON</h3><div class="row">${ICONS.map(i => `<button class="chip" data-icon="${i}" aria-pressed="${s.icon === i}" style="${s.icon === i ? 'border-color:var(--gold);background:#2a2306' : ''}">${i}</button>`).join('')}</div>
+        <h3>4 · YOUR WORDS</h3>
+        ${Object.entries(DEVICES).map(([k, d]) => `<div class="field"><label for="t_${k}">Name for your ${d.def.toLowerCase()}</label><input type="text" id="t_${k}" data-title="${k}" maxlength="22" value="${esc(s.titles[k] || '')}" placeholder="${d.def}" /></div>`).join('')}
+        <div class="field"><label for="sigTag">Your tagline (optional)</label><input type="text" id="sigTag" maxlength="40" value="${esc(s.tag)}" placeholder="e.g. test it, prove it" /></div>
+        <label style="display:flex;gap:6px;align-items:center;margin-top:8px;cursor:pointer"><input type="checkbox" id="sample" checked /> show examples in the preview</label>
+      </div><div class="devs" id="devs"></div></div>`;
+    $('main').querySelectorAll('[data-style]').forEach(b => b.addEventListener('click', () => { s.style = b.dataset.style; save(); sfx.click(); renderSignature(); }));
+    $('main').querySelectorAll('[data-acc]').forEach(b => b.addEventListener('click', () => { s.accent = b.dataset.acc; save(); sfx.click(); renderSignature(); }));
+    $('main').querySelectorAll('[data-icon]').forEach(b => b.addEventListener('click', () => { s.icon = b.dataset.icon; save(); sfx.click(); renderSignature(); }));
+    $('main').querySelectorAll('[data-title]').forEach(i => i.addEventListener('input', () => { s.titles[i.dataset.title] = i.value.trim(); save(); drawDevices(); }));
+    $('sigTag').addEventListener('input', e => { s.tag = e.target.value.trim(); save(); drawDevices(); });
+    $('sample').addEventListener('change', drawDevices);
+    drawDevices();
+  }
+  function drawDevices() {
+    const sample = $('sample') && $('sample').checked;
+    $('devs').innerHTML = `<div class="dev"><div class="kick" style="margin-bottom:6px">CRITERION BADGES</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px">${CRITERIA.map(c => badgeSVG(c.n)).join('')}</div>
+        <div class="row"><button class="act small" data-dl="badges" data-type="svg">⬇ All 8 badges (SVG)</button><button class="act small alt" data-dl="badges" data-type="png">⬇ All 8 badges (PNG)</button></div></div>
+      <div class="dev"><div class="kick" style="margin-bottom:6px">CLAIM BANNER</div>${claimSVG(6, sample ? CRITERIA[5].claim : '')}<p class="muted" style="font-size:12px;margin:6px 0 0">Download your own filled-in banners from ⑤ once you've written your claim lines.</p></div>` +
+      Object.keys(DEVICES).map(k => `<div class="dev"><div class="kick" style="margin-bottom:6px">${MOVES[{ decision: 'decision', fault: 'faultticket', test: 'testcard' }[k]].n.toUpperCase()}</div>${deviceSVG(k, sample ? { sample: SAMPLES[k] } : null)}
+        <div class="row"><button class="act small" data-dl="${k}" data-type="svg">⬇ SVG (editable in PowerPoint)</button><button class="act small alt" data-dl="${k}" data-type="png">⬇ PNG</button></div></div>`).join('') +
+      `<p class="muted">Downloads are blank templates in your style. The examples are preview only.</p>`;
+    $('devs').querySelectorAll('[data-dl]').forEach(b => b.addEventListener('click', () => downloadDevice(b.dataset.dl, b.dataset.type)));
+  }
+  function fileSafe(t) { return String(t || 'student').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase(); }
+  function downloadBlob(blob, name) { const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 10000); }
+  function svgToPng(svg, name, done) {
+    const m = /viewBox="0 0 (\d+) (\d+)"/.exec(svg), w = +m[1], h = +m[2];
+    const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    img.onload = () => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); c.toBlob(b => { downloadBlob(b, name); done && done(); }, 'image/png'); };
+    img.onerror = () => toast('Couldn\'t make the image in this browser. Try SVG instead.');
+    img.src = url;
+  }
+  function saveFile(svg, base, type, msg) { if (type === 'svg') { downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), base + '.svg'); toast(msg || '✓ Downloaded. In PowerPoint: Insert → Pictures, then Convert to Shape.'); } else svgToPng(svg, base + '.png', () => toast('✓ PNG downloaded')); }
+  function downloadDevice(k, type) {
+    S.sig.made = true; save(); drawTabs();
+    const who = fileSafe(S.player.name);
+    if (k === 'badges') { CRITERIA.forEach((c, i) => setTimeout(() => saveFile(badgeSVG(c.n), `${who}-badge-c${c.n}`, type, '✓ 8 badges downloaded'), i * 300)); return; }
+    saveFile(deviceSVG(k), `${who}-${fileSafe(S.sig.titles[k] || DEVICES[k].def)}`, type);
+  }
+
+  // ---------------- CRITERIA GUIDE ----------------
+  let critFilter = null;
+  function renderCriteria(opts) {
+    if (critFilter === null) critFilter = S.phase;
+    const list = critsFor(critFilter);
+    $('main').innerHTML = `<div class="panel">${ohm(`Each criterion below lists <b>what your record must include</b> (the VCAA requirements, organised by criterion), <b>what makes it strong</b>, moves that suit it, and a <b>claim line</b> to adapt for the top of that section.<br><br>For the difference between High and Very High wording, play the <a href="evidence-lab.html">9–10 Evidence Lab</a>.`)}
+      <div class="filter" role="group" aria-label="Show criteria">${[['all', 'All 8'], [3, 'Unit 3: C1–C3'], [4, 'Unit 4: C4–C8']].map(([k, l]) => `<button data-f="${k}" class="${String(critFilter) === String(k) ? 'on' : ''}" aria-pressed="${String(critFilter) === String(k)}">${l}</button>`).join('')}</div></div>
+      ${list.map(c => `<div class="crit" id="crit-${c.n}" style="border-left-color:${CCOL[c.n - 1]}"><h3>${badge(c.n)}${esc(c.t)} <span class="muted" style="font-size:12px;font-weight:normal">· Unit ${c.unit}${c.unit === 3 ? ' (resubmitted in Unit 4)' : ''}</span></h3><p class="muted" style="margin:2px 0">${esc(c.about)}</p>
+        <div class="lbl m">YOUR RECORD MUST INCLUDE</div><ul>${c.req.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+        <div class="lbl s">STRONG WHEN</div><ul>${c.strong.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+        <div class="lbl t">MOVES THAT SUIT IT</div><div>${c.moves.map(m => `<button class="chip" data-move="${m}">${MOVES[m].ic} ${esc(MOVES[m].n)}</button>`).join('')}</div>
+        <div class="lbl t">CLAIM LINE TO ADAPT</div><div class="claimbox">${esc(c.claim)}</div></div>`).join('')}`;
+    $('main').querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => { critFilter = b.dataset.f === 'all' ? 'all' : Number(b.dataset.f); sfx.click(); renderCriteria({}); }));
+    $('main').querySelectorAll('[data-move]').forEach(c => c.addEventListener('click', () => { sfx.click(); go('moves', { focus: c.dataset.move }); }));
+    if (opts.crit) { const el = $('crit-' + opts.crit); if (el) setTimeout(() => el.scrollIntoView({ block: 'start' }), 30); }
+  }
+
+  // ---------------- MOVES ----------------
+  function renderMoves(opts) {
+    $('main').innerHTML = `<div class="panel">${ohm(`<b>Evidence moves</b> are how you build your style. The first three are <b>signposting moves</b>: they make each criterion obvious to the assessor. The ones marked <b style="color:var(--pink)">SIGNATURE</b> are designed in ②.`)}</div>
+      <div class="moves">${Object.entries(MOVES).map(([k, m]) => { const cs = CRITERIA.filter(c => c.moves.includes(k) || (m.crit || []).includes(c.n)); return `<div class="move" id="move-${k}" tabindex="-1"><h4><span class="ic">${m.ic}</span>${esc(m.n)}</h4>${m.sig ? '<div class="sig">★ SIGNATURE MOVE</div>' : ''}<p>${esc(m.what)}</p><p><b style="color:var(--green)">Strong when:</b> ${esc(m.strong)}</p>
+        <div class="muted" style="font-size:12px">Good for: ${cs.length === 8 ? 'every criterion' : cs.map(c => `<button class="chip" data-crit="${c.n}">C${c.n}</button>`).join('') || 'anything'}</div></div>`; }).join('')}</div>`;
+    $('main').querySelectorAll('[data-crit]').forEach(c => c.addEventListener('click', () => { critFilter = 'all'; go('criteria', { crit: c.dataset.crit }); }));
+    if (opts.focus) { const el = $('move-' + opts.focus); if (el) setTimeout(() => { el.scrollIntoView({ block: 'center' }); el.classList.add('flash'); el.focus({ preventScroll: true }); }, 30); }
+  }
+
+  // ---------------- INDEX & SELF-AUDIT ----------------
+  let idxFilter = null;
+  function renderIndex() {
+    if (idxFilter === null) idxFilter = S.phase;
+    const list = critsFor(idxFilter);
+    $('main').innerHTML = `<div class="panel">${ohm(`This is your <b>criteria index</b> and <b>self-audit</b> in one. For each criterion: write your <b>claim line</b>, say <b>where</b> it is, tick each VCAA requirement you've covered (and where), then run the <b>find-it-fast</b> checks. When all four are lit and every requirement is ticked, it's <b>assessor-ready</b>.<br><br>Before each submission, download your <b>index cover page</b> and put it at the front of your record.`)}
+      <div class="filter" role="group" aria-label="Show criteria">${[[3, 'Unit 3: C1–C3'], [4, 'Unit 4: C4–C8'], ['all', 'All 8']].map(([k, l]) => `<button data-f="${k}" class="${String(idxFilter) === String(k) ? 'on' : ''}" aria-pressed="${String(idxFilter) === String(k)}">${l}</button>`).join('')}</div>
+      <div class="bars" id="bars"></div></div>
+      ${list.map(c => critBlock(c)).join('')}
+      <div class="panel"><h2>🧭 Criteria index cover page</h2><p>An assessor-facing front page in your style: each criterion, your claim line, and exactly where to find it. ${S.phase === 3 ? 'For Unit 3, export C1–C3.' : 'For Unit 4, export all eight.'}</p>
+        <div class="row"><button class="act" data-cover="svg">⬇ Index cover (SVG)</button><button class="act alt" data-cover="png">⬇ Index cover (PNG)</button><button class="act alt" id="copyIdx">📋 Copy index as text</button><button class="act alt" id="copyMd">📋 Copy for Notion / website (Markdown)</button></div>
+        <label style="display:flex;gap:6px;align-items:center;margin-top:8px;cursor:pointer"><input type="checkbox" id="coverAll" ${S.phase === 4 ? 'checked' : ''} /> include all 8 criteria (Unit 4 submission)</label></div>
+      <div class="panel"><h2>📦 Weekly drop</h2><p>A one-page summary for Teams: readiness per criterion, this week, next week, still needed.</p>
+        <div class="field"><label for="dWeek">This week I captured…</label><textarea id="dWeek" rows="2" maxlength="220" placeholder="e.g. Test 4 with formula and SI units, and a decision stamp for the rivets"></textarea></div>
+        <div class="field"><label for="dNext">Next week I'll capture…</label><textarea id="dNext" rows="2" maxlength="220" placeholder="e.g. planned vs actual timeline for C7"></textarea></div>
+        <div class="field"><label for="dStuck">I'm stuck on… (optional)</label><input type="text" id="dStuck" maxlength="120" style="width:100%" /></div>
+        <div class="row"><button class="act" id="dropBtn">⬇ MAKE MY WEEKLY DROP (PNG)</button></div><div id="dropHist" class="muted" style="font-size:12px;margin-top:6px"></div></div>`;
+    drawBars(); $('dropHist').textContent = S.drops.length ? 'Drops made: ' + S.drops.map(d => d.date).join(' · ') : 'No drops yet.';
+    $('main').querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => { idxFilter = b.dataset.f === 'all' ? 'all' : Number(b.dataset.f); sfx.click(); renderIndex(); }));
+    $('copyIdx').addEventListener('click', () => copyText(indexText(), '✓ Index copied. Paste it at the front of your record.'));
+    $('copyMd').addEventListener('click', () => copyText(indexMarkdown(), '✓ Markdown copied. Paste it into Notion or your site.'));
+    $('dropBtn').addEventListener('click', makeDrop);
+  }
+  // Delegated once for the index page (the page re-renders, so handlers must not be re-attached).
+    $('main').addEventListener('input', e => {
+    if (current !== 'index') return;
+      const blk = e.target.closest('[data-c]'); if (!blk) return; const n = +blk.dataset.c, s = cs(n);
+      if (e.target.matches('[data-claim]')) s.claim = e.target.value;
+      if (e.target.matches('[data-where]')) s.where = e.target.value;
+      if (e.target.matches('[data-need]')) s.need = e.target.value;
+      if (e.target.matches('[data-rwhere]')) s.rwhere[e.target.dataset.rwhere] = e.target.value;
+      save(); refreshBlock(n);
+    });
+    $('main').addEventListener('click', e => {
+    if (current !== 'index') return;
+      const blk = e.target.closest('[data-c]');
+      const t = e.target.closest('[data-req]'), f = e.target.closest('[data-ffk]'), dl = e.target.closest('[data-claimdl]');
+      if (blk && t) { const s = cs(+blk.dataset.c), i = t.dataset.req; s.have[i] = !s.have[i]; t.classList.toggle('on', !!s.have[i]); t.setAttribute('aria-pressed', String(!!s.have[i])); t.textContent = s.have[i] ? '✓ Have' : '○ Need'; sfx.click(); save(); refreshBlock(+blk.dataset.c); }
+      if (blk && f) { const s = cs(+blk.dataset.c); s[f.dataset.ffk] = !s[f.dataset.ffk]; sfx.click(); save(); refreshBlock(+blk.dataset.c); }
+      if (blk && dl) { const n = +blk.dataset.c; saveFile(claimSVG(n, cs(n).claim.trim() || CRITERIA[n - 1].claim), `${fileSafe(S.player.name)}-claim-c${n}`, dl.dataset.claimdl); }
+      const cv = e.target.closest('[data-cover]'); if (cv) exportCover(cv.dataset.cover);
+    });
+  function critBlock(c) {
+    const s = cs(c.n);
+    return `<div class="cblock" data-c="${c.n}" style="border-left-color:${CCOL[c.n - 1]}"><h3>${badge(c.n)}${esc(c.t)} <span class="ready r${readiness(c.n)}" data-ready>${READY[readiness(c.n)]}</span></h3>
+      <div class="field"><label for="claim${c.n}">Claim line (top of your C${c.n} section)</label><input type="text" id="claim${c.n}" data-claim maxlength="160" value="${esc(s.claim)}" placeholder="${esc(c.claim)}"></div>
+      <div class="row"><div class="field" style="flex:1;min-width:200px"><label for="where${c.n}">Where is C${c.n}? (for the index)</label><input type="text" id="where${c.n}" data-where maxlength="60" value="${esc(s.where)}" placeholder="e.g. ${unit()}s 4–11"></div>
+        <button class="act small alt" data-claimdl="svg" title="Download your claim banner">⬇ claim banner</button></div>
+      <table class="reqs"><tbody>${c.req.map((r, i) => `<tr><td style="width:84px"><button class="tick${s.have[i] ? ' on' : ''}" data-req="${i}" aria-pressed="${!!s.have[i]}" aria-label="${esc(r)}">${s.have[i] ? '✓ Have' : '○ Need'}</button></td><td>${esc(r)}</td><td style="width:140px"><input type="text" data-rwhere="${i}" maxlength="30" value="${esc(s.rwhere[i] || '')}" placeholder="where?" aria-label="Where: ${esc(r)}"></td></tr>`).join('')}</tbody></table>
+      <div class="ffchecks" data-ff>${ffHtml(c.n)}</div>
+      <div class="field"><label for="need${c.n}">Still need for C${c.n}</label><input type="text" id="need${c.n}" data-need maxlength="100" value="${esc(s.need)}" style="width:100%"></div></div>`;
+  }
+  function ffHtml(n) {
+    const f = ffState(n);
+    return `<span class="muted" style="font-size:12px;align-self:center">Find-it-fast:</span>
+      <button class="ff${f.tag ? ' on' : ''}" data-ffk="tag" aria-pressed="${f.tag}" title="Tick when every C${n} section wears its badge">🏷 TAG</button>
+      <span class="ff${f.index ? ' on' : ''}" title="Lights up when you fill in 'Where is C${n}?'">🧭 INDEX</span>
+      <span class="ff${f.claim ? ' on' : ''}" title="Lights up when your claim line is written">📣 CLAIM</span>
+      <button class="ff${f.date ? ' on' : ''}" data-ffk="date" aria-pressed="${f.date}" title="Tick when all C${n} evidence is dated">📅 DATE</button>`;
+  }
+  function refreshBlock(n) { const b = $('main').querySelector(`[data-c="${n}"]`); if (!b) return; const r = readiness(n), el = b.querySelector('[data-ready]'); el.className = 'ready r' + r; el.textContent = READY[r]; b.querySelector('[data-ff]').innerHTML = ffHtml(n); drawBars(); }
+  function drawBars() { const el = $('bars'); if (!el) return; el.innerHTML = CRITERIA.map(c => { const r = reqCount(c.n), t = c.req.length, ff = Object.values(ffState(c.n)).filter(Boolean).length; return `<div class="bar">${badge(c.n)} ${r}/${t} · ${ff}/4 ${readiness(c.n) === 2 ? '✓' : ''}<div class="tr"><i style="width:${Math.round((r / t * 0.7 + ff / 4 * 0.3) * 100)}%"></i></div></div>`; }).join(''); }
+  function wrapText(t, max) { const w = String(t || '').replace(/\s+/g, ' ').trim().split(' '), out = []; let l = ''; w.forEach(x => { if ((l + ' ' + x).trim().length > max) { if (l) out.push(l); l = x; } else l = (l + ' ' + x).trim(); }); if (l) out.push(l); return out; }
+  function coverList() { return $('coverAll') && $('coverAll').checked ? CRITERIA : CRITERIA.filter(c => c.unit === 3); }
+  function indexText() { const list = coverList(); return [`CRITERIA EVIDENCE INDEX · ${S.player.name} · ${S.system || 'my system'}`].concat(list.map(c => `C${c.n} ${c.t}: ${cs(c.n).where || '(not yet)'}${cs(c.n).claim ? '\n   ' + cs(c.n).claim : ''}`)).join('\n'); }
+  function indexMarkdown() { const list = coverList(); return `# Criteria evidence index\n\n**${S.player.name}** · ${S.system || ''}\n\n| Criterion | What this shows | Where |\n|---|---|---|\n` + list.map(c => `| **C${c.n}** ${c.t} | ${(cs(c.n).claim || '').replace(/\|/g, '/')} | ${cs(c.n).where || '(not yet)'} |`).join('\n'); }
+  function copyText(text, msg) {
+    const fallback = () => { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e) {} t.remove(); toast(msg); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast(msg), fallback); else fallback();
+  }
+  function exportCover(type) {
+    const st = STYLES[S.sig.style], f = st.font, acc = S.sig.accent, list = coverList(), W = 794;
+    let y = 205, rows = '';
+    list.forEach((c, i) => {
+      if (i > 0 && c.unit === 4 && list[i - 1].unit === 3) y += 20;
+      if (i === 0 || (c.unit === 4 && list[i - 1].unit === 3)) { rows += `<text x="40" y="${y}" font-family='${f}' font-size="14" font-weight="bold" fill="${st.ink}" fill-opacity="0.7">UNIT ${c.unit}${c.unit === 3 && list.length > 3 ? ' (resubmitted with Unit 4)' : ''}</text>`; y += 14; }
+      const s = cs(c.n), claim = wrapText(s.claim || '', 62).slice(0, 2), col = CCOL[c.n - 1], h = 70 + Math.max(0, claim.length - 1) * 18;
+      rows += `<rect x="40" y="${y}" width="${W - 80}" height="${h - 10}" rx="8" fill="${st.bg}" stroke="${col}" stroke-width="2.5"/>
+        <rect x="40" y="${y}" width="70" height="${h - 10}" rx="8" fill="${col}"/><rect x="96" y="${y}" width="14" height="${h - 10}" fill="${col}"/>
+        <text x="75" y="${y + (h - 10) / 2 + 9}" text-anchor="middle" font-family='${f}' font-size="26" font-weight="bold" fill="${onCol(col)}">C${c.n}</text>
+        <text x="124" y="${y + 24}" font-family='${f}' font-size="16" font-weight="bold" fill="${st.ink}">${esc(trunc(short(c), 38))}</text>
+        <text x="${W - 56}" y="${y + 24}" text-anchor="end" font-family='${f}' font-size="16" font-weight="bold" fill="${st.ink}">${esc(s.where ? trunc(s.where, 26) : '(not yet)')}</text>
+        ${claim.map((l, k) => `<text x="124" y="${y + 46 + k * 18}" font-family='${f}' font-size="13" fill="${st.ink}" fill-opacity="0.8">${esc(l)}</text>`).join('')}`;
+      y += h;
+    });
+    const H = Math.max(1123, y + 60);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="${st.bg}"/>${deco(st, W, H, 140)}
+      <rect x="0" y="0" width="${W}" height="120" fill="${acc}"/>
+      <text x="40" y="58" font-family='${f}' font-size="30" font-weight="bold" fill="${onCol(acc)}">${esc(S.sig.icon)} CRITERIA EVIDENCE INDEX</text>
+      <text x="40" y="92" font-family='${f}' font-size="17" fill="${onCol(acc)}">${esc(S.player.name)}${S.player.cls ? ' · ' + esc(S.player.cls) : ''} · ${esc(S.system || 'Systems Engineering SAT')}</text>
+      <text x="40" y="152" font-family='${f}' font-size="14" fill="${st.ink}" fill-opacity="0.75">Each criterion section in this record carries its coloured badge.</text>
+      <text x="40" y="172" font-family='${f}' font-size="14" fill="${st.ink}" fill-opacity="0.75">Locations are ${esc(unit().toLowerCase())} numbers.</text>
+      ${rows}${S.sig.tag ? `<text x="${W - 40}" y="${H - 24}" text-anchor="end" font-family='${f}' font-size="13" font-style="italic" fill="${st.ink}" fill-opacity="0.7">${esc(S.sig.tag)}</text>` : ''}</svg>`;
+    saveFile(svg, `${fileSafe(S.player.name)}-criteria-index`, type, '✓ Index cover downloaded. Put it at the front of your record.');
+  }
+  function makeDrop() {
+    const week = $('dWeek').value.trim(), nxt = $('dNext').value.trim(), stuck = $('dStuck').value.trim();
+    if (week.length < 5 || nxt.length < 5) { toast('Fill in "this week" and "next week" first.'); (week.length < 5 ? $('dWeek') : $('dNext')).focus(); return; }
+    const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }), W = 900;
+    const T = (x, y, s, o) => `<text x="${x}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${(o && o.size) || 16}" ${o && o.bold ? 'font-weight="bold"' : ''} fill="${(o && o.fill) || '#111'}" ${o && o.anchor ? `text-anchor="${o.anchor}"` : ''}>${esc(s)}</text>`;
+    let y = 250, bars = '';
+    CRITERIA.forEach(c => {
+      const r = reqCount(c.n), t = c.req.length, ff = Object.values(ffState(c.n)).filter(Boolean).length, w = 340;
+      bars += `<rect x="50" y="${y}" width="52" height="24" rx="5" fill="${CCOL[c.n - 1]}"/>` + T(76, y + 18, 'C' + c.n, { bold: true, anchor: 'middle', fill: onCol(CCOL[c.n - 1]) }) + T(112, y + 18, trunc(short(c), 26), { size: 14 }) +
+        `<rect x="330" y="${y + 3}" width="${w}" height="18" rx="4" fill="#e5e7eb"/><rect x="330" y="${y + 3}" width="${r / t * w}" height="18" rx="4" fill="${readiness(c.n) === 2 ? '#16a34a' : '#facc15'}"/>` +
+        T(690, y + 18, `${r}/${t} items · ${ff}/4 find-it-fast${readiness(c.n) === 2 ? ' ✓' : ''}`, { size: 13 });
+      y += 32;
+    });
+    const needs = CRITERIA.filter(c => cs(c.n).need).slice(0, 4).map(c => `C${c.n}: ${cs(c.n).need}`), para = (x, yy, s, n, lines) => wrapText(s, n).slice(0, lines).map((l, i) => T(x, yy + i * 22, l)).join('');
+    const H = y + 330 + Math.max(1, needs.length) * 24 + (stuck ? 40 : 0);
+    const ready = CRITERIA.filter(c => readiness(c.n) === 2).length;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/>
+      <rect x="0" y="0" width="${W}" height="120" fill="#0b0218"/><rect x="0" y="116" width="${W}" height="6" fill="#facc15"/>
+      ${T(50, 55, 'WEEKLY SAT EVIDENCE DROP', { size: 32, bold: true, fill: '#fff' })}${T(50, 92, `Year 12 · Unit ${S.phase} · ${ready}/8 criteria assessor-ready`, { size: 17, fill: '#facc15' })}
+      ${T(W - 50, 55, date, { size: 18, fill: '#fff', anchor: 'end' })}${T(W - 50, 92, `Drop #${S.drops.length + 1}`, { size: 16, fill: '#22d3ee', anchor: 'end' })}
+      ${T(50, 165, `${S.player.name}${S.player.cls ? ' · ' + S.player.cls : ''}`, { size: 24, bold: true })}${T(50, 195, `System: ${S.system || '—'}   ·   Record: ${(FORMATS[S.format] || {}).name || ''}`, { size: 16, fill: '#444' })}
+      ${T(50, 232, 'VCAA items covered (green = assessor-ready)', { size: 15, bold: true })}${bars}
+      <line x1="50" y1="${y + 6}" x2="${W - 50}" y2="${y + 6}" stroke="#ccc"/>
+      ${T(50, y + 44, 'This week I captured', { size: 18, bold: true, fill: '#0e7490' })}${para(50, y + 72, week, 80, 3)}
+      ${T(50, y + 156, 'Next week I\'ll capture', { size: 18, bold: true, fill: '#15803d' })}${para(50, y + 184, nxt, 80, 3)}
+      ${T(50, y + 268, 'Still needed', { size: 18, bold: true, fill: '#be185d' })}${(needs.length ? needs : ['(nothing listed)']).map((n, i) => T(50, y + 296 + i * 24, '• ' + trunc(n, 90), { size: 15 })).join('')}
+      ${stuck ? T(50, y + 296 + Math.max(1, needs.length) * 24 + 20, 'Stuck on: ' + trunc(stuck, 80), { size: 16, bold: true, fill: '#b45309' }) : ''}</svg>`;
+    S.drops.push({ date, ready }); save(); drawTabs(); $('dropHist').textContent = 'Drops made: ' + S.drops.map(d => d.date).join(' · ');
+    svgToPng(svg, `sat-weekly-drop-${fileSafe(S.player.name)}-${S.drops.length}.png`, () => { sfx.good(); toast('✓ Weekly drop downloaded. Post it on Teams!'); });
+  }
+
+  // =====================================================================
+  //  START / VIEW
+  // =====================================================================
+  let fmtChoice = 'slides', phaseChoice = 3;
+  function drawFmts() {
+    $('fmts').innerHTML = Object.entries(FORMATS).map(([k, f]) => `<button class="fmt${fmtChoice === k ? ' on' : ''}" data-fmt="${k}" aria-pressed="${fmtChoice === k}">${f.icon} ${f.name}</button>`).join('');
+    $('phases').innerHTML = [[3, 'Unit 3 · working on C1–C3'], [4, 'Unit 4 · working on C4–C8']].map(([k, l]) => `<button class="fmt${phaseChoice === k ? ' on' : ''}" data-ph="${k}" aria-pressed="${phaseChoice === k}">${l}</button>`).join('');
+  }
+  $('fmts').addEventListener('click', e => { const b = e.target.closest('[data-fmt]'); if (b) { fmtChoice = b.dataset.fmt; drawFmts(); sfx.click(); } });
+  $('phases').addEventListener('click', e => { const b = e.target.closest('[data-ph]'); if (b) { phaseChoice = +b.dataset.ph; drawFmts(); sfx.click(); } });
+  function begin() { $('startOverlay').classList.add('hidden'); drawTabs(); go('home'); }
+  (function init() {
+    const saved = load();
+    if (saved) { S = saved; $('resumeCard').classList.remove('hidden'); $('signCard').classList.add('hidden'); $('resumeText').textContent = `${S.player.name} (${S.player.cls}) · ${S.system || 'my system'} · Unit ${S.phase}`; setTimeout(() => $('resumeBtn').focus(), 50); }
+    else {
+      let p = null;
+      for (const k of NAME_KEYS) { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); p = v && (v.player || v); } catch (e) { p = null; } if (p && p.name) break; }
+      if (p && p.name) { $('obName').value = p.name; $('obClass').value = p.cls || ''; $('obNote').textContent = 'Filled in from another game on this device. Change it if it isn\'t you.'; }
+      setTimeout(() => $('obName').focus(), 50);
+    }
+    drawFmts();
+  })();
+  $('resumeBtn').addEventListener('click', begin);
+  $('freshBtn').addEventListener('click', () => { const p = S.player; S = blank(); $('resumeCard').classList.add('hidden'); $('signCard').classList.remove('hidden'); $('obName').value = p.name || ''; $('obClass').value = p.cls || ''; });
+  function tryStart() {
+    const n = $('obName').value.trim(), c = $('obClass').value.trim();
+    if (!n || !c) { $('obMsg').textContent = 'Still needed: ' + [!n && 'first name', !c && 'class'].filter(Boolean).join(' and ') + '.'; sfx.retry(); return; }
+    S = blank(); S.started = true; S.player = { name: n, cls: c }; S.system = $('obSystem').value.trim(); S.format = fmtChoice; S.phase = phaseChoice; save(); sfx.win(); begin();
+  }
+  $('startBtn').addEventListener('click', tryStart);
+  ['obName', 'obClass', 'obSystem'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') tryStart(); }));
+  $('who').addEventListener('click', () => {});
+  $('restartBtn').addEventListener('click', () => {
+    if ($('restartBtn').dataset.armed) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} location.reload(); return; }
+    $('restartBtn').dataset.armed = '1'; $('restartBtn').textContent = 'Clear? click again'; toast('This clears your SAT studio on this device. Click again to confirm.');
+    setTimeout(() => { delete $('restartBtn').dataset.armed; $('restartBtn').textContent = '↺'; }, 4000);
+  });
+  let zoom = 1;
+  try { const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null'); if (v) { zoom = Math.min(1.5, Math.max(0.8, +v.zoom || 1)); muted = !!v.muted; } } catch (e) {}
+  function applyView() { document.documentElement.style.setProperty('--ui', zoom); $('muteBtn').textContent = muted ? '🔇' : '🔊'; $('muteBtn').setAttribute('aria-pressed', String(muted)); try { localStorage.setItem(VIEW_KEY, JSON.stringify({ zoom, muted })); } catch (e) {} }
+  $('zMinus').addEventListener('click', () => { zoom = Math.max(0.8, Math.round((zoom - 0.1) * 10) / 10); applyView(); });
+  $('zPlus').addEventListener('click', () => { zoom = Math.min(1.5, Math.round((zoom + 0.1) * 10) / 10); applyView(); });
+  $('muteBtn').addEventListener('click', () => { muted = !muted; applyView(); });
+  applyView();
+
+  ROUNDS.forEach((r, i) => { console.assert(r.ups.filter(u => u.ok).length === 1, 'round ' + i + ' needs one correct upgrade'); console.assert(r.probs.some(p => !p.ok), 'round ' + i + ' distractor'); });
+  CRITERIA.forEach(c => c.moves.forEach(m => console.assert(MOVES[m], 'move ' + m)));
+  console.assert(ROUNDS.map(r => r.c).join() === '1,2,3,4,5,6,7,8', 'one round per criterion');
+  window.__satStudio = { state: () => JSON.parse(JSON.stringify(S)), ROUNDS, CRITERIA, go };
+})();
+</script>
+<script src="lock.js"></script>
+<script>SELocks.guard(9); // teacher lock id 9 (see dashboard.html); the studio stays open if no lock row exists</script>
+</body>
+</html>
