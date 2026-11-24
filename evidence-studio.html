@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Evidence Studio – Year 11 Build &amp; Test – Systems Engineering</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --orange: #fb923c; --red: #f87171; --violet: #a78bfa; --panel: rgba(0,0,0,0.86); --ui: 1; }
+  html { background: #000; }
+  body { margin: 0; min-height: 100vh; color: #eee; font-family: monospace; font-size: calc(14px * var(--ui)); background: radial-gradient(ellipse at 50% 0%, #2a0a3d 0%, #0b0218 55%, #000 100%); }
+  button, input, textarea, select { font-family: monospace; font-size: inherit; }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .hidden { display: none !important; }
+  a { color: var(--cyan); }
+
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 14px; border-bottom: 2px solid #2b1740; background: rgba(0,0,0,0.6); position: sticky; top: 0; z-index: 20; }
+  .brand { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand small { color: var(--cyan); letter-spacing: 3px; font-weight: bold; font-size: 11px; }
+  .brand b { color: #fff; font-size: 17px; text-shadow: 0 0 10px var(--pink); }
+  #tabs { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; justify-content: center; }
+  .tab { border: 1px solid #555; background: #111; color: #ccc; border-radius: 6px; padding: 5px 9px; font-size: calc(12px * var(--ui)); cursor: pointer; }
+  .tab.on { background: var(--cyan); color: #000; border-color: var(--cyan); font-weight: bold; }
+  .tab .tk { color: var(--green); }
+  .tab.on .tk { color: #064e3b; }
+  .tools { display: flex; gap: 5px; align-items: center; }
+  .tools button, .tools a { background: #1b1b22; color: #eee; border: 1px solid #555; border-radius: 5px; padding: 4px 8px; font: bold 12px monospace; cursor: pointer; text-decoration: none; }
+  .tools span { font-size: 11px; color: #888; }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 14px; }
+  .panel { background: var(--panel); border: 2px solid #3a3a46; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  h1 { margin: 4px 0 6px; font-size: calc(26px * var(--ui)); color: #fff; text-shadow: 0 0 10px var(--cyan); }
+  h2 { margin: 0 0 8px; font-size: calc(19px * var(--ui)); color: #fff; }
+  h3 { margin: 12px 0 6px; font-size: calc(15px * var(--ui)); color: var(--gold); letter-spacing: 1px; }
+  p { line-height: 1.5; margin: 6px 0; }
+  .kick { color: var(--pink); letter-spacing: 3px; font-weight: bold; font-size: calc(11px * var(--ui)); }
+  .muted { color: #9ca3af; }
+  .act { padding: 9px 13px; border: none; border-radius: 6px; background: var(--cyan); color: #000; font-weight: bold; cursor: pointer; }
+  .act.alt { background: #222; color: #eee; border: 1px solid #555; }
+  .act.small { padding: 5px 9px; font-size: calc(12px * var(--ui)); }
+  .act[disabled] { opacity: 0.5; cursor: default; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=text], textarea, select { background: #111; color: #eee; border: 1px solid #555; border-radius: 5px; padding: 6px 8px; }
+  textarea { width: 100%; resize: vertical; }
+
+  /* Ohmbot */
+  .bot { display: flex; gap: 10px; align-items: flex-start; }
+  .ohm { margin: 0; color: var(--cyan); font-size: 11px; line-height: 1.1; text-shadow: 0 0 6px var(--cyan); flex: none; }
+  .bubble { flex: 1; border: 1px solid #444; border-radius: 8px; padding: 9px 11px; background: #0d0d14; line-height: 1.5; }
+  .bubble b { color: var(--gold); }
+
+  /* Evidence Test */
+  .rule { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
+  .rule div { border: 2px solid; border-radius: 8px; padding: 9px; background: #0b0b12; line-height: 1.4; }
+  .rule b { display: block; font-size: calc(17px * var(--ui)); margin-bottom: 3px; }
+  .r-show { border-color: var(--cyan) !important; } .r-show b { color: var(--cyan); }
+  .r-say { border-color: var(--gold) !important; } .r-say b { color: var(--gold); }
+  .r-why { border-color: var(--pink) !important; } .r-why b { color: var(--pink); }
+  .r-next { border-color: var(--green) !important; } .r-next b { color: var(--green); }
+  @media (max-width: 760px) { .rule { grid-template-columns: 1fr 1fr; } }
+
+  /* home tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+  .tile { text-align: left; background: #0d0d16; border: 2px solid #3a3a46; border-radius: 10px; padding: 12px; color: #eee; cursor: pointer; line-height: 1.4; }
+  .tile:hover { border-color: var(--cyan); }
+  .tile .n { color: var(--pink); font-weight: bold; letter-spacing: 2px; font-size: calc(11px * var(--ui)); }
+  .tile b { display: block; color: #fff; font-size: calc(16px * var(--ui)); margin: 3px 0; }
+  .tile .st { margin-top: 6px; font-size: calc(12px * var(--ui)); color: var(--green); }
+
+  /* makeover */
+  .mk { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.1fr); gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .mk { grid-template-columns: 1fr; } }
+  .slide { background: #fff; color: #111; border-radius: 6px; padding: 14px; font-family: Arial, Helvetica, sans-serif; box-shadow: 0 0 0 3px #333, 0 0 18px rgba(34,211,238,0.25); }
+  .slide .sh { font-size: 11px; letter-spacing: 1px; color: #0e7490; font-weight: bold; }
+  .slide h4 { margin: 2px 0 8px; font-size: 18px; }
+  .slide .pic { background: #e5e7eb; border: 1px dashed #9ca3af; border-radius: 4px; height: 120px; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 13px; text-align: center; padding: 6px; }
+  .slide .cap { margin-top: 8px; font-size: 15px; line-height: 1.45; white-space: pre-line; }
+  .slide table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 6px; }
+  .slide td, .slide th { border: 1px solid #cbd5e1; padding: 3px 5px; text-align: left; }
+  .slide th { background: #e0f2fe; }
+  .opt { display: block; width: 100%; text-align: left; margin: 6px 0 0; padding: 8px 10px; background: #111; color: #eee; border: 1px solid #555; border-radius: 6px; cursor: pointer; line-height: 1.4; }
+  .opt:hover { border-color: var(--cyan); }
+  .opt.on { border-color: var(--cyan); background: #062a33; }
+  .opt.right { border-color: var(--green); background: #062012; }
+  .opt[disabled] { opacity: 0.5; cursor: default; }
+  .opt.struck { text-decoration: line-through; opacity: 0.45; }
+  #mkFeedback { min-height: 1.4em; line-height: 1.5; margin-top: 8px; }
+  .ok { color: var(--green); font-weight: bold; } .no { color: var(--gold); font-weight: bold; } .cb { color: var(--pink); font-weight: bold; }
+  .dots { display: flex; gap: 4px; margin: 6px 0; } .dots i { width: 22px; height: 6px; border-radius: 3px; background: #333; } .dots i.d { background: var(--green); } .dots i.c { background: var(--cyan); }
+
+  /* beats */
+  .stage { margin-top: 10px; }
+  .stage > h3 { display: flex; gap: 8px; align-items: center; }
+  .beats { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+  .beat { background: #0d0d16; border: 1px solid #3a3a46; border-left: 4px solid var(--cyan); border-radius: 8px; padding: 10px 12px; line-height: 1.45; }
+  .beat h4 { margin: 0 0 4px; font-size: calc(15px * var(--ui)); color: #fff; }
+  .beat ul { margin: 4px 0; padding-left: 18px; }
+  .beat .lbl { font-size: calc(11px * var(--ui)); letter-spacing: 1px; font-weight: bold; margin-top: 6px; }
+  .beat .lbl.m { color: var(--cyan); } .beat .lbl.s { color: var(--green); } .beat .lbl.t { color: var(--gold); }
+  .beat .starter { background: #14120a; border-left: 3px solid var(--gold); padding: 5px 8px; margin-top: 4px; font-size: calc(13px * var(--ui)); color: #e5e7eb; }
+  .chip { display: inline-block; border: 1px solid #555; border-radius: 12px; padding: 2px 8px; margin: 3px 4px 0 0; font-size: calc(12px * var(--ui)); background: #15151f; color: #ddd; cursor: pointer; }
+  .chip:hover { border-color: var(--cyan); }
+  details.ex { margin-top: 6px; } details.ex summary { cursor: pointer; color: var(--violet); }
+  details.ex div { margin-top: 4px; background: #fff; color: #111; border-radius: 5px; padding: 7px 9px; font-family: Arial, Helvetica, sans-serif; font-size: 13.5px; line-height: 1.45; }
+
+  /* moves */
+  .moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .move { background: #0d0d16; border: 1px solid #3a3a46; border-radius: 8px; padding: 10px 12px; line-height: 1.45; scroll-margin-top: 80px; }
+  .move.flash { border-color: var(--gold); box-shadow: 0 0 14px rgba(250,204,21,0.5); }
+  .move h4 { margin: 0 0 4px; color: #fff; font-size: calc(15px * var(--ui)); }
+  .move .ic { font-size: 20px; margin-right: 4px; }
+  .move .sig { font-size: calc(11px * var(--ui)); color: var(--pink); font-weight: bold; letter-spacing: 1px; }
+
+  /* signature */
+  .sigwrap { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .sigwrap { grid-template-columns: 1fr; } }
+  .styles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stl { background: #111; color: #eee; border: 2px solid #444; border-radius: 6px; padding: 7px; cursor: pointer; text-align: left; line-height: 1.3; }
+  .stl.on { border-color: var(--cyan); background: #062a33; }
+  .stl small { color: #9ca3af; display: block; }
+  .sw { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #222; cursor: pointer; }
+  .sw.on { outline: 3px solid #fff; }
+  .field { margin: 8px 0; } .field label { display: block; color: #cbd5e1; margin-bottom: 3px; font-size: calc(12px * var(--ui)); }
+  .field input[type=text] { width: 100%; }
+  .devs { display: grid; gap: 12px; }
+  .dev { background: #1b1b24; border-radius: 8px; padding: 10px; }
+  .dev svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .dev .row { margin-top: 6px; }
+
+  /* audit */
+  .audit { width: 100%; border-collapse: collapse; }
+  .audit th, .audit td { border-bottom: 1px solid #333; padding: 6px 5px; text-align: left; vertical-align: top; }
+  .audit th { color: var(--cyan); font-size: calc(12px * var(--ui)); letter-spacing: 1px; }
+  .audit td.stg { color: var(--pink); font-weight: bold; font-size: calc(12px * var(--ui)); padding-top: 12px; }
+  .audit input[type=text] { width: 100%; min-width: 90px; }
+  .checks { display: flex; gap: 3px; flex-wrap: wrap; }
+  .ck { border: 2px solid #444; background: #111; color: #888; border-radius: 5px; padding: 3px 6px; font-weight: bold; font-size: calc(11px * var(--ui)); cursor: pointer; }
+  .ck.on.c-show { border-color: var(--cyan); color: #000; background: var(--cyan); }
+  .ck.on.c-say { border-color: var(--gold); color: #000; background: var(--gold); }
+  .ck.on.c-why { border-color: var(--pink); color: #000; background: var(--pink); }
+  .ck.on.c-next { border-color: var(--green); color: #000; background: var(--green); }
+  .stat { font-weight: bold; white-space: nowrap; font-size: calc(12px * var(--ui)); }
+  .stat.s0 { color: #777; } .stat.s1 { color: var(--gold); } .stat.s2 { color: var(--green); }
+  .bars { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .bar { background: #0d0d16; border: 1px solid #333; border-radius: 6px; padding: 6px 8px; font-size: calc(12px * var(--ui)); }
+  .bar .tr { height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .bar .tr i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--green)); }
+  @media (max-width: 760px) { .audit .hide-sm { display: none; } }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #052e16; color: var(--green); border: 2px solid var(--green); border-radius: 8px; padding: 8px 14px; font-weight: bold; z-index: 60; }
+
+  /* sign-in overlay */
+  .overlay { position: fixed; inset: 0; z-index: 50; background: radial-gradient(ellipse at 50% 30%, #2a0a3d 0%, #0b0218 60%, #000 100%); overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: 30px 14px; }
+  .ob { width: 100%; max-width: 640px; border: 2px solid var(--cyan); border-radius: 10px; padding: 18px; background: rgba(0,0,0,0.88); box-shadow: 0 0 26px rgba(34,211,238,0.3); }
+  .ob label { display: block; margin: 12px 0 4px; }
+  .ob input[type=text], .ob select { width: 100%; padding: 8px 9px; font-size: 15px; }
+  .fmts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+  .fmt { background: #111; color: #eee; border: 2px solid #444; border-radius: 6px; padding: 7px; cursor: pointer; text-align: left; }
+  .fmt.on { border-color: var(--cyan); background: #062a33; }
+  @media (max-width: 600px) { .fmts { grid-template-columns: 1fr 1fr; } }
+  #obMsg { color: var(--red); min-height: 1.2em; margin-top: 6px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div id="startOverlay" class="overlay">
+  <div class="ob">
+    <div class="kick" style="color:var(--cyan)">YEAR 11 · UNITS 1 &amp; 2 · RECORD OF EVIDENCE</div>
+    <h1>EVIDENCE STUDIO</h1>
+    <div style="color:var(--green);letter-spacing:3px;font-weight:bold">BUILD &amp; TEST · YOUR WAY</div>
+    <pre class="ohm" aria-hidden="true" style="font-size:14px;margin:12px 0">  .-----.
+  | o o |   "Your record of evidence tells the story
+  |  =  |    of your build. Same proof for everyone,
+  '--+--'    told in YOUR style. Let's find it."
+   [###]
+  Ohmbot</pre>
+    <div id="resumeCard" class="hidden"><p id="resumeText"></p><div class="row"><button class="act" id="resumeBtn">CONTINUE ▶</button><button class="act alt" id="freshBtn">Start again</button></div></div>
+    <div id="signCard">
+      <label for="obName">First name</label><input type="text" id="obName" maxlength="40" autocomplete="given-name" />
+      <label for="obClass">Class</label><input type="text" id="obClass" maxlength="20" />
+      <div id="obNote" class="muted" style="font-size:12px;margin-top:4px"></div>
+      <label for="obSystem">Your system, in a few words (you can change it later)</label><input type="text" id="obSystem" maxlength="70" placeholder="e.g. automatic plant waterer" />
+      <label>Where will you build your record of evidence?</label>
+      <div class="fmts" id="fmts" role="group" aria-label="Format"></div>
+      <div class="row" style="margin-top:14px"><button class="act" id="startBtn" style="flex:1;padding:12px">ENTER THE STUDIO ▶</button></div>
+      <div id="obMsg" role="alert"></div>
+    </div>
+    <p class="muted" style="font-size:12px">Saved in this browser only. <a href="index.html">◀ Game hub</a></p>
+  </div>
+</div>
+
+<header>
+  <div class="brand"><small>YEAR 11 · BUILD &amp; TEST</small><b>EVIDENCE STUDIO</b></div>
+  <nav id="tabs" aria-label="Studio sections"></nav>
+  <div class="tools"><span id="who"></span><button id="zMinus" aria-label="Smaller text">A−</button><button id="zPlus" aria-label="Bigger text">A+</button><button id="muteBtn" aria-pressed="false" title="Sound on/off">🔊</button><button id="restartBtn" title="Clear my studio">↺</button><a href="index.html">HUB</a></div>
+</header>
+
+<main id="main"></main>
+<div id="toast" class="hidden" role="status"></div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const STORE_KEY = 'seEvidenceStudio11', VIEW_KEY = 'seEvidenceStudio11View';
+  const NAME_KEYS = ['seStepUp2Player', 'seStepUpPlayer'];
+
+  // ---------------- sound ----------------
+  let audioCtx = null, muted = false;
+  function beep(f, d, type, vol) { if (muted) return; try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = type || 'square'; o.frequency.value = f; g.gain.value = vol || 0.035; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + d / 1000); } catch (e) {} }
+  const sfx = { click: () => beep(700, 30, 'square', 0.02), good: () => { beep(660, 80); setTimeout(() => beep(880, 80), 80); }, retry: () => beep(240, 150, 'triangle', 0.05), win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 110), i * 100)), cb: () => { beep(523, 70); setTimeout(() => beep(784, 70), 70); setTimeout(() => beep(1047, 120), 140); } };
+
+  // =====================================================================
+  //  CONTENT
+  // =====================================================================
+  const RULE = [
+    { k: 'show', t: 'SHOW', d: 'A clear photo, video, screenshot or data from <i>your</i> build. Dated.' },
+    { k: 'say', t: 'SAY', d: 'What you did or decided. Specific: names, numbers, units.' },
+    { k: 'why', t: 'WHY', d: 'The reason, backed by something you saw or measured.' },
+    { k: 'next', t: 'NEXT', d: 'What it means for your next step.' }
+  ];
+  const FORMATS = {
+    slides: { icon: '🖥️', name: 'PowerPoint / slides', unit: 'Slide' }, folio: { icon: '📘', name: 'OneNote / document', unit: 'Page' },
+    website: { icon: '🌐', name: 'Website / Notion', unit: 'Page' }, canva: { icon: '🎨', name: 'Canva / design', unit: 'Page' },
+    paper: { icon: '📓', name: 'Paper logbook', unit: 'Page' }, video: { icon: '🎬', name: 'Video log', unit: 'Clip' }
+  };
+  const STAGES = [
+    { id: 'prepare', name: 'Prepare', col: '#22d3ee' }, { id: 'construct', name: 'Construct', col: '#fb923c' }, { id: 'test', name: 'Test', col: '#facc15' },
+    { id: 'analyse', name: 'Analyse', col: '#a78bfa' }, { id: 'evaluate', name: 'Evaluate', col: '#ff4ecf' }, { id: 'submit', name: 'Submit', col: '#4ade80' }
+  ];
+  // What the record of evidence must show (from the Build & Test portfolio), with a quality bar for each.
+  const BEATS = [
+    { id: 'design', stage: 'prepare', t: 'My approved design', show: ['A picture of what you\'re building: circuit diagram, sketch or CAD', 'What it does: input → process → output', 'Your original expectations, before building changes anything'], strong: ['Captured before you start, so later changes are visible', 'Expectations are specific enough to test later (numbers where you can)'], moves: ['annotated', 'sketch'], starter: 'My system is meant to ___. Input: ___ → process: ___ → output: ___. I expect it to ___.', ex: 'Automatic plant waterer (approved 3/5). Input: soil moisture sensor → process: microcontroller compares reading with a dry level → output: pump runs for 3 s. I expect it to water within 10 s of the soil going dry.' },
+    { id: 'prep', stage: 'prepare', t: 'Build plan and safety', show: ['Components, materials and tools', 'Hazards for YOUR build and how you\'ll control each one', 'Which subsystem you\'ll build first, and why'], strong: ['Hazards are specific ("pump near mains-powered bench supply"), not generic ("be careful")', 'Your first stage is chosen for a reason'], moves: ['table', 'annotated'], starter: 'The biggest hazard in my build is ___, so I will ___. I\'m building ___ first because ___.', ex: 'Hazard: water near the electronics. Control: reservoir sits below and away from the board, and tubing is clipped. First stage: the sensor circuit, because everything else depends on a reliable reading.' },
+    { id: 'stages', stage: 'construct', t: 'Build stages (one per stage)', show: ['A photo or short video of each stage as it happens, dated', 'What you completed', 'What you tested or noticed', 'What\'s next'], strong: ['One useful photo per stage beats ten random ones', 'Every stage ends with a quick check: does this part work yet?'], moves: ['annotated', 'timeline', 'video'], starter: '📅 ___  Today I ___. I checked it by ___ and saw ___. Next I\'ll ___.', ex: '📅 12/5 Wired the moisture sensor to A0. Checked readings: 820 in dry soil, 310 in wet soil, so it can tell the difference. Next: connect the pump relay.' },
+    { id: 'mods', stage: 'construct', t: 'Modifications', show: ['Original plan → what changed', 'Why it was necessary (evidence)', 'The result of the change'], strong: ['Every change is linked to an observation, measurement or fault', 'Before and after evidence'], moves: ['beforeafter', 'decision'], starter: 'I planned ___, but changed it to ___ because ___ (evidence). After the change, ___.', ex: 'Planned: pump under the tank. Changed: pump beside the tank. Why: the tubing kinked and flow dropped from 120 to 40 mL/min in Test 2. Result: 115 mL/min.' },
+    { id: 'faults', stage: 'construct', t: 'Fault-finding', show: ['The problem', 'What you thought was causing it', 'What you tested, and the result', 'How you fixed it (or what you\'ll try next)'], strong: ['Shows your reasoning, including wrong guesses', 'A test proves the cause before the fix'], moves: ['faultticket', 'video'], starter: 'Problem: ___. I suspected ___. I tested ___ and found ___. Fix: ___.', ex: 'Problem: pump never switched on. Suspected: dead pump. Test: connected it straight to 5 V and it ran, so the pump was fine. Next suspect: relay. The relay LED stayed off, and the control wire was in the wrong row. Moved it and the pump switched on.' },
+    { id: 'kpis', stage: 'test', t: 'Key performance indicators', show: ['Each intended function', 'A measurable KPI and target for each', 'How you\'ll measure it'], strong: ['A number or observable result that proves success ("waters within 10 s")', 'Not "works well" or "responds quickly"'], moves: ['table'], starter: 'Function: ___. KPI: ___. Target: ___. Measured by: ___.', ex: 'Function: water when dry. KPI: time from dry reading to pump on. Target: under 10 s. Measured by: stopwatch from the moment the probe is lifted out of the soil.' },
+    { id: 'procedure', stage: 'test', t: 'Fair, repeatable test plan', show: ['What you\'ll measure, and with what', 'What stays the same each trial', 'How many trials', 'Steps and safety controls'], strong: ['Someone else could repeat your test from what you wrote'], moves: ['testcard', 'video'], starter: 'I will measure ___ with ___. I\'ll keep ___ the same. I\'ll do ___ trials.', ex: 'Measure pump-on delay with a phone stopwatch. Same pot, same soil, probe at the same depth. 5 trials. Board kept dry on the shelf above the tray.' },
+    { id: 'results', stage: 'test', t: 'Test results', show: ['At least 3 trials', 'Expected vs actual, with units', 'Pass or fail', 'Observations, including anything unexpected'], strong: ['Numbered and dated tests that build on each other ("Because Test 2 showed…")', 'Unexpected results are recorded, not hidden'], moves: ['testcard', 'table', 'video'], starter: 'Test __ (date): expected ___, measured ___ ___ (units). Noticed: ___.', ex: 'Test 3 (19/5): trials of 6.2, 6.8, 14.1, 6.5 and 6.4 s. 4 of 5 passed the 10 s target. Trial 3 was slow: the probe wasn\'t pushed fully into the soil.' },
+    { id: 'analysis', stage: 'analyse', t: 'Performance against KPIs', show: ['Each KPI: target vs actual, met / partly / not met', 'A pattern or conclusion'], strong: ['Every claim points to data', 'KPIs you didn\'t test are marked "not verified", not claimed as met'], moves: ['table', 'selfaudit'], starter: 'KPI ___ : target ___, actual ___ → ___. Overall the results show ___.', ex: 'Pump-on delay: target < 10 s, average 6.5 s (one outlier) → met. Runs 7 days on one tank: not tested → not verified.' },
+    { id: 'unexpected', stage: 'analyse', t: 'Unexpected behaviour explained', show: ['What happened, and when', 'The likely cause', 'Evidence for your explanation', 'What you did about it'], strong: ['Your explanation is backed by evidence, not a guess'], moves: ['faultticket', 'video'], starter: 'On ___, ___ happened. I think it was caused by ___, because ___.', ex: 'Day 4: readings in the same wet soil crept from 310 to 450. Cause: the probe was corroding. Evidence: green build-up on the probe, shown in the photo.' },
+    { id: 'principles', stage: 'analyse', t: 'Engineering principles in my system', show: ['The principle, and where it appears in your system', 'How it affected performance or problem-solving'], strong: ['Explains how YOUR system behaves, not a textbook definition'], moves: ['annotated', 'sketch'], starter: '___ explains why my system ___.', ex: 'The sensor is a voltage divider: wetter soil has lower resistance, so the voltage at A0 drops. That\'s why the wet reading (310) is lower than the dry one (820).' },
+    { id: 'strengths', stage: 'evaluate', t: 'Strengths and limitations', show: ['At least 2 strengths and 2 limitations', 'Evidence for each'], strong: ['Each one is backed by a result or observation'], moves: ['table', 'selfaudit'], starter: 'A strength is ___, shown by ___. A limitation is ___, shown by ___.', ex: 'Strength: fast response (6.5 s average, Test 3). Limitation: the probe corrodes (readings drifted over 4 days).' },
+    { id: 'improvements', stage: 'evaluate', t: 'Justified improvements', show: ['Specific changes', 'The evidence behind each', 'The expected improvement, and which comes first'], strong: ['Name the change · cite the evidence · explain the effect', 'Not "use a better sensor"'], moves: ['decision', 'matrix'], starter: 'Change ___ because ___ (evidence), which should ___.', ex: 'Replace the resistive probe with a capacitive sensor, because the resistive probe corroded and drifted by 140 in 4 days. A capacitive sensor doesn\'t touch the water, so readings should stay stable.' },
+    { id: 'reflection', stage: 'evaluate', t: 'Reflection', show: ['Your most successful decision', 'Your hardest problem', 'How your approach changed', 'What you\'d do differently'], strong: ['Specific moments, not general feelings'], moves: ['voice', 'video'], starter: 'My best decision was ___ because ___. Next time I would ___.', ex: 'Best decision: testing the sensor on its own before mounting anything. It caught the wiring fault early. Next time I\'d plan the tubing route before printing the stand.' },
+    { id: 'demo', stage: 'submit', t: 'Demonstration', show: ['Video or live demo of the intended function, done safely', 'Input → process → output explained'], strong: ['A caption tells the viewer what to watch for', 'It demonstrates your KPIs'], moves: ['video', 'selfaudit'], starter: 'In this clip, watch for ___. It shows ___.', ex: '[24 s clip] Watch the moisture reading drop as I lift the probe out. The pump starts at 0:07, inside the 10 s target.' }
+  ];
+  const MOVES = {
+    annotated: { ic: '📷', n: 'Annotated photo', what: 'Your photo with arrows and labels on what matters.', strong: 'Labels say what AND why ("relay here, so the pump is switched safely"). Dated.' },
+    beforeafter: { ic: '↔️', n: 'Before / after pair', what: 'Two photos side by side, with what changed and the measured effect.', strong: 'Same angle both times, and the effect is measured ("40 → 115 mL/min").' },
+    video: { ic: '🎬', n: 'Captioned video (15–60 s)', what: 'A short clip, plus a caption saying what the viewer should notice.', strong: 'The caption points to a moment: "watch the LED at 0:07". Script: "This is… I just… watch for… next…"' },
+    voice: { ic: '🎙️', n: 'Voice memo', what: 'Talk through a test or a decision as it happens, then add a one-line summary.', strong: 'Recorded in the moment, not after. The summary line gives the key number.' },
+    sketch: { ic: '✏️', n: 'Sketch with callouts', what: 'Hand-drawn and photographed: quick, personal, clear.', strong: 'The callouts explain, not just name ("divider: wet soil = lower voltage").' },
+    timeline: { ic: '🗓️', n: 'Photo strip / timeline', what: 'Dated stages in a row, so progress is visible at a glance.', strong: 'Each frame has a date and one line on what changed.' },
+    table: { ic: '📊', n: 'Results table + graph', what: 'Expected vs actual with units. A graph shows the pattern.', strong: 'Units on every number. Outliers highlighted and explained.' },
+    matrix: { ic: '▦', n: 'Comparison matrix', what: 'Options you tried vs your criteria, with ticks or numbers, then a winner and why.', strong: 'Shows you tested alternatives (e.g. three sensors), not just one.' },
+    testcard: { ic: '🧪', n: 'Test card', what: 'Numbered and dated: purpose → setup → result (numbers) → so what.', strong: 'Each test builds on the last ("Because Test 2 showed…").', sig: true },
+    faultticket: { ic: '🎫', n: 'Fault ticket', what: 'Problem → suspected cause → test → result → action.', strong: 'Shows your reasoning, including the guesses that turned out wrong.', sig: true },
+    decision: { ic: '🔖', n: 'Decision stamp', what: 'I chose ___ instead of ___ because ___ (evidence). Dated.', strong: 'Used every time you make a real choice. Easy to spot when skimming.', sig: true },
+    selfaudit: { ic: '📋', n: 'Self-audit', what: 'Have / still need, for each part of the record.', strong: 'Honest: anything not tested is marked "not verified".' }
+  };
+  // Evidence Makeover rounds: a fictional student, Jordan, building an automatic plant waterer.
+  const ROUNDS = [
+    { beat: 'stages', title: 'Build stage 2', pic: '📷 photo: breadboard with sensor and wires', cap: '📅 12/5\nWired it up.',
+      probs: [{ t: 'It doesn\'t say what was wired, or to what', ok: true }, { t: 'There\'s no check: does it work yet?', ok: true }, { t: 'No next step', ok: true }, { t: 'There\'s no photo', ok: false, fb: 'There IS a photo, and it\'s dated. That part passes SHOW.' }],
+      ups: [{ t: 'Today I worked really hard on my circuit and it\'s looking great. Really proud of my progress!', fb: 'Lots of words, no evidence: nothing about what was wired, no test, no next step.' },
+        { t: 'Wired the moisture sensor to A0. Checked it: 820 in dry soil, 310 in wet, so it can tell the difference. Next: connect the pump relay.', ok: true },
+        { t: 'Wired up the sensor and the pump. It all works now.', fb: '"It works" isn\'t evidence. How do you know? What did you measure?' }],
+      win: 'SAY (A0, moisture sensor), WHY (820 vs 310 proves it works), NEXT (pump relay). Short, and it does the job.' },
+    { beat: 'mods', title: 'Modification', pic: '(no photo)', cap: 'Changed the pump position.',
+      probs: [{ t: 'No before/after evidence', ok: true }, { t: 'Doesn\'t say where it moved from or to', ok: true }, { t: 'No reason or evidence for the change', ok: true }, { t: 'It\'s too short. Long entries score better.', ok: false, fb: 'Length isn\'t the problem. A short entry with a number and a reason beats a long story.' }],
+      ups: [{ t: 'Changed the pump position because it was better there.', fb: '"Better" how? There\'s no evidence: what did you see or measure?' },
+        { t: 'Over the weekend I thought about the pump a lot and decided to try moving it around a few times until I felt happier with how it looked on the stand.', fb: 'A story, but no evidence: no measurement, and "happier with how it looked" isn\'t an engineering reason.' },
+        { t: '[before/after photos] Planned: pump under the tank. Moved it beside the tank because the tubing kinked: flow dropped to 40 mL/min in Test 2. After the move: 115 mL/min. Next: secure it with cable ties.', ok: true }],
+      win: 'Plan → change → evidence → measured result → next. That\'s a modification an assessor can trust.' },
+    { beat: 'kpis', title: 'My KPIs', table: [['Function', 'KPI'], ['Water the plant', 'Works well'], ['Detect dry soil', 'Detects it quickly']],
+      probs: [{ t: '"Works well" and "quickly" can\'t be measured', ok: true }, { t: 'No targets (numbers)', ok: true }, { t: 'Doesn\'t say how it will be measured', ok: true }, { t: 'There should be at least 6 KPIs', ok: false, fb: 'The number of KPIs isn\'t the issue. Two good, measurable KPIs beat six vague ones.' }],
+      ups: [{ t: 'Water the plant → works really well and reliably every time', fb: 'Still not measurable. What number would prove "reliably"?' },
+        { t: 'Detect dry soil → pump on within 10 s of a dry reading (stopwatch). Water the plant → 100 mL ± 10 per cycle (measuring jug).', ok: true },
+        { t: 'Water the plant → the plant stays alive', fb: 'Too slow and vague to test in a unit: it depends on the plant, the weather… What can you measure today?' }],
+      win: 'Function → measurable KPI → target → method. Now "did it work?" has a real answer.' },
+    { beat: 'results', title: 'Test results', pic: '📷 photo: plant pot next to the pump', cap: 'Tested it 3 times and it worked every time ✅✅✅',
+      probs: [{ t: 'No measurements or units', ok: true }, { t: 'No expected vs actual', ok: true }, { t: '"Worked" isn\'t defined', ok: true }, { t: '3 trials is too few', ok: false, fb: 'Three trials meets the minimum. The problem is that we can\'t see any results.' }],
+      ups: [{ t: 'Trial 1 ✅ Trial 2 ✅ Trial 3 ✅ Everything passed!', fb: 'Ticks without numbers. What was measured?' },
+        { t: 'Test 3 (19/5) · target < 10 s · trials: 6.2 s, 6.8 s, 14.1 s ❌, 6.5 s · Trial 3 was slow: the probe wasn\'t fully in the soil. Next: mark the probe depth.', ok: true },
+        { t: 'I tested it a few times and it was mostly pretty fast, apart from once.', fb: 'Closer, but still no numbers. How fast? Which trial? Why?' }],
+      win: 'Numbered, dated, units, a failure recorded honestly with its cause, and a next step. Unexpected results are evidence too.' },
+    { beat: 'faults', title: 'Problem', pic: '(no photo)', cap: 'The pump stopped working so I fixed it.',
+      probs: [{ t: 'No suspected cause', ok: true }, { t: 'No test to find the cause', ok: true }, { t: 'Doesn\'t say how it was fixed', ok: true }, { t: 'Problems shouldn\'t go in your evidence: they look bad', ok: false, fb: 'Problems are some of the BEST evidence. Fault-finding shows engineering thinking.' }],
+      ups: [{ t: '🎫 Pump won\'t start → suspected dead pump → connected it straight to 5 V: it ran, so the pump was fine → checked the relay: its LED stayed off, and the control wire was in row 14, not row 13 → moved it → pump starts.', ok: true },
+        { t: 'The pump stopped working. It was really annoying and took ages, but in the end I got it going again.', fb: 'Tells us how it felt, not how you found the cause.' },
+        { t: 'The pump stopped working because of a wiring problem, which I fixed.', fb: 'Which wire? How did you know? The test that found it is the evidence.' }],
+      win: 'A fault ticket: problem → suspect → test → result → fix. Even the wrong first guess is worth showing.' },
+    { beat: 'improvements', title: 'Improvements', pic: '(no photo)', cap: 'Next time I would use a better sensor.',
+      probs: [{ t: '"Better" isn\'t specific: which sensor?', ok: true }, { t: 'No evidence for why it\'s needed', ok: true }, { t: 'No expected effect', ok: true }, { t: 'You shouldn\'t admit your system could be better', ok: false, fb: 'Honest limitations with a justified fix show strong evaluation.' }],
+      ups: [{ t: 'Use a more expensive, higher quality sensor so it works better.', fb: 'Price isn\'t a reason. What went wrong, and what effect would the change have?' },
+        { t: 'Replace the resistive probe with a capacitive sensor, because the probe corroded and drifted from 310 to 450 in 4 days (Test 5). A capacitive sensor doesn\'t touch the water, so readings should stay stable.', ok: true },
+        { t: 'Improve the sensor and the pump and the code and the stand.', fb: 'A list with no evidence. Pick one change, back it with data, and explain its effect.' }],
+      win: 'Name the change · cite the evidence · explain the effect. That\'s straight from your guide.' },
+    { beat: 'analysis', title: 'Final evaluation', pic: '(no photo)', cap: 'My system met all of its KPIs.',
+      probs: [{ t: 'Doesn\'t point to any data', ok: true }, { t: 'KPI 3 (runs 7 days on one tank) was never tested', ok: true }, { t: 'No pattern or conclusion', ok: true }, { t: 'It should say the system is perfect', ok: false, fb: 'Over-claiming is the problem here. Engineers report what the evidence shows.' }],
+      ups: [{ t: 'My system met all of its KPIs really well and I am very happy with it.', fb: 'Same claim, and still no data. KPI 3 was never tested.' },
+        { t: 'KPI 1 met (6.5 s average, Test 3). KPI 2 met (98–104 mL, Test 4). KPI 3 (7 days on one tank) wasn\'t tested, so it\'s NOT verified. I\'d run a week-long test next.', ok: true },
+        { t: 'The system met KPIs 1, 2 and 3.', fb: 'Claims KPI 3 without testing it. Untested means "not verified".' }],
+      win: 'Every claim points to data, and the untested KPI is honestly marked "not verified". Top folios do exactly this.' }
+  ];
+
+  // Signature devices and styles
+  const STYLES = {
+    blueprint: { n: 'Blueprint', d: 'grid, white ink', bg: '#0b3a6e', ink: '#e0f2fe', line: '#7dd3fc', font: '"Courier New", Courier, monospace', grid: true },
+    notebook: { n: 'Lab notebook', d: 'ruled paper', bg: '#fffef5', ink: '#1f2937', line: '#93c5fd', font: 'Georgia, "Times New Roman", serif', ruled: true },
+    neon: { n: 'Neon arcade', d: 'dark and bright', bg: '#0b0218', ink: '#f5f5f5', line: '#ff4ecf', font: '"Courier New", Courier, monospace', glow: true },
+    sticky: { n: 'Sticky note', d: 'casual, bold', bg: '#fef08a', ink: '#1c1917', line: '#a16207', font: '"Trebuchet MS", Arial, sans-serif', tilt: true },
+    clean: { n: 'Clean minimal', d: 'white space', bg: '#ffffff', ink: '#111827', line: '#d1d5db', font: 'Arial, Helvetica, sans-serif' },
+    field: { n: 'Field journal', d: 'warm, rugged', bg: '#f3e9d2', ink: '#3f2d1a', line: '#8b6b3f', font: 'Georgia, "Times New Roman", serif', dashed: true }
+  };
+  const ACCENTS = ['#22d3ee', '#ff4ecf', '#4ade80', '#facc15', '#fb923c', '#a78bfa', '#ef4444', '#2563eb'];
+  const ICONS = ['⚡', '🔧', '🧪', '🤖', '🌱', '🚀', '🎯', '🛠️', '💡', '⚙️'];
+  const DEVICES = {
+    decision: { def: 'DECISION', fields: ['I chose', 'Instead of', 'Because (evidence)', 'Date'] },
+    fault: { def: 'FAULT TICKET', fields: ['Problem', 'Suspected cause', 'What I tested', 'Result', 'Action'] },
+    test: { def: 'TEST', fields: ['Test # · date', 'Purpose', 'Setup', 'Result (numbers)', 'So what?'] }
+  };
+
+  // =====================================================================
+  //  STATE
+  // =====================================================================
+  function blank() { return { v: 1, started: false, done: false, player: { name: '', cls: '' }, system: '', format: 'slides', seen: {}, mk: { round: 0, done: false, firstTry: 0, comebacks: 0, finished: [] }, sig: { style: 'blueprint', accent: '#22d3ee', icon: '⚡', titles: {}, tag: '', made: false }, audit: {}, drops: [] }; }
+  let S = blank();
+  function save() { S.done = !!(S.mk.done && S.sig.made && S.drops.length); try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+  function load() { try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && s.v === 1 && s.started) { const b = blank(); return Object.assign(b, s, { mk: Object.assign(b.mk, s.mk), sig: Object.assign(b.sig, s.sig) }); } } catch (e) {} return null; }
+  const unit = () => (FORMATS[S.format] || FORMATS.slides).unit;
+  function toast(t) { const el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.add('hidden'), 2600); }
+  const ohm = (html, face) => `<div class="bot"><pre class="ohm" aria-hidden="true">  .-----.\n  | ${face || 'o o'} |\n  |  =  |\n  '--+--'\n   [###]\n  Ohmbot</pre><div class="bubble">${html}</div></div>`;
+  const ruleHtml = () => `<div class="rule">${RULE.map(r => `<div class="r-${r.k}"><b>${r.t}</b>${r.d}</div>`).join('')}</div>`;
+
+  // =====================================================================
+  //  TABS
+  // =====================================================================
+  const TABS = [
+    { id: 'home', label: '🏠 Studio' }, { id: 'makeover', label: '① Evidence Makeover', done: () => S.mk.done },
+    { id: 'signature', label: '② My signature', done: () => S.sig.made }, { id: 'beats', label: '③ What to show' },
+    { id: 'moves', label: '④ Evidence moves' }, { id: 'audit', label: '⑤ Self-audit & drop', done: () => S.drops.length > 0 }
+  ];
+  let current = 'home';
+  function drawTabs() {
+    $('tabs').innerHTML = TABS.map(t => `<button class="tab${current === t.id ? ' on' : ''}" data-tab="${t.id}" ${current === t.id ? 'aria-current="page"' : ''}>${t.label}${t.done && t.done() ? ' <span class="tk">✓</span>' : ''}</button>`).join('');
+    $('who').textContent = S.player.name ? `${S.player.name} · ${S.system || 'my system'}` : '';
+  }
+  $('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) { sfx.click(); go(b.dataset.tab); } });
+  function go(id, opts) {
+    current = id; S.seen[id] = true; save(); drawTabs();
+    ({ home: renderHome, makeover: renderMakeover, signature: renderSignature, beats: renderBeats, moves: renderMoves, audit: renderAudit })[id](opts || {});
+    if (!(opts && opts.keepScroll)) window.scrollTo(0, 0);
+  }
+
+  // ---------------- HOME ----------------
+  function renderHome() {
+    const strong = BEATS.filter(b => auditStatus(b.id) === 2).length;
+    $('main').innerHTML = `<div class="panel">${ohm(`Hi <b>${esc(S.player.name)}</b>! Your record of evidence proves what you built and how you know it works. Everyone has to prove the <b>same things</b>, but <b>how</b> you show them is up to you: photos, videos, sketches, tables, voice memos, your own colours and layout.<br><br>Every entry, in any style, has to pass <b>the Evidence Test</b>:`)}${ruleHtml()}
+      <p class="muted">Not sure where to start? Do them in order: ① teaches the test, ② gives your folio its own look, ③ and ④ are your reference, ⑤ keeps you on track each week.</p></div>
+      <div class="tiles">
+        <button class="tile" data-go="makeover"><span class="n">① 7 ROUNDS</span><b>Evidence Makeover</b>Jordan's evidence is weak. Spot what's missing and pick the upgrade.<div class="st">${S.mk.done ? `✓ Done · ${S.mk.firstTry}/7 first try` : S.mk.round ? `▶ Round ${S.mk.round + 1} of 7` : ''}</div></button>
+        <button class="tile" data-go="signature"><span class="n">② YOUR STYLE</span><b>My signature</b>Design your own decision stamp, fault ticket and test card, then use them all project.<div class="st">${S.sig.made ? '✓ Signature made' : ''}</div></button>
+        <button class="tile" data-go="beats"><span class="n">③ REFERENCE</span><b>What to show</b>The ${BEATS.length} things your record must prove, and what makes each one strong.</button>
+        <button class="tile" data-go="moves"><span class="n">④ REFERENCE</span><b>Evidence moves</b>${Object.keys(MOVES).length} ways to show evidence. Mix and match to make it yours.</button>
+        <button class="tile" data-go="audit"><span class="n">⑤ EVERY WEEK</span><b>Self-audit & weekly drop</b>What you have, what you still need, and a one-page summary for Teams.<div class="st">${strong}/${BEATS.length} strong${S.drops.length ? ` · ${S.drops.length} drop${S.drops.length > 1 ? 's' : ''} made` : ''}</div></button>
+      </div>`;
+    $('main').querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { sfx.click(); go(b.dataset.go); }));
+  }
+
+  // ---------------- MAKEOVER ----------------
+  let mkStage = 'probs', mkPicked = new Set(), mkWrong = 0;
+  function renderMakeover(opts) {
+    if (S.mk.done && !opts.replay && S.mk.round >= ROUNDS.length) return renderMakeoverEnd();
+    if (opts.replay) { S.mk.round = 0; S.mk.finished = []; save(); }
+    const r = ROUNDS[S.mk.round], beat = BEATS.find(b => b.id === r.beat);
+    mkStage = 'probs'; mkPicked = new Set(); mkWrong = 0;
+    const slide = `<div class="slide" aria-label="Jordan's entry"><div class="sh">${STAGES.find(s => s.id === beat.stage).name.toUpperCase()} · ${esc(beat.t.toUpperCase())}</div><h4>${esc(r.title)}</h4>
+      ${r.table ? `<table>${r.table.map((row, i) => `<tr>${row.map(c => i ? `<td>${esc(c)}</td>` : `<th>${esc(c)}</th>`).join('')}</tr>`).join('')}</table>` : `<div class="pic">${esc(r.pic)}</div><div class="cap">${esc(r.cap)}</div>`}</div>`;
+    $('main').innerHTML = `<div class="panel"><div class="kick">EVIDENCE MAKEOVER · ROUND ${S.mk.round + 1} OF ${ROUNDS.length}</div>
+      <div class="dots">${ROUNDS.map((_, i) => `<i class="${i < S.mk.round ? 'd' : i === S.mk.round ? 'c' : ''}"></i>`).join('')}</div>
+      <div class="mk"><div><p class="muted" style="margin-top:0">Jordan (Year 11) is building an <b style="color:#fff">automatic plant waterer</b>. Here's one of Jordan's entries:</p>${slide}
+        <details class="ex" style="margin-top:10px"><summary>What should a "${esc(beat.t)}" entry show?</summary><div>${beat.show.map(x => '• ' + esc(x)).join('<br>')}</div></details></div>
+        <div>${ohm('', 'o o').replace('<div class="bubble"></div>', '<div class="bubble" id="mkSay"></div>')}<div id="mkArea"></div><div id="mkFeedback" aria-live="polite"></div><div class="row" style="margin-top:8px"><button class="act hidden" id="mkNext">NEXT ▶</button></div></div></div></div>`;
+    drawMkStage();
+    $('mkNext').addEventListener('click', () => {
+      sfx.click();
+      if (mkStage === 'probs') { mkStage = 'ups'; mkWrong = 0; drawMkStage(); return; }
+      S.mk.round++; save();
+      if (S.mk.round >= ROUNDS.length) { S.mk.done = true; save(); drawTabs(); sfx.win(); renderMakeoverEnd(); } else renderMakeover({});
+      window.scrollTo(0, 0);
+    });
+  }
+  function drawMkStage() {
+    const r = ROUNDS[S.mk.round];
+    $('mkNext').classList.add('hidden'); $('mkFeedback').innerHTML = '';
+    if (mkStage === 'probs') {
+      $('mkSay').innerHTML = `<b>Step 1: what's wrong with it?</b> Select <b>every</b> real problem, then check. Careful: one option isn't actually a problem.`;
+      $('mkArea').innerHTML = r.probs.map((p, i) => `<button class="opt" data-p="${i}" aria-pressed="false">☐ ${esc(p.t)}</button>`).join('') + `<button class="act" id="mkCheck" style="margin-top:8px;width:100%">CHECK</button>`;
+      $('mkArea').querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => {
+        const i = Number(b.dataset.p); if (mkPicked.has(i)) mkPicked.delete(i); else mkPicked.add(i);
+        b.classList.toggle('on', mkPicked.has(i)); b.setAttribute('aria-pressed', String(mkPicked.has(i))); b.textContent = (mkPicked.has(i) ? '☑ ' : '☐ ') + r.probs[i].t; sfx.click();
+      }));
+      $('mkCheck').addEventListener('click', () => {
+        const right = r.probs.map((p, i) => p.ok ? i : -1).filter(i => i >= 0);
+        const wrongPick = [...mkPicked].find(i => !r.probs[i].ok);
+        const missed = right.filter(i => !mkPicked.has(i));
+        if (wrongPick !== undefined) { mkWrong++; sfx.retry(); $('mkFeedback').innerHTML = `<span class="no">✗ Not quite.</span> ${esc(r.probs[wrongPick].fb)}`; return; }
+        if (missed.length) { mkWrong++; sfx.retry(); $('mkFeedback').innerHTML = `<span class="no">✗ Good so far, but you've missed ${missed.length} problem${missed.length > 1 ? 's' : ''}.</span> Check it against the Evidence Test: SHOW · SAY · WHY · NEXT.`; return; }
+        finishStage(`All the real problems found.`);
+        $('mkArea').querySelectorAll('[data-p]').forEach(b => { b.disabled = true; const i = Number(b.dataset.p); if (r.probs[i].ok) b.classList.add('right'); else b.classList.add('struck'); });
+        $('mkCheck').remove();
+      });
+    } else {
+      $('mkSay').innerHTML = `<b>Step 2: pick the best upgrade.</b> Which rewrite passes the Evidence Test?`;
+      $('mkArea').innerHTML = r.ups.map((u, i) => `<button class="opt" data-u="${i}">${esc(u.t)}</button>`).join('');
+      $('mkArea').querySelectorAll('[data-u]').forEach(b => b.addEventListener('click', () => {
+        const u = r.ups[Number(b.dataset.u)];
+        if (!u.ok) { mkWrong++; sfx.retry(); b.disabled = true; b.classList.add('struck'); $('mkFeedback').innerHTML = `<span class="no">✗</span> ${esc(u.fb)}`; return; }
+        b.classList.add('right'); $('mkArea').querySelectorAll('[data-u]').forEach(x => x.disabled = true);
+        finishStage(esc(r.win), true);
+      }));
+    }
+  }
+  function finishStage(msg, last) {
+    const cb = mkWrong > 0;
+    if (cb) { S.mk.comebacks++; sfx.cb(); } else sfx.good();
+    if (last) { if (!S.mk.finished.includes(S.mk.round) && !cb && !S.mk.roundWrong) S.mk.firstTry++; S.mk.finished.push(S.mk.round); S.mk.roundWrong = false; }
+    else if (cb) S.mk.roundWrong = true;
+    save();
+    $('mkFeedback').innerHTML = `${cb ? '<span class="cb">🔁 COMEBACK!</span> ' : '<span class="ok">✓</span> '}${msg}`;
+    const nb = $('mkNext'); nb.classList.remove('hidden'); nb.textContent = !last ? 'STEP 2 ▶' : S.mk.round < ROUNDS.length - 1 ? 'NEXT ROUND ▶' : 'FINISH ▶'; nb.focus({ preventScroll: true });
+  }
+  function renderMakeoverEnd() {
+    $('main').innerHTML = `<div class="panel">${ohm(`<b>Makeover complete!</b> You fixed all ${ROUNDS.length} of Jordan's entries${S.mk.firstTry ? `, ${S.mk.firstTry} on the first try` : ''}${S.mk.comebacks ? `, with ${S.mk.comebacks} comeback${S.mk.comebacks > 1 ? 's' : ''}` : ''}.<br><br>Notice that the strong entries weren't longer or fancier. They just passed the Evidence Test. That works in <b>any</b> style.`, '^ ^')}${ruleHtml()}
+      <div class="row"><button class="act" id="toSig">NEXT: DESIGN MY SIGNATURE ▶</button><button class="act alt" id="replay">Play again</button></div></div>`;
+    $('toSig').addEventListener('click', () => go('signature'));
+    $('replay').addEventListener('click', () => { S.mk.firstTry = 0; S.mk.comebacks = 0; go('makeover', { replay: true }); });
+  }
+
+  // ---------------- SIGNATURE ----------------
+  function wrapLine(t, n) { return String(t || '').length > n ? String(t).slice(0, n - 1) + '…' : String(t || ''); }
+  function deviceSVG(kind, opt) {
+    opt = opt || {};
+    const st = STYLES[S.sig.style], acc = S.sig.accent, d = DEVICES[kind], title = (S.sig.titles[kind] || d.def).toUpperCase();
+    const W = 640, rowH = 54, top = 70, H = top + d.fields.length * rowH + (S.sig.tag ? 36 : 16);
+    const f = st.font, ink = st.ink;
+    const lum = h => { const n = parseInt(h.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+    const onAcc = lum(acc) > 0.35 ? '#000' : '#fff';            // readable text on the accent header
+    const lightBg = lum(st.bg) > 0.5, labelCol = lightBg ? ink : acc; // labels: ink on paper styles, accent on dark styles
+    let bgDeco = '';
+    if (st.grid) for (let x = 0; x <= W; x += 20) bgDeco += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#ffffff" stroke-opacity="0.07"/>`;
+    if (st.grid) for (let y = 0; y <= H; y += 20) bgDeco += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="#ffffff" stroke-opacity="0.07"/>`;
+    if (st.ruled) for (let y = top + 10; y < H; y += 18) bgDeco += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="${st.line}" stroke-opacity="0.35"/>`;
+    const border = st.dashed ? `stroke-dasharray="8 5"` : '';
+    const glow = st.glow ? `<filter id="g${kind}"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
+    const rows = d.fields.map((fl, i) => {
+      const y = top + i * rowH;
+      return `<rect x="22" y="${y + 6}" width="5" height="15" fill="${acc}"/><text x="33" y="${y + 18}" font-family='${f}' font-size="14" font-weight="bold" fill="${labelCol}">${esc(fl.toUpperCase())}</text>
+        <line x1="22" y1="${y + rowH - 8}" x2="${W - 22}" y2="${y + rowH - 8}" stroke="${st.line}" stroke-width="1.5" ${st.dashed ? 'stroke-dasharray="4 4"' : ''}/>
+        ${opt.sample ? `<text x="22" y="${y + 38}" font-family='${f}' font-size="14" fill="${ink}" fill-opacity="0.75">${esc(wrapLine(opt.sample[i], 70))}</text>` : ''}`;
+    }).join('');
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(title)} template">
+      <defs>${glow}</defs>
+      <rect x="3" y="3" width="${W - 6}" height="${H - 6}" rx="${st.tilt ? 4 : 12}" fill="${st.bg}" stroke="${acc}" stroke-width="4" ${border} ${st.glow ? `filter="url(#g${kind})"` : ''}/>
+      ${bgDeco}
+      <rect x="3" y="3" width="${W - 6}" height="52" rx="${st.tilt ? 4 : 12}" fill="${acc}"/><rect x="3" y="40" width="${W - 6}" height="15" fill="${acc}"/>
+      <text x="22" y="38" font-family='${f}' font-size="24" font-weight="bold" fill="${onAcc}">${esc(S.sig.icon)} ${esc(title)}</text>
+      <text x="${W - 22}" y="36" text-anchor="end" font-family='${f}' font-size="14" fill="${onAcc}" fill-opacity="0.85">${esc(S.player.name.toUpperCase())}</text>
+      ${rows}
+      ${S.sig.tag ? `<text x="${W - 22}" y="${H - 16}" text-anchor="end" font-family='${f}' font-size="13" font-style="italic" fill="${ink}" fill-opacity="0.7">${esc(S.sig.tag)}</text>` : ''}
+    </svg>`;
+  }
+  const SAMPLES = {
+    decision: ['Capacitive moisture sensor', 'Resistive probe', 'Probe corroded: drifted 310→450 in 4 days', '26/5'],
+    fault: ['Pump won\'t start', 'Dead pump?', 'Pump straight to 5 V: runs. Relay LED: off', 'Control wire in row 14, not 13', 'Moved wire → pump starts'],
+    test: ['Test 3 · 19/5', 'Pump starts within 10 s of dry reading', 'Same pot and soil, probe depth 4 cm, 5 trials', '6.2 · 6.8 · 14.1 · 6.5 · 6.4 s', '4/5 pass. Mark probe depth (Test 4)']
+  };
+  function renderSignature() {
+    const s = S.sig;
+    $('main').innerHTML = `<div class="panel">${ohm(`Top engineers' folios have a <b>signature</b>: a few recurring devices that make their evidence instantly recognisable, and quicker to make. Design yours once, then reuse them all project.<br><br>Download them as <b>SVG</b>. In PowerPoint: <b>Insert → Pictures</b>, then right-click → <b>Convert to Shape</b> and type straight onto it. Or download a <b>PNG</b> for Canva, OneNote or printing.`)}</div>
+      <div class="sigwrap"><div class="panel">
+        <h3 style="margin-top:0">1 · STYLE</h3><div class="styles">${Object.entries(STYLES).map(([k, v]) => `<button class="stl${s.style === k ? ' on' : ''}" data-style="${k}" aria-pressed="${s.style === k}"><b>${v.n}</b><small>${v.d}</small></button>`).join('')}</div>
+        <h3>2 · ACCENT COLOUR</h3><div class="row">${ACCENTS.map(c => `<button class="sw${s.accent === c ? ' on' : ''}" data-acc="${c}" style="background:${c}" aria-label="Accent colour ${c}" aria-pressed="${s.accent === c}"></button>`).join('')}</div>
+        <h3>3 · ICON</h3><div class="row">${ICONS.map(i => `<button class="chip" data-icon="${i}" aria-pressed="${s.icon === i}" style="${s.icon === i ? 'border-color:var(--cyan);background:#062a33' : ''}">${i}</button>`).join('')}</div>
+        <h3>4 · YOUR WORDS</h3>
+        ${Object.entries(DEVICES).map(([k, d]) => `<div class="field"><label for="t_${k}">Name for your ${d.def.toLowerCase()}</label><input type="text" id="t_${k}" data-title="${k}" maxlength="22" value="${esc(s.titles[k] || '')}" placeholder="${d.def}" /></div>`).join('')}
+        <div class="field"><label for="sigTag">Your tagline (optional)</label><input type="text" id="sigTag" maxlength="40" value="${esc(s.tag)}" placeholder="e.g. test it, prove it" /></div>
+        <label style="display:flex;gap:6px;align-items:center;margin-top:8px;cursor:pointer"><input type="checkbox" id="sample" checked /> show an example in the preview</label>
+      </div>
+      <div class="devs" id="devs"></div></div>`;
+    $('main').querySelectorAll('[data-style]').forEach(b => b.addEventListener('click', () => { s.style = b.dataset.style; save(); sfx.click(); renderSignature(); }));
+    $('main').querySelectorAll('[data-acc]').forEach(b => b.addEventListener('click', () => { s.accent = b.dataset.acc; save(); sfx.click(); renderSignature(); }));
+    $('main').querySelectorAll('[data-icon]').forEach(b => b.addEventListener('click', () => { s.icon = b.dataset.icon; save(); sfx.click(); renderSignature(); }));
+    $('main').querySelectorAll('[data-title]').forEach(i => i.addEventListener('input', () => { s.titles[i.dataset.title] = i.value.trim(); save(); drawDevices(); }));
+    $('sigTag').addEventListener('input', e => { s.tag = e.target.value.trim(); save(); drawDevices(); });
+    $('sample').addEventListener('change', drawDevices);
+    drawDevices();
+  }
+  function drawDevices() {
+    const sample = $('sample') && $('sample').checked;
+    $('devs').innerHTML = Object.keys(DEVICES).map(k => `<div class="dev"><div class="kick" style="margin-bottom:6px">${MOVES[{ decision: 'decision', fault: 'faultticket', test: 'testcard' }[k]].n.toUpperCase()}</div>${deviceSVG(k, sample ? { sample: SAMPLES[k] } : null)}
+      <div class="row"><button class="act small" data-dl="${k}" data-type="svg">⬇ SVG (editable in PowerPoint)</button><button class="act small alt" data-dl="${k}" data-type="png">⬇ PNG</button></div></div>`).join('') +
+      `<div class="row"><button class="act" id="dlAll">⬇ Download all three (SVG)</button><span class="muted">Downloads are blank templates in your style. The example is preview only.</span></div>`;
+    $('devs').querySelectorAll('[data-dl]').forEach(b => b.addEventListener('click', () => downloadDevice(b.dataset.dl, b.dataset.type)));
+    $('dlAll').addEventListener('click', () => { Object.keys(DEVICES).forEach((k, i) => setTimeout(() => downloadDevice(k, 'svg'), i * 350)); });
+  }
+  function fileSafe(t) { return String(t || 'student').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase(); }
+  function downloadBlob(blob, name) { const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 10000); }
+  function svgToPng(svg, w, h, name, done) {
+    const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    img.onload = () => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const g = c.getContext('2d'); g.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); c.toBlob(b => { downloadBlob(b, name); done && done(); }, 'image/png'); };
+    img.onerror = () => toast('Couldn\'t make the image in this browser. Try SVG instead.');
+    img.src = url;
+  }
+  function downloadDevice(k, type) {
+    const svg = deviceSVG(k), m = /viewBox="0 0 (\d+) (\d+)"/.exec(svg), name = `${fileSafe(S.player.name)}-${fileSafe(S.sig.titles[k] || DEVICES[k].def)}`;
+    S.sig.made = true; save(); drawTabs();
+    if (type === 'svg') { downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), name + '.svg'); toast('✓ Downloaded. In PowerPoint: Insert → Pictures, then Convert to Shape.'); }
+    else svgToPng(svg, +m[1], +m[2], name + '.png', () => toast('✓ PNG downloaded'));
+  }
+
+  // ---------------- BEATS ----------------
+  function renderBeats() {
+    $('main').innerHTML = `<div class="panel">${ohm(`These are the <b>${BEATS.length} things</b> your record of evidence has to prove. Your record doesn't need a slide or page for each one, and it doesn't need to look like anyone else's. It just has to show all of them.<br><br>Each card says <b>what to show</b>, <b>when it's strong</b>, and moves that suit it. Stuck? Use the <b>starter</b>, then make it yours.`)}</div>` +
+      STAGES.map(st => `<div class="panel stage"><h3 style="margin-top:0;color:${st.col}">${st.name.toUpperCase()}</h3><div class="beats">${BEATS.filter(b => b.stage === st.id).map(beatCard).join('')}</div></div>`).join('');
+    bindMoveChips();
+  }
+  function beatCard(b) {
+    const st = STAGES.find(s => s.id === b.stage);
+    return `<div class="beat" id="beat-${b.id}" style="border-left-color:${st.col}"><h4>${esc(b.t)}</h4>
+      <div class="lbl m">MUST SHOW</div><ul>${b.show.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="lbl s">STRONG WHEN</div><ul>${b.strong.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="lbl t">MOVES THAT SUIT IT</div><div>${b.moves.map(m => `<button class="chip" data-move="${m}">${MOVES[m].ic} ${esc(MOVES[m].n)}</button>`).join('')}</div>
+      <details class="ex"><summary>Starter + Jordan's example</summary><div class="starter" style="background:#14120a;color:#e5e7eb;font-family:monospace">${esc(b.starter)}</div><div>${esc(b.ex)}</div></details></div>`;
+  }
+  function bindMoveChips() { $('main').querySelectorAll('[data-move]').forEach(c => c.addEventListener('click', () => { sfx.click(); go('moves', { focus: c.dataset.move }); })); }
+
+  // ---------------- MOVES ----------------
+  function renderMoves(opts) {
+    $('main').innerHTML = `<div class="panel">${ohm(`<b>Evidence moves</b> are the building blocks of your style. Mix them: a fault ticket here, a 20-second video there, an annotated sketch, a results graph. The three marked <b style="color:var(--pink)">SIGNATURE</b> are the ones you designed in ②.<br><br>Every move still has to pass the Evidence Test.`)}</div>
+      <div class="moves">${Object.entries(MOVES).map(([k, m]) => `<div class="move" id="move-${k}" tabindex="-1"><h4><span class="ic">${m.ic}</span>${esc(m.n)}</h4>${m.sig ? '<div class="sig">★ SIGNATURE MOVE</div>' : ''}<p>${esc(m.what)}</p><p><b style="color:var(--green)">Strong when:</b> ${esc(m.strong)}</p>
+        <div class="muted" style="font-size:12px">Good for: ${BEATS.filter(b => b.moves.includes(k)).map(b => `<button class="chip" data-beat="${b.id}">${esc(b.t)}</button>`).join('') || 'anything'}</div></div>`).join('')}</div>`;
+    $('main').querySelectorAll('[data-beat]').forEach(c => c.addEventListener('click', () => { go('beats'); const el = $('beat-' + c.dataset.beat); if (el) { el.scrollIntoView({ block: 'center' }); el.style.boxShadow = '0 0 14px rgba(250,204,21,0.6)'; } }));
+    if (opts.focus) { const el = $('move-' + opts.focus); if (el) { setTimeout(() => { el.scrollIntoView({ block: 'center' }); el.classList.add('flash'); el.focus({ preventScroll: true }); }, 30); } }
+  }
+
+  // ---------------- AUDIT ----------------
+  function auditRow(id) { return S.audit[id] || (S.audit[id] = { c: {}, where: '', need: '' }); }
+  function auditStatus(id) { const a = S.audit[id]; if (!a) return 0; const n = RULE.filter(r => a.c[r.k]).length; return n === 4 ? 2 : (n || a.where) ? 1 : 0; }
+  const STAT_TXT = ['○ Not yet', '◐ Captured', '● Strong'];
+  function renderAudit() {
+    $('main').innerHTML = `<div class="panel">${ohm(`Your <b>self-audit</b>. For each thing your record must show, tick the parts of the Evidence Test it passes, say <b>where it is</b> in your record, and note what you <b>still need</b>. Four ticks = <b>strong</b>.<br><br>Be honest: an untested result counts as <b>not yet</b>. Every week, make a <b>weekly drop</b> and post it on Teams.`)}<div class="bars" id="bars"></div></div>
+      <div class="panel" style="overflow-x:auto"><table class="audit"><thead><tr><th>EVIDENCE</th><th>EVIDENCE TEST</th><th>STATUS</th><th>WHERE IS IT?</th><th class="hide-sm">STILL NEED</th></tr></thead><tbody>
+      ${STAGES.map(st => `<tr><td colspan="5" class="stg" style="color:${st.col}">${st.name.toUpperCase()}</td></tr>` + BEATS.filter(b => b.stage === st.id).map(b => { const a = auditRow(b.id); return `<tr data-row="${b.id}">
+        <td><button class="chip" data-beatlink="${b.id}" title="What should this show?">${esc(b.t)}</button></td>
+        <td><div class="checks">${RULE.map(r => `<button class="ck c-${r.k}${a.c[r.k] ? ' on' : ''}" data-ck="${r.k}" aria-pressed="${!!a.c[r.k]}" aria-label="${r.t} for ${esc(b.t)}">${r.t}</button>`).join('')}</div></td>
+        <td class="stat s${auditStatus(b.id)}" data-stat>${STAT_TXT[auditStatus(b.id)]}</td>
+        <td><input type="text" data-where value="${esc(a.where)}" maxlength="40" placeholder="e.g. ${unit()} 7" aria-label="Where is ${esc(b.t)}"></td>
+        <td class="hide-sm"><input type="text" data-need value="${esc(a.need)}" maxlength="80" placeholder="what's missing?" aria-label="Still need for ${esc(b.t)}"></td></tr>`; }).join('')).join('')}
+      </tbody></table></div>
+      <div class="panel"><h2>📦 Weekly drop</h2><p>A one-page summary of where you're at, ready to post on Teams.</p>
+        <div class="field"><label for="dWeek">This week I captured…</label><textarea id="dWeek" rows="2" maxlength="220" placeholder="e.g. Test 3 results (5 trials) and a fault ticket for the pump relay"></textarea></div>
+        <div class="field"><label for="dNext">Next week I'll capture…</label><textarea id="dNext" rows="2" maxlength="220" placeholder="e.g. my modification to the pump position, with before/after photos"></textarea></div>
+        <div class="field"><label for="dStuck">I'm stuck on… (optional)</label><input type="text" id="dStuck" maxlength="120" style="width:100%" /></div>
+        <div class="row"><button class="act" id="dropBtn">⬇ MAKE MY WEEKLY DROP (PNG)</button><button class="act alt" id="indexBtn">📋 Copy my evidence index</button></div>
+        <p class="muted" style="font-size:12px">The evidence index lists each item and where it is in your record. Paste it as a contents ${unit().toLowerCase()} so your teacher (and you) can find everything.</p>
+        <div id="dropHist" class="muted" style="font-size:12px"></div></div>`;
+    drawBars(); drawDropHist();
+    const tb = $('main').querySelector('tbody');
+    tb.addEventListener('click', e => {
+      const ck = e.target.closest('[data-ck]'), link = e.target.closest('[data-beatlink]');
+      if (link) { go('beats'); const el = $('beat-' + link.dataset.beatlink); if (el) el.scrollIntoView({ block: 'center' }); return; }
+      if (!ck) return;
+      const id = ck.closest('[data-row]').dataset.row, a = auditRow(id), k = ck.dataset.ck;
+      a.c[k] = !a.c[k]; ck.classList.toggle('on', a.c[k]); ck.setAttribute('aria-pressed', String(a.c[k])); sfx.click(); updateRow(id); save();
+    });
+    tb.addEventListener('input', e => { const tr = e.target.closest('[data-row]'); if (!tr) return; const a = auditRow(tr.dataset.row); if (e.target.matches('[data-where]')) a.where = e.target.value; if (e.target.matches('[data-need]')) a.need = e.target.value; updateRow(tr.dataset.row); save(); });
+    $('dropBtn').addEventListener('click', makeDrop);
+    $('indexBtn').addEventListener('click', copyIndex);
+  }
+  function updateRow(id) { const td = $('main').querySelector(`[data-row="${id}"] [data-stat]`), s = auditStatus(id); td.className = 'stat s' + s; td.textContent = STAT_TXT[s]; drawBars(); }
+  function stageCounts() { return STAGES.map(st => { const bs = BEATS.filter(b => b.stage === st.id); return { st, total: bs.length, strong: bs.filter(b => auditStatus(b.id) === 2).length, captured: bs.filter(b => auditStatus(b.id) >= 1).length }; }); }
+  function drawBars() { $('bars').innerHTML = stageCounts().map(c => `<div class="bar"><b style="color:${c.st.col}">${c.st.name}</b> · ${c.strong}/${c.total} strong<div class="tr"><i style="width:${Math.round((c.strong + 0.5 * (c.captured - c.strong)) / c.total * 100)}%"></i></div></div>`).join(''); }
+  function drawDropHist() { $('dropHist').textContent = S.drops.length ? 'Drops made: ' + S.drops.map(d => d.date).join(' · ') : 'No drops yet.'; }
+  function copyIndex() {
+    const lines = [`EVIDENCE INDEX – ${S.player.name} – ${S.system || 'my system'}`].concat(STAGES.map(st => `\n${st.name.toUpperCase()}\n` + BEATS.filter(b => b.stage === st.id).map(b => `• ${b.t}: ${(S.audit[b.id] && S.audit[b.id].where) || '(not yet)'}`).join('\n')));
+    const text = lines.join('\n');
+    const fallback = () => { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e) {} t.remove(); toast('✓ Index copied. Paste it into your record.'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast('✓ Index copied. Paste it into your record.'), fallback); else fallback();
+  }
+  function wrapText(t, max) { const w = String(t || '').replace(/\s+/g, ' ').trim().split(' '), out = []; let l = ''; w.forEach(x => { if ((l + ' ' + x).trim().length > max) { if (l) out.push(l); l = x; } else l = (l + ' ' + x).trim(); }); if (l) out.push(l); return out; }
+  function makeDrop() {
+    const week = $('dWeek').value.trim(), nxt = $('dNext').value.trim(), stuck = $('dStuck').value.trim();
+    if (week.length < 5 || nxt.length < 5) { toast('Fill in "this week" and "next week" first.'); (week.length < 5 ? $('dWeek') : $('dNext')).focus(); return; }
+    const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    const W = 900, counts = stageCounts();
+    const T = (x, y, s, o) => `<text x="${x}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${(o && o.size) || 16}" ${o && o.bold ? 'font-weight="bold"' : ''} fill="${(o && o.fill) || '#111'}" ${o && o.anchor ? `text-anchor="${o.anchor}"` : ''}>${esc(s)}</text>`;
+    const para = (x, y, s, n, lines) => wrapText(s, n).slice(0, lines).map((l, i) => T(x, y + i * 22, l)).join('');
+    let y = 270, bars = '';
+    counts.forEach(c => {
+      const w = 400, sw = c.strong / c.total * w, cw = (c.captured - c.strong) / c.total * w;
+      bars += T(50, y + 15, c.st.name, { bold: true }) + `<rect x="180" y="${y}" width="${w}" height="20" rx="4" fill="#e5e7eb"/><rect x="180" y="${y}" width="${sw}" height="20" rx="4" fill="#16a34a"/><rect x="${180 + sw}" y="${y}" width="${cw}" height="20" fill="#facc15"/>` + T(600, y + 15, `${c.strong} strong · ${c.captured - c.strong} captured · ${c.total - c.captured} not yet`, { size: 14 });
+      y += 34;
+    });
+    const needsN = Math.max(1, BEATS.filter(b => S.audit[b.id] && S.audit[b.id].need).slice(0, 4).length);
+    const H = y + 330 + needsN * 24 + (stuck ? 40 : 0) + 50;
+    const needs = BEATS.filter(b => S.audit[b.id] && S.audit[b.id].need).slice(0, 4).map(b => `${b.t}: ${S.audit[b.id].need}`);
+    const strongTotal = counts.reduce((t, c) => t + c.strong, 0);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/>
+      <rect x="0" y="0" width="${W}" height="120" fill="#0b0218"/><rect x="0" y="116" width="${W}" height="6" fill="#22d3ee"/>
+      ${T(50, 55, 'WEEKLY EVIDENCE DROP', { size: 34, bold: true, fill: '#fff' })}${T(50, 92, 'Year 11 · Build & Test · Record of evidence', { size: 17, fill: '#22d3ee' })}
+      ${T(W - 50, 55, date, { size: 18, fill: '#fff', anchor: 'end' })}${T(W - 50, 92, `Drop #${S.drops.length + 1}`, { size: 16, fill: '#facc15', anchor: 'end' })}
+      ${T(50, 170, `${S.player.name}${S.player.cls ? ' · ' + S.player.cls : ''}`, { size: 24, bold: true })}${T(50, 200, `System: ${S.system || '—'}   ·   Built in: ${(FORMATS[S.format] || {}).name || ''}`, { size: 16, fill: '#444' })}
+      ${T(50, 250, `Progress: ${strongTotal} of ${BEATS.length} evidence items strong (green = strong, yellow = captured)`, { size: 17, bold: true })}
+      ${bars}
+      <line x1="50" y1="${y + 8}" x2="${W - 50}" y2="${y + 8}" stroke="#ccc"/>
+      ${T(50, y + 46, 'This week I captured', { size: 18, bold: true, fill: '#0e7490' })}${para(50, y + 74, week, 80, 3)}
+      ${T(50, y + 160, 'Next week I\'ll capture', { size: 18, bold: true, fill: '#15803d' })}${para(50, y + 188, nxt, 80, 3)}
+      ${T(50, y + 274, 'Still needed (from my self-audit)', { size: 18, bold: true, fill: '#be185d' })}${(needs.length ? needs : ['(nothing listed)']).map((n, i) => T(50, y + 302 + i * 24, '• ' + wrapText(n, 85)[0], { size: 15 })).join('')}
+      ${stuck ? T(50, y + 302 + needsN * 24 + 24, 'Stuck on: ' + wrapText(stuck, 80)[0], { size: 16, bold: true, fill: '#b45309' }) : ''}
+      ${T(50, H - 30, 'Evidence Test: SHOW · SAY · WHY · NEXT', { size: 14, fill: '#666' })}</svg>`;
+    S.drops.push({ date, strong: strongTotal }); save(); drawTabs(); drawDropHist();
+    svgToPng(svg, W, H, `weekly-drop-${fileSafe(S.player.name)}-${S.drops.length}.png`, () => { sfx.good(); toast('✓ Weekly drop downloaded. Post it on Teams!'); });
+  }
+
+  // =====================================================================
+  //  START / VIEW
+  // =====================================================================
+  let fmtChoice = 'slides';
+  function drawFmts() { $('fmts').innerHTML = Object.entries(FORMATS).map(([k, f]) => `<button class="fmt${fmtChoice === k ? ' on' : ''}" data-fmt="${k}" aria-pressed="${fmtChoice === k}">${f.icon} ${f.name}</button>`).join(''); }
+  $('fmts').addEventListener('click', e => { const b = e.target.closest('[data-fmt]'); if (b) { fmtChoice = b.dataset.fmt; drawFmts(); sfx.click(); } });
+  function begin() { $('startOverlay').classList.add('hidden'); drawTabs(); go('home'); }
+  (function init() {
+    const saved = load();
+    if (saved) { S = saved; $('resumeCard').classList.remove('hidden'); $('signCard').classList.add('hidden'); $('resumeText').textContent = `${S.player.name} (${S.player.cls}) · ${S.system || 'my system'}`; setTimeout(() => $('resumeBtn').focus(), 50); }
+    else {
+      let p = null; for (const k of NAME_KEYS) { try { p = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) {} if (p && p.name) break; }
+      if (p && p.name) { $('obName').value = p.name; $('obClass').value = p.cls || ''; $('obNote').textContent = 'Filled in from another game on this device. Change it if it isn\'t you.'; }
+      setTimeout(() => $('obName').focus(), 50);
+    }
+    drawFmts();
+  })();
+  $('resumeBtn').addEventListener('click', begin);
+  $('freshBtn').addEventListener('click', () => { const p = S.player; S = blank(); $('resumeCard').classList.add('hidden'); $('signCard').classList.remove('hidden'); $('obName').value = p.name || ''; $('obClass').value = p.cls || ''; });
+  function tryStart() {
+    const n = $('obName').value.trim(), c = $('obClass').value.trim();
+    if (!n || !c) { $('obMsg').textContent = 'Still needed: ' + [!n && 'first name', !c && 'class'].filter(Boolean).join(' and ') + '.'; sfx.retry(); return; }
+    S = blank(); S.started = true; S.player = { name: n, cls: c }; S.system = $('obSystem').value.trim(); S.format = fmtChoice; save(); sfx.win(); begin();
+  }
+  $('startBtn').addEventListener('click', tryStart);
+  ['obName', 'obClass', 'obSystem'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') tryStart(); }));
+  $('restartBtn').addEventListener('click', () => {
+    if ($('restartBtn').dataset.armed) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} location.reload(); return; }
+    $('restartBtn').dataset.armed = '1'; $('restartBtn').textContent = 'Clear? click again'; toast('This clears your studio on this device. Click again to confirm.');
+    setTimeout(() => { delete $('restartBtn').dataset.armed; $('restartBtn').textContent = '↺'; }, 4000);
+  });
+  let zoom = 1;
+  try { const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null'); if (v) { zoom = Math.min(1.5, Math.max(0.8, +v.zoom || 1)); muted = !!v.muted; } } catch (e) {}
+  function applyView() { document.documentElement.style.setProperty('--ui', zoom); $('muteBtn').textContent = muted ? '🔇' : '🔊'; $('muteBtn').setAttribute('aria-pressed', String(muted)); try { localStorage.setItem(VIEW_KEY, JSON.stringify({ zoom, muted })); } catch (e) {} }
+  $('zMinus').addEventListener('click', () => { zoom = Math.max(0.8, Math.round((zoom - 0.1) * 10) / 10); applyView(); });
+  $('zPlus').addEventListener('click', () => { zoom = Math.min(1.5, Math.round((zoom + 0.1) * 10) / 10); applyView(); });
+  $('muteBtn').addEventListener('click', () => { muted = !muted; applyView(); });
+  applyView();
+
+  // sanity checks
+  ROUNDS.forEach((r, i) => { console.assert(r.ups.filter(u => u.ok).length === 1, 'round ' + i + ' needs one correct upgrade'); console.assert(r.probs.some(p => !p.ok) && r.probs.some(p => p.ok), 'round ' + i + ' problems'); console.assert(BEATS.some(b => b.id === r.beat), 'round beat'); });
+  BEATS.forEach(b => b.moves.forEach(m => console.assert(MOVES[m], 'move ' + m)));
+  window.__evidenceStudio = { state: () => JSON.parse(JSON.stringify(S)), BEATS, ROUNDS, go };
+})();
+</script>
+<script src="lock.js"></script>
+<script>SELocks.guard(8); // teacher lock id 8 (see dashboard.html); the studio stays open if no lock row exists</script>
+</body>
+</html>

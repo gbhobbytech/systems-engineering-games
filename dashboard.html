@@ -641,7 +641,9 @@
     // Research mission: The Controller Challenge (controller-challenge.html). Only shown once a level_locks row for level 6 exists.
     { n: 6, name: 'Research · The Controller Challenge', optional: true },
     // Year 11 Step Up Part 2: Ohmbot's Circuit Rescue (step-up-circuit-rescue.html). Only shown once a level_locks row for level 7 exists.
-    { n: 7, name: 'Step Up Part 2 · Circuit Rescue', optional: true }
+    { n: 7, name: 'Step Up Part 2 · Circuit Rescue', optional: true },
+    // Year 11 Evidence Studio (evidence-studio.html). Only shown once a level_locks row for level 8 exists.
+    { n: 8, name: 'Evidence Studio · Year 11', optional: true }
   ];
   const lockable = () => LOCKABLE.filter(l => !l.optional || l.n in lockState);
   let lockState = {};
