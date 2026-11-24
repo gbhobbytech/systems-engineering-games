@@ -1,7 +1,7 @@
 // Browser play-through of step-up-circuit-rescue.html (all missions, persistence, reload, hub).
 // Needs Playwright:  npm i -D playwright  (or a global install), then serve the repo root and run:
 //   python3 -m http.server 8765 &   node tests/play-through.spec.js
-// Optional: SHOTS=dir to save screenshots.
+// Optional: SHOTS=dir to save screenshots; VW/VH to set the window size (default 1366x768).
 'use strict';
 const { chromium } = require('playwright');
 const BASE = process.env.BASE || 'http://localhost:8765/';
@@ -13,7 +13,7 @@ const check = (cond, msg) => { if (cond) { pass++; console.log('  ✓ ' + msg); 
 
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROME || undefined });
-  const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, acceptDownloads: true });
+  const ctx = await browser.newContext({ viewport: { width: Number(process.env.VW || 1366), height: Number(process.env.VH || 768) }, acceptDownloads: true });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -72,6 +72,11 @@ const check = (cond, msg) => { if (cond) { pass++; console.log('  ✓ ' + msg); 
   // ---------- Mission 2 ----------
   console.log('\nMission 2 – Complete the Circuit');
   if ((await st()).mission !== 'm2') await page.click('[data-m="m2"]');
+  const fits = await page.evaluate(() => {
+    const vis = id => { const r = document.getElementById(id).getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; };
+    return { big: innerWidth >= 1000 && innerHeight >= 500, noScroll: document.documentElement.scrollHeight <= innerHeight + 1, board: vis('board'), power: vis('powerBtn'), press: vis('pressBtn'), status: vis('diagChip') };
+  });
+  if (fits.big) check(fits.noScroll && fits.board && fits.power && fits.press && fits.status, 'fit to screen: board, power, press and status all visible without scrolling ' + JSON.stringify(fits));
   await hole('C5'); check((await page.$$('#bbHi rect.hi')).length === 5, 'selecting a hole highlights its 5 connected contacts');
   check(/A5–E5/.test(await page.textContent('#inspector')), 'inspector names the connected group');
   await next();

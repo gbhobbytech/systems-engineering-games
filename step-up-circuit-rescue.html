@@ -36,12 +36,45 @@
   #who { font-size: 12px; color: #ccc; }
 
   /* ---------- layout ---------- */
-  #app { display: grid; grid-template-columns: minmax(300px, 360px) 1fr; gap: 12px; padding: 12px; max-width: 1500px; margin: 0 auto; }
-  #work { display: grid; grid-template-columns: minmax(230px, 300px) 1fr; gap: 12px; align-items: start; min-width: 0; }
+  #app { display: grid; grid-template-columns: clamp(270px, 24vw, 360px) 1fr; gap: 10px; padding: 10px; max-width: 1700px; margin: 0 auto; }
+  #work { display: grid; grid-template-columns: minmax(0, 1fr) clamp(240px, 22vw, 320px); gap: 10px; align-items: start; min-width: 0; }
+  #side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   .panel { background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 10px; min-width: 0; }
   .panel h3 { margin: 0 0 6px; font-size: calc(12px * var(--ui)); letter-spacing: 2px; color: var(--cyan); }
-  @media (max-width: 1180px) { #work { grid-template-columns: 1fr; } #schemPanel { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 10px; } #schemPanel h3 { grid-column: 1 / -1; } }
-  @media (max-width: 900px) { #app { grid-template-columns: 1fr; } #schemPanel { display: block; } }
+  /* narrower screens: board on top, schematic and controls side by side underneath (page scrolls) */
+  @media (max-width: 999px) {
+    #work { grid-template-columns: 1fr; }
+    #side { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr); align-items: start; }
+  }
+  @media (max-width: 999px), (max-height: 499px) { #fitBtn { display: none; } }
+  @media (max-width: 760px) { #app { grid-template-columns: 1fr; } #side { display: flex; } #mentor { position: static; max-height: none; } }
+
+  /* ---------- FIT TO SCREEN (default on laptop-sized and larger screens) ----------
+     The whole game fits the window: each column scrolls on its own if needed, and the breadboard
+     scales to the space left, so the board, the power/press controls and Ohmbot are visible together. */
+  @media (min-width: 1000px) and (min-height: 500px) {
+    body.fit { height: 100vh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    body.fit header { flex: none; padding: 5px 12px; }
+    body.fit #app { flex: 1 1 auto; min-height: 0; width: 100%; grid-template-rows: minmax(0, 1fr); }
+    body.fit #mentor { position: static; max-height: none; height: 100%; }
+    body.fit #work { height: 100%; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+    body.fit #boardPanel { display: flex; flex-direction: column; min-height: 0; }
+    body.fit #boardView { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+    body.fit #board { flex: 1 1 0; min-height: 150px; width: 100%; height: auto; }
+    body.fit #matchView, body.fit #anatomyView { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    body.fit #side { min-height: 0; overflow-y: auto; }
+    body.fit #schem { max-height: 34vh; }
+    body.fit .m-btns { position: sticky; bottom: -10px; background: rgba(0,0,0,0.94); padding: 6px 0 2px; }
+  }
+  @media (min-width: 1000px) and (min-height: 500px) and (max-height: 760px) {
+    body.fit #schem { max-height: 27vh; }
+    body.fit .legend { display: none; }
+    body.fit .panel { padding: 7px 8px; }
+    body.fit .panel h3 { margin-bottom: 3px; }
+    body.fit #pressBtn, body.fit #powerBtn { padding: 6px 9px; min-width: 0; }
+    body.fit #inspector { min-height: 0; }
+    body.fit .brand small { display: none; }
+  }
 
   /* ---------- mentor (Ohmbot) ---------- */
   #mentor { border-color: var(--pink); box-shadow: 0 0 18px rgba(255,78,207,0.18); display: flex; flex-direction: column; gap: 8px; align-self: start; position: sticky; top: 8px; max-height: calc(100vh - 16px); overflow-y: auto; }
@@ -76,7 +109,7 @@
   .safety { border: 2px solid var(--red); border-radius: 6px; padding: 6px 8px; color: #fecaca; background: #1a0606; font-size: calc(13px * var(--ui)); }
 
   /* ---------- schematic ---------- */
-  #schem { width: 100%; height: auto; display: block; background: #05080d; border-radius: 6px; }
+  #schem { width: 100%; height: auto; display: block; margin: 0 auto; background: #05080d; border-radius: 6px; }
   #schem .w { stroke: #cbd5e1; stroke-width: 2.5; fill: none; stroke-linecap: round; }
   #schem .sym { cursor: pointer; }
   #schem .sym .hit { fill: transparent; stroke: transparent; stroke-width: 2; rx: 6; }
@@ -89,7 +122,7 @@
   #schem .ledglow { fill: rgba(248,113,113,0.0); }
   #schem .lit .ledglow { fill: rgba(248,113,113,0.55); }
   @keyframes dash { to { stroke-dashoffset: -16; } }
-  #schemInfo { font-size: calc(13px * var(--ui)); line-height: 1.4; margin-top: 6px; color: #cbd5e1; min-height: 3em; }
+  #schemInfo { font-size: calc(13px * var(--ui)); line-height: 1.4; margin-top: 6px; color: #cbd5e1; }
   #schemInfo b { color: var(--gold); }
   .legend { font-size: calc(12px * var(--ui)); color: #9ca3af; line-height: 1.4; margin-top: 6px; border-top: 1px solid #333; padding-top: 6px; }
 
@@ -119,10 +152,11 @@
   .tb[disabled] { opacity: 0.4; cursor: default; }
   .tb .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; border: 1px solid #000; }
 
-  #controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid #333; }
-  #powerBtn { padding: 9px 12px; border-radius: 6px; border: 2px solid #666; background: #1a1a1a; color: #eee; font: bold calc(14px * var(--ui)) monospace; cursor: pointer; min-width: 140px; }
+  #ctrlPanel { border-color: var(--orange); }
+  #controls { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+  #powerBtn { flex: 1 1 auto; padding: 9px 12px; border-radius: 6px; border: 2px solid #666; background: #1a1a1a; color: #eee; font: bold calc(14px * var(--ui)) monospace; cursor: pointer; }
   #powerBtn.on { border-color: var(--green); color: var(--green); box-shadow: 0 0 10px rgba(74,222,128,0.35); }
-  #pressBtn { padding: 9px 12px; border-radius: 22px; border: 2px solid var(--orange); background: #1f1206; color: var(--orange); font: bold calc(14px * var(--ui)) monospace; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; min-width: 170px; }
+  #pressBtn { padding: 9px 12px; border-radius: 22px; border: 2px solid var(--orange); background: #1f1206; color: var(--orange); font: bold calc(14px * var(--ui)) monospace; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; flex: 1 1 auto; }
   #pressBtn.down { background: var(--orange); color: #000; }
   #latchLab { font-size: calc(13px * var(--ui)); color: #ccc; display: flex; gap: 4px; align-items: center; cursor: pointer; }
   #flowLab { font-size: calc(13px * var(--ui)); color: #ccc; display: flex; gap: 4px; align-items: center; cursor: pointer; }
@@ -141,7 +175,8 @@
   #inspector { margin-top: 8px; font-size: calc(13px * var(--ui)); line-height: 1.45; background: #0b0b12; border: 1px solid #333; border-radius: 6px; padding: 6px 8px; min-height: 2.6em; }
   #inspector b { color: var(--gold); }
   #inspector .ib { margin: 4px 6px 0 0; }
-  .kbd-help { font-size: calc(11px * var(--ui)); color: #777; margin-top: 4px; }
+  .kbd-help { font-size: calc(11px * var(--ui)); color: #888; margin-top: 6px; line-height: 1.4; }
+  .kbd-help summary { cursor: pointer; }
 
   /* ---------- mission 1 views ---------- */
   #matchView { padding: 4px; }
@@ -253,6 +288,7 @@
   <div class="hdr-tools">
     <span id="who"></span>
     <button id="zMinus" aria-label="Smaller text" title="Smaller text">A−</button><span id="zPct">100%</span><button id="zPlus" aria-label="Bigger text" title="Bigger text">A+</button>
+    <button id="fitBtn" aria-pressed="true" title="Fit the whole game to the window (turn off to scroll with a bigger board)">⛶ Fit</button>
     <button id="muteBtn" aria-pressed="false" title="Sound on/off">🔊</button>
     <button id="restartBtn" title="Restart Part 2">↺</button>
     <a href="index.html" title="Game hub">HUB</a>
@@ -272,17 +308,7 @@
   </aside>
 
   <section id="work">
-    <!-- ===================== PANEL A: SCHEMATIC ===================== -->
-    <div class="panel" id="schemPanel">
-      <h3>A · CIRCUIT SCHEMATIC</h3>
-      <svg id="schem" viewBox="0 0 300 250" style="overflow:visible" role="group" aria-label="Circuit schematic. Select a symbol to inspect it."></svg>
-      <div>
-        <div id="schemInfo">Select a symbol to inspect it.</div>
-        <div class="legend">Conventional current flows from <b style="color:#fff">+</b> around the loop to <b style="color:#fff">−</b>. Wire colours: <b style="color:#f87171">red = +</b>, <b style="color:#ddd">black = − (0 V)</b>, other colours = jumpers.</div>
-      </div>
-    </div>
-
-    <!-- ===================== PANEL B: BREADBOARD ===================== -->
+    <!-- ===================== PANEL B: BREADBOARD (centre, gets the most space) ===================== -->
     <div class="panel" id="boardPanel">
       <h3>B · MINI BREADBOARD (170 POINTS)</h3>
       <div id="matchView" class="hidden"></div>
@@ -291,6 +317,23 @@
         <div id="placeMsg" aria-live="polite"></div>
         <svg id="board" viewBox="0 0 636 404" tabindex="0" role="application" aria-roledescription="breadboard" aria-label="Mini breadboard. Use arrow keys to move between holes and Enter to select."></svg>
         <div id="tray" aria-label="Component tray"></div>
+      </div>
+    </div>
+
+    <div id="side">
+      <!-- ===================== PANEL A: SCHEMATIC ===================== -->
+      <div class="panel" id="schemPanel">
+        <h3>A · CIRCUIT SCHEMATIC</h3>
+        <svg id="schem" viewBox="0 0 300 250" style="overflow:visible" role="group" aria-label="Circuit schematic. Select a symbol to inspect it."></svg>
+        <div>
+          <div id="schemInfo">Select a symbol to inspect it.</div>
+          <div class="legend">Conventional current flows from <b style="color:#fff">+</b> around the loop to <b style="color:#fff">−</b>. Wire colours: <b style="color:#f87171">red = +</b>, <b style="color:#ddd">black = − (0 V)</b>, other colours = jumpers.</div>
+        </div>
+      </div>
+
+      <!-- ===================== TEST & INSPECT ===================== -->
+      <div class="panel" id="ctrlPanel">
+        <h3>TEST &amp; INSPECT</h3>
         <div id="controls">
           <button id="powerBtn" aria-pressed="false">⏻ POWER: OFF</button>
           <button id="pressBtn" aria-pressed="false" title="Hold to press the push-button (or hold the B key)">🔘 HOLD TO PRESS</button>
@@ -299,7 +342,7 @@
           <div id="status" aria-live="polite"><span id="diagChip" class="s-off">⏻ Power off</span><span id="obsLine"></span></div>
         </div>
         <div id="inspector" aria-live="polite"></div>
-        <div class="kbd-help">Keyboard: arrows move · Enter selects a hole · Del removes the selected part · F flips the LED · Esc cancels · hold B to press the button</div>
+        <details class="kbd-help"><summary>⌨ Keyboard shortcuts</summary>Arrows move · Enter selects a hole · Del removes the selected part · F flips the LED · Esc cancels · hold B to press the button</details>
       </div>
     </div>
   </section>
@@ -1111,7 +1154,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
   // =====================================================================
   //  MISSIONS
   // =====================================================================
-  const view = v => { $('matchView').classList.toggle('hidden', v !== 'match'); $('anatomyView').classList.toggle('hidden', v !== 'anatomy'); $('boardView').classList.toggle('hidden', v === 'match' || v === 'anatomy'); };
+  const view = v => { const m1v = v === 'match' || v === 'anatomy'; $('matchView').classList.toggle('hidden', v !== 'match'); $('anatomyView').classList.toggle('hidden', v !== 'anatomy'); $('boardView').classList.toggle('hidden', m1v); $('ctrlPanel').classList.toggle('hidden', m1v); };
   const req = (cond, fb) => cond ? true : (fb ? { info: fb } : false);
 
   // ----- Mission 1 helpers: matching cards -----
@@ -1744,16 +1787,19 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
   $('cfYes').addEventListener('click', () => { try { localStorage.removeItem(STORE_KEY); } catch (e) {} location.reload(); });
 
   // text size + mute
-  let zoom = 1;
-  try { const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null'); if (v) { zoom = Math.min(1.5, Math.max(0.8, Number(v.zoom) || 1)); muted = !!v.muted; } } catch (e) {}
+  let zoom = 1, fit = true;
+  try { const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null'); if (v) { zoom = Math.min(1.5, Math.max(0.8, Number(v.zoom) || 1)); muted = !!v.muted; fit = v.fit !== false; } } catch (e) {}
   function applyView() {
     document.documentElement.style.setProperty('--ui', zoom); $('zPct').textContent = Math.round(zoom * 100) + '%';
     $('muteBtn').textContent = muted ? '🔇' : '🔊'; $('muteBtn').setAttribute('aria-pressed', String(muted));
-    try { localStorage.setItem(VIEW_KEY, JSON.stringify({ zoom, muted })); } catch (e) {}
+    document.body.classList.toggle('fit', fit);
+    $('fitBtn').setAttribute('aria-pressed', String(fit)); $('fitBtn').textContent = fit ? '⛶ Fit: on' : '⛶ Fit: off';
+    try { localStorage.setItem(VIEW_KEY, JSON.stringify({ zoom, muted, fit })); } catch (e) {}
   }
   $('zMinus').addEventListener('click', () => { zoom = Math.max(0.8, Math.round((zoom - 0.1) * 10) / 10); applyView(); });
   $('zPlus').addEventListener('click', () => { zoom = Math.min(1.5, Math.round((zoom + 0.1) * 10) / 10); applyView(); });
   $('muteBtn').addEventListener('click', () => { muted = !muted; applyView(); });
+  $('fitBtn').addEventListener('click', () => { fit = !fit; applyView(); });
   applyView();
 
   // ---------------- sanity checks (console) ----------------
