@@ -143,3 +143,7 @@ Use the same LED, 330 Ω resistor, push-button and mini breadboard. **Power off 
 - The four-leg tactile switch straddles the channel. Legs across the channel (further apart) are always joined, and pressing joins the two rows. The interface only allows this orientation, because it's the only one that physically fits across the channel.
 - **Schematic check:** a build or repair passes only if the model confirms the LED lights at a safe current only while the button is pressed, *and* the current path runs + → push-button → resistor → LED (anode → cathode) → −. Students can still use any holes, as long as the connections match the schematic.
 - **Tests:** `node tests/circuit-engine.test.js` (no dependencies; 69 checks on the shipped engine). `tests/play-through.spec.js` is a full Playwright play-through of every mission, all six Detective faults, persistence, reset and hub integration (needs Playwright and a local web server: see the file header).
+
+## Class live board
+
+This activity can appear on the class live dashboard. See `LIVE-BOARD-TEACHER-GUIDE.md` for how to run a session and the one-time database check.

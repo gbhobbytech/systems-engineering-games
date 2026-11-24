@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Step Up – Part 2: Ohmbot's Circuit Rescue</title>
+<script src="live.js"></script>
 <style>
   * { box-sizing: border-box; }
   :root {
@@ -1691,13 +1692,16 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
   }
   function completePredict(o) {
     stepDone = true; sfx.good();
+    if (window.SELive) SELive.answer(liveQ(), true, { sec: liveSec() });
     feedback('ok', (o.ok ? 'Good reasoning. ' : 'Interesting prediction. ' + o.fb + ' ') + 'Now test it!');
     const nb = $('nextBtn'); nb.classList.remove('hidden'); nb.textContent = 'NEXT ▶'; nb.focus({ preventScroll: true });
   }
-  function miss(fb) { wrongThisStep++; feedback('no', fb); sfx.retry(); }
+  const liveQ = () => M.id + ':' + stepIdx, liveSec = () => (M.id === 'det' ? 7 : M.n);
+  function miss(fb) { wrongThisStep++; feedback('no', fb); sfx.retry(); if (window.SELive) SELive.answer(liveQ(), false, { sec: liveSec() }); }
   function complete(extra) {
     if (stepDone) return;
     stepDone = true;
+    if (window.SELive) SELive.answer(liveQ(), true, { sec: liveSec() });
     let html = sayHtml(step.done || 'Nice work.');
     if (wrongThisStep) { S.comebacks++; html = '<span class="cb">COMEBACK!</span> ' + html; sfx.comeback(); } else sfx.good();
     save();
@@ -1733,6 +1737,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
 
   function finishMission() {
     if (!S.completed.includes(M.id)) S.completed.push(M.id);
+    if (window.SELive) { SELive.stage(M.id, { sec: liveSec(), label: M.title }); if (M.id === 'det') SELive.finish(); }
     const idx = MISSIONS.indexOf(M), nextM = MISSIONS[idx + 1];
     if (M.id === 'det') { S.done = true; S.current = 'det'; save(); drawTracker(); sfx.win(); showEnd(); return; }
     S.current = nextM.id; save(); drawTracker(); sfx.win();
@@ -1813,6 +1818,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
   // =====================================================================
   function begin() {
     $('startOverlay').classList.add('hidden');
+    if (window.SELive) SELive.identify(S.player.name, S.player.cls);
     drawTracker();
     startMission(MISSION_BY_ID[S.current] && unlocked(S.current) ? S.current : 'm1');
     if (S.done && S.current === 'det') showEnd();
@@ -1867,6 +1873,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
   MISSIONS.forEach(m => m.steps.forEach((s, i) => { if (s.kind === 'choice' && !s.detective) console.assert(s.opts.filter(o => o.ok).length === 1, `${m.id} step ${i}: needs one correct option`); }));
 
   loadBoard(emptyLayout()); update(); drawTracker();
+  if (window.SELive) SELive.init({ level: 7, name: 'Circuit Rescue', corner: 'right', joinPayload: () => ({ completed: S.completed.length }) });
   // test hook (read-only views) for automated browser tests
   window.__circuitRescue = { engine: E, state: () => S, sim: () => Object.assign({}, sim), layout: () => E.clone(layout), step: () => ({ mission: M && M.id, index: stepIdx, done: stepDone }), referenceLayout, faultLayout };
 })();

@@ -72,6 +72,17 @@
   .race .fill.done { background: linear-gradient(90deg, var(--green), var(--gold)) !important; }
   .race .v { text-align: right; color: #aaa; }
   .race { max-height: 46vh; overflow-y: auto; }
+  .wtab { width: 100%; border-collapse: collapse; font-size: clamp(13px, 1.1vw, 17px); }
+  .wtab th { color: #9ca3af; font-size: 0.8em; text-align: center; padding: 4px; border-bottom: 1px solid #333; }
+  .wtab td { padding: 4px; border-bottom: 1px solid #222; text-align: center; }
+  .wtab td.n { text-align: left; font-weight: bold; white-space: nowrap; }
+  .wtab .ph { font-size: 0.7em; color: #9ca3af; border: 1px solid #555; border-radius: 4px; padding: 0 3px; }
+  .wc.full { background: #166534; color: #dcfce7; } .wc.part { background: #854d0e; color: #fef9c3; } .wc.none { color: #555; }
+  span.wc { background: none !important; } span.wc.full { color: #22c55e; } span.wc.part { color: #eab308; }
+  .dyes { color: #4ade80; font-weight: bold; } .dno { color: #f87171; }
+  .wclass { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .wcls { font-size: 14px; } .wcls .bar { height: 14px; background: #222; border-radius: 4px; overflow: hidden; display: flex; margin: 4px 0; }
+  .wcls .f { background: #22c55e; } .wcls .p { background: #eab308; }
   .heat { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
   body.l3 .heat { grid-template-columns: repeat(8, 1fr); }
   .heat .cell { border-radius: 6px; padding: 8px 4px; text-align: center; font-weight: bold; color: #000; }
@@ -159,7 +170,7 @@
     <span>Finished <b id="stDone">0</b></span>
     <span id="stVaultsWrap"><span id="stVaultsLbl">Vaults cracked</span> <b id="stVaults">0</b></span>
     <span>Session time <b id="stTime">0:00</b></span>
-    <span>Level rating <b id="stRate">–</b></span>
+    <span id="stRateWrap">Level rating <b id="stRate">–</b></span>
   </div>
   <div id="l4board" class="hidden">
     <div class="grid">
@@ -174,6 +185,16 @@
       <div class="card"><h2>💲 CLASS BUDGET (estimated school share)</h2><div class="big3" id="budget4"></div></div>
       <div class="card"><h2>📦 STORAGE</h2><div class="big3" id="storage4"></div></div>
     </div>
+  </div>
+  <div id="wallBoard" class="hidden">
+    <div class="grid">
+      <div class="card"><h2>📋 PROGRESS WALL <span class="net" style="font-weight:normal">alphabetical · not ranked</span></h2><div id="wall"></div><div class="net" id="wallKey" style="margin-top:6px"></div></div>
+      <div>
+        <div class="card"><h2>🏆 MAKEOVER LEADERBOARD</h2><table class="lb"><tbody id="lbWall"></tbody></table></div>
+        <div class="card" style="margin-top:16px"><h2>📡 LIVE FEED</h2><div class="feed" id="feedWall"></div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px"><h2>🧭 CLASS PROGRESS</h2><div class="wclass" id="wallClass"></div><div class="net" style="margin-top:6px"><span class="wc full">■</span> complete &nbsp; <span class="wc part">■</span> started</div></div>
   </div>
   <div class="grid" id="mainGrid">
     <div class="card" id="lbCard"><h2>🏆 LEADERBOARD</h2><table class="lb"><tbody id="lb"></tbody></table></div>
@@ -238,8 +259,19 @@
   const SUPABASE_KEY = 'sb_publishable_wgUH3E8Nepy-6QC_dXpVtA_Uyszqkrm';
   const RANKS = [ { min: 125, name: 'Rubric Master' }, { min: 100, name: 'Criteria Cracker' }, { min: 60, name: 'Band Climber' }, { min: 0, name: 'Rubric Rookie' } ];
   const SHORT = ['', 'Investigating', 'Designing', 'Planning', 'Implementing', 'Realisation', 'Testing', 'Project mgmt', 'Evaluating', 'Final vault'];
-  const LEVELS = { 2: { name: 'RUBRIC HEIST', file: 'rubric-heist.html' }, 3: { name: '9–10 EVIDENCE LAB', file: 'evidence-lab.html' },
-                  4: { name: 'WILL IT FLY?', file: 'will-it-fly.html', label: 'PROJECT CHECK' } };
+  // type 'game' = ranked leaderboard (live.js activities); type 'wall' = progress wall, not ranked (Evidence Studios).
+  // Levels 2–4 keep their own boards. Level numbers match the teacher lock ids.
+  const LEVELS = {
+    1: { name: 'ORIENTATION', file: 'orientation.html', label: 'ORIENTATION', type: 'game', maxV: 8, secs: ['', 'Assessment', 'Integrity', 'Command', 'Logbook', 'Safety ★', 'Systems ★', 'Workshop ★', 'Final'] },
+    2: { name: 'RUBRIC HEIST', file: 'rubric-heist.html' }, 3: { name: '9–10 EVIDENCE LAB', file: 'evidence-lab.html' },
+    4: { name: 'WILL IT FLY?', file: 'will-it-fly.html', label: 'PROJECT CHECK' },
+    5: { name: 'STEP UP · PART 1', file: 'step-up.html', label: 'STEP UP 1', type: 'game', maxV: 9, secs: ['', 'Electronics Lab', 'Sustainable Design', 'Mech Workshop', 'Inclusive Design', 'Safety Bay', 'Logbook Hut', 'Test Bench', 'Integrity', 'Final sort'] },
+    6: { name: 'THE CONTROLLER CHALLENGE', file: 'controller-challenge.html', label: 'CONTROLLER', type: 'game', maxV: 4, secs: ['', 'Mission 1', 'Mission 2', 'Mission 3', 'Mission 4'] },
+    7: { name: 'CIRCUIT RESCUE', file: 'step-up-circuit-rescue.html', label: 'CIRCUIT RESCUE', type: 'game', maxV: 7, secs: ['', 'Decode', 'Build', 'Single path', 'Wrong way', 'Broken link', 'Shortcut', 'Detective'] },
+    8: { name: 'EVIDENCE STUDIO · YEAR 11', file: 'evidence-studio.html', label: 'STUDIO Y11', type: 'wall', rounds: 7, parts: [['prepare', 'Prepare'], ['construct', 'Construct'], ['test', 'Test'], ['analyse', 'Analyse'], ['evaluate', 'Evaluate'], ['submit', 'Submit']] },
+    9: { name: 'EVIDENCE STUDIO · SAT', file: 'evidence-studio-sat.html', label: 'STUDIO SAT', type: 'wall', rounds: 8, sat: true, parts: [1, 2, 3, 4, 5, 6, 7, 8].map(n => [String(n), 'C' + n]) }
+  };
+  const lvType = () => LEVELS[level].type || 'classic';
   const GATE_NAMES = ['', 'Integrated system', 'Power and voltage', 'Size and storage', 'Making it', 'Budget and parts', 'Time'];
   const STATUS_NAMES = { decided: 'Decided', few: 'A few ideas', none: 'Undecided' };
   const RESW = { G: 'green', A: 'amber', R: 'red' };
@@ -370,7 +402,12 @@
     $('mainGrid').classList.toggle('hidden', l4);
     $('heatCard').classList.toggle('hidden', l4);
     if (l4) { $('l3extra').classList.add('hidden'); $('lbToggle').classList.add('hidden'); $('stVaultsLbl').textContent = 'Checks done'; }
-    $('tavgLbl').textContent = l4 ? 'Share of students with a red result, per check:' : l3 ? 'Aiming for Very High (share of students who planned that criterion):' : 'Average target band per criterion (from students who finished):';
+    const W = lvType() === 'wall', Gm = lvType() === 'game';
+    $('wallBoard').classList.toggle('hidden', !W);
+    if (W) { ['mainGrid', 'heatCard', 'l3extra', 'l4board'].forEach(id => $(id).classList.add('hidden')); $('lbToggle').classList.add('hidden'); $('stVaultsLbl').textContent = 'Drops this week'; $('stRateWrap').classList.add('hidden'); }
+    else $('stRateWrap').classList.remove('hidden');
+    if (Gm) { $('stVaultsLbl').textContent = 'Sections done'; $('heatTitle').textContent = '🔥 CLASS HEATMAP – % of attempts correct, per section'; }
+    $('tavgLbl').textContent = W ? (LEVELS[level].sat ? 'Share of students assessor-ready, per criterion:' : 'Share of students with every item strong, per stage:') : Gm ? 'Most-missed questions:' : l4 ? 'Share of students with a red result, per check:' : l3 ? 'Aiming for Very High (share of students who planned that criterion):' : 'Average target band per criterion (from students who finished):';
   }
   $('lbToggle').addEventListener('click', () => {
     showLB3 = !showLB3;
@@ -420,7 +457,8 @@
   function P(r) {
     if (!players[r.player_id]) players[r.player_id] = { id: r.player_id, name: r.name, cls: r.class, score: 0, vault: 0, done: false, time: 0,
       wrong: [], hints: 0, targets: null, rating: 0, format: '', otherFmt: '', plans: {}, planned: 0, firstAction: 0,
-      gates: {}, status: '', idea: '', pitch: null, explorer: null };
+      gates: {}, status: '', idea: '', pitch: null, explorer: null,
+      wall: { mk: 0, sig: false, snap: null, drops: [], system: '', phase: 0 } };
     return players[r.player_id];
   }
   function ingest(r) {
@@ -430,6 +468,8 @@
     const qid = r.question_id || '';
     const pl = r.payload || {};
     if (level === 4) return ingest4(r, p, qid, pl);
+    if (lvType() === 'game') return ingestGame(r, p, qid, pl);
+    if (lvType() === 'wall') return ingestWall(r, p, qid, pl);
     if (r.event === 'join') {
       if (pl.format) { p.format = pl.format; p.otherFmt = pl.other || ''; }
       pushFeed(level === 3 ? `🧪 <b>${esc(p.name)}</b> entered the lab${p.format ? ' (' + esc(FORMAT_NAMES[p.format] || p.format) + ')' : ''}` : `👋 <b>${esc(p.name)}</b> joined the heist`);
@@ -464,6 +504,59 @@
         p.vault = 9; pushFeed(`🏆 <b>${esc(p.name)}</b> finished: ${esc(rankFor(r.score || p.score))}!`);
       }
     }
+  }
+  // live.js activities: every event carries the running total in payload.total
+  function ingestGame(r, p, qid, pl) {
+    const L = LEVELS[level];
+    if (typeof pl.total === 'number') p.score = Math.max(p.score, pl.total);
+    if (r.event === 'join') pushFeed(`👋 <b>${esc(p.name)}</b> joined`);
+    else if (r.event === 'answer') { if (r.correct === false) p.wrong.push(qid); }
+    else if (r.event === 'vault') { p.vault = Math.max(p.vault, Math.min(L.maxV, r.vault || 0)); if (!pl.catchup) pushFeed(`✅ <b>${esc(p.name)}</b> completed ${esc(pl.label || 'a section')}`); }
+    else if (r.event === 'finish') { p.done = true; p.vault = L.maxV; p.time = r.elapsed_s || p.time; pushFeed(`🏆 <b>${esc(p.name)}</b> finished: ${p.score} pts!`); }
+  }
+  function ingestWall(r, p, qid, pl) {
+    const w = p.wall;
+    if (typeof pl.total === 'number') p.score = Math.max(p.score, pl.total);
+    if (r.event === 'join') { if (pl.system) w.system = pl.system; if (pl.phase) w.phase = pl.phase; pushFeed(`👋 <b>${esc(p.name)}</b> opened the studio`); }
+    else if (r.event === 'vault') {
+      if (/^S:MK\d/.test(qid)) { w.mk = Math.max(w.mk, Number(qid.slice(4)) || 0); pushFeed(`🎯 <b>${esc(p.name)}</b> fixed makeover round ${esc(qid.slice(4))}`); }
+      else if (pl.catchup) w.mk = Math.max(w.mk, r.vault || 0);
+    } else if (r.event === 'answer') {
+      if (qid === 'SIG') { if (!w.sig) pushFeed(`🎨 <b>${esc(p.name)}</b> designed their signature`); w.sig = true; }
+      else if (qid === 'AUDIT') { w.snap = pl; if (pl.sig) w.sig = true; if (pl.phase) w.phase = pl.phase; if (typeof pl.mk === 'number') w.mk = Math.max(w.mk, pl.mk); }
+      else if (qid === 'DROP') { w.snap = pl; w.drops.push({ at: r.created_at, week: pl.week || '', next: pl.next || '', stuck: pl.stuck || '' }); pushFeed(`📦 <b>${esc(p.name)}</b> posted a weekly drop${pl.stuck ? ' (stuck on something)' : ''}`); }
+      else if (r.correct === false) p.wrong.push(qid);
+    } else if (r.event === 'finish') p.done = true;
+  }
+  const WEEK_MS = 7 * 24 * 3600 * 1000;
+  const lastDrop = p => p.wall.drops.length ? p.wall.drops[p.wall.drops.length - 1] : null;
+  const droppedThisWeek = p => { const d = lastDrop(p); return !!d && Date.now() - new Date(d.at).getTime() < WEEK_MS; };
+  // progress per part: [done, total, full?, started?]
+  function partState(p, key) {
+    const s = p.wall.snap; if (!s) return null;
+    if (LEVELS[level].sat) { const c = s.crit && s.crit[key]; return c ? { txt: `${c[0]}/${c[1]}`, full: c[3] === 2, started: c[0] > 0 || c[2] > 0 } : null; }
+    const g = s.stages && s.stages[key]; return g ? { txt: `${g[0]}/${g[2]}`, full: g[0] === g[2], started: g[1] > 0 } : null;
+  }
+  function renderWall(ps) {
+    const L = LEVELS[level];
+    $('stDone').textContent = ps.filter(p => p.done).length;
+    $('stVaults').textContent = ps.filter(droppedThisWeek).length;
+    renderClock(); $('stRate').textContent = '–';
+    const lb = ps.slice().sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 10);
+    $('lbWall').innerHTML = lb.map((p, i) => `<tr><td class="r">${i + 1}</td><td class="n">${esc(p.name)}</td><td class="s">${p.score}</td><td class="t">${Math.min(p.wall.mk, L.rounds)}/${L.rounds}</td></tr>`).join('') || '<tr><td style="color:#777">Waiting for students… share the code!</td></tr>';
+    const alpha = ps.slice().sort((a, b) => a.name.localeCompare(b.name));
+    $('wall').innerHTML = alpha.length ? `<table class="wtab"><thead><tr><th>Name</th><th title="Makeover rounds">🎯</th><th title="Signature designed">🎨</th>${L.parts.map(([, n]) => `<th>${esc(n)}</th>`).join('')}<th>Drop this week</th></tr></thead><tbody>` +
+      alpha.map(p => { const d = lastDrop(p), wk = droppedThisWeek(p);
+        return `<tr><td class="n">${esc(p.name)}${L.sat && p.wall.phase ? ` <span class="ph">U${p.wall.phase}</span>` : ''}</td><td>${Math.min(p.wall.mk, L.rounds)}/${L.rounds}</td><td>${p.wall.sig ? '✓' : '·'}</td>` +
+          L.parts.map(([k]) => { const c = partState(p, k); return `<td class="wc ${c ? (c.full ? 'full' : c.started ? 'part' : 'none') : 'none'}">${c ? c.txt : '·'}</td>`; }).join('') +
+          `<td class="${wk ? 'dyes' : 'dno'}">${wk ? '✓ ' + new Date(d.at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : (d ? '✗ last ' + new Date(d.at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '✗')}</td></tr>`; }).join('') + '</tbody></table>'
+      : '<div style="color:#777">Waiting for students… share the code!</div>';
+    $('wallKey').innerHTML = L.sat ? '<span class="wc full">■</span> assessor-ready &nbsp; <span class="wc part">■</span> in progress &nbsp; numbers = VCAA items covered' : '<span class="wc full">■</span> all strong &nbsp; <span class="wc part">■</span> started &nbsp; numbers = strong items';
+    $('wallClass').innerHTML = L.parts.map(([k, n]) => {
+      const st = ps.map(p => partState(p, k)).filter(Boolean), full = st.filter(c => c.full).length, part = st.filter(c => c.started && !c.full).length, tot = ps.length || 1;
+      return `<div class="wcls"><b>${esc(n)}</b><div class="bar"><div class="f" style="width:${full / tot * 100}%"></div><div class="p" style="width:${part / tot * 100}%"></div></div><span>${full} ✓ · ${part} started</span></div>`;
+    }).join('');
+    $('feedWall').innerHTML = liveFeed.map(f => `<div>${f}</div>`).join('') || '<div style="color:#777">Events will appear here.</div>';
   }
   function ingest4(r, p, qid, pl) {
     if (r.event === 'join') { p.status = pl.status || ''; pushFeed(`✈️ <b>${esc(p.name)}</b> started their project check`); }
@@ -502,8 +595,9 @@
   // ---------- render ----------
   function renderClock() { $('stTime').textContent = firstAt ? fmt((Date.now() - firstAt.getTime()) / 1000) : '0:00'; }
   function render() {
-    const ps = visiblePlayers(), l3 = level === 3, maxV = l3 ? 8 : 9;
+    const ps = visiblePlayers(), l3 = level === 3, G = lvType() === 'game', maxV = G ? LEVELS[level].maxV : (l3 ? 8 : 9);
     $('stJoined').textContent = ps.length;
+    if (lvType() === 'wall') { renderWall(ps); renderTeacher(); return; }
     $('stDone').textContent = ps.filter(p => p.done).length;
     if (level === 4) {
       $('stVaults').textContent = ps.reduce((t, p) => t + Object.keys(p.gates).length, 0);
@@ -521,7 +615,7 @@
     const lb = ps.slice().sort((a, b) => b.score - a.score || (b.done - a.done) || a.time - b.time).slice(0, 10);
     $('lb').innerHTML = lb.map((p, i) => {
       const changed = prevScores[p.id] !== undefined && prevScores[p.id] !== p.score;
-      const where = p.done ? fmt(p.time) : l3 ? `${p.planned}/8` : (p.vault >= 8 ? 'Final' : 'Vault ' + (p.vault + 1));
+      const where = p.done ? fmt(p.time) : G ? `${p.vault}/${maxV}` : l3 ? `${p.planned}/8` : (p.vault >= 8 ? 'Final' : 'Vault ' + (p.vault + 1));
       return `<tr class="${changed ? 'flash' : ''}"><td class="r">${i + 1}</td><td class="n">${esc(p.name)}${p.done ? ' ✓' : ''}</td>
         <td class="s">${p.score}</td><td class="t">${where}</td></tr>`;
     }).join('') || '<tr><td style="color:#777">Waiting for players… share the code!</td></tr>';
@@ -544,12 +638,13 @@
     });
     let h = '';
     for (let v = 1; v <= maxV; v++) {
-      const s = stats[v], label = v === 9 ? 'FINAL' : 'C' + v;
-      if (!s) { h += `<div class="cell none"><div class="k">${label}</div><div class="p">–</div><div class="k">${SHORT[v]}</div></div>`; continue; }
+      const s = stats[v], label = G ? '#' + v : v === 9 ? 'FINAL' : 'C' + v, nm = G ? LEVELS[level].secs[v] : SHORT[v];
+      if (!s) { h += `<div class="cell none"><div class="k">${label}</div><div class="p">–</div><div class="k">${esc(nm)}</div></div>`; continue; }
       const pct = Math.round((s.c / s.n) * 100), hue = Math.round((pct / 100) * 120);
-      h += `<div class="cell" style="background:hsl(${hue},75%,55%)"><div class="k">${label}</div><div class="p">${pct}%</div><div class="k">${SHORT[v]}</div></div>`;
+      h += `<div class="cell" style="background:hsl(${hue},75%,55%)"><div class="k">${label}</div><div class="p">${pct}%</div><div class="k">${esc(nm)}</div></div>`;
     }
     $('heat').innerHTML = h;
+    $('heat').style.gridTemplateColumns = G ? `repeat(${maxV}, 1fr)` : '';
     $('feed').innerHTML = liveFeed.map(f => `<div>${f}</div>`).join('') || '<div style="color:#777">Events will appear here.</div>';
 
     if (l3) {
@@ -568,7 +663,26 @@
   function renderTeacher() {
     const all = Object.values(players).sort((a, b) => level === 3 ? (b.planned - a.planned || a.name.localeCompare(b.name)) : b.score - a.score);
     const hideBtn = p => `<button class="btn" data-hide="${esc(p.id)}">${hidden.has(p.id) ? 'Unhide' : 'Hide'}</button>`;
-    if (level === 4) {
+    if (lvType() === 'wall') {
+      const L = LEVELS[level], list = Object.values(players).sort((a, b) => (droppedThisWeek(a) - droppedThisWeek(b)) || (!!b.wall.drops.slice(-1)[0]?.stuck - !!a.wall.drops.slice(-1)[0]?.stuck) || a.name.localeCompare(b.name));
+      $('thead').innerHTML = '<tr><th>Name</th><th>Class</th><th>System</th><th>Makeover</th><th>Signature</th><th>Drops</th><th>Last drop</th><th>Stuck on</th><th>Details</th><th></th></tr>';
+      $('tbody').innerHTML = list.map(p => { const d = lastDrop(p), s = p.wall.snap || {};
+        const det = `${d ? `<div class="planbox"><b>This week</b><br>${esc(d.week)}<br><b>Next week</b><br>${esc(d.next)}</div>` : ''}${(s.needs || []).length ? `<div class="planbox"><b>Still needed</b><br>${s.needs.map(esc).join('<br>')}</div>` : ''}`;
+        return `<tr style="${hidden.has(p.id) ? 'opacity:.4' : ''}"><td>${esc(p.name)}${L.sat && p.wall.phase ? ' (U' + p.wall.phase + ')' : ''}</td><td>${esc(p.cls)}</td><td>${esc(p.wall.system) || '–'}</td>
+          <td>${Math.min(p.wall.mk, L.rounds)}/${L.rounds} · ${p.score} pts</td><td>${p.wall.sig ? '✓' : '–'}</td><td>${p.wall.drops.length}</td>
+          <td>${d ? new Date(d.at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) + (droppedThisWeek(p) ? '' : ' ⚠') : '⚠ none'}</td><td>${d && d.stuck ? '⚠ ' + esc(d.stuck) : '–'}</td>
+          <td>${det ? `<details><summary>View</summary>${det}</details>` : '–'}</td><td>${hideBtn(p)}</td></tr>`; }).join('');
+      const vis = list.filter(p => !hidden.has(p.id)); let t = '';
+      L.parts.forEach(([k, n]) => { const full = vis.filter(p => (partState(p, k) || {}).full).length; t += `<div>${esc(n)}<b>${vis.length ? Math.round(full / vis.length * 100) + '%' : '–'}</b>${L.sat ? 'ready' : 'all strong'}</div>`; });
+      $('tavg').innerHTML = t;
+    } else if (lvType() === 'game') {
+      const L = LEVELS[level];
+      $('thead').innerHTML = '<tr><th>Name</th><th>Class</th><th>Points</th><th>Sections</th><th>Time</th><th>Wrong attempts</th><th></th></tr>';
+      $('tbody').innerHTML = all.map(p => `<tr style="${hidden.has(p.id) ? 'opacity:.4' : ''}"><td>${esc(p.name)}</td><td>${esc(p.cls)}</td><td>${p.score}</td><td>${p.done ? 'done ✓' : p.vault + '/' + L.maxV}</td><td>${fmt(p.time)}</td>
+        <td>${p.wrong.length ? `<details><summary>${p.wrong.length}</summary>${esc(p.wrong.join(', '))}</details>` : '–'}</td><td>${hideBtn(p)}</td></tr>`).join('');
+      const miss = {}; Object.values(players).filter(p => !hidden.has(p.id)).forEach(p => p.wrong.forEach(q => { miss[q] = (miss[q] || 0) + 1; }));
+      $('tavg').innerHTML = Object.entries(miss).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([q, n]) => `<div>${esc(q)}<b>${n}</b>wrong</div>`).join('') || '<div>–<b>–</b>no misses yet</div>';
+    } else if (level === 4) {
       const reds = p => Object.values(p.gates).filter(x => x.r === 'R').length, ambers = p => Object.values(p.gates).filter(x => x.r === 'A').length;
       const pri = p => (p.status === 'none' && !p.idea ? 100 : 0) + reds(p) * 10 + ambers(p);
       const list = Object.values(players).sort((a, b) => pri(b) - pri(a) || a.name.localeCompare(b.name));
@@ -716,6 +830,17 @@
   }
   $('csvBtn').addEventListener('click', () => {
     const date = new Date().toISOString().slice(0, 10);
+    if (lvType() === 'wall') {
+      const L = LEVELS[level];
+      const rows = [['name', 'class', 'system', 'unit', 'makeover_rounds', 'makeover_points', 'signature', 'drops', 'last_drop', 'this_week', 'next_week', 'stuck_on', 'still_needed', ...L.parts.map(([, n]) => n)]];
+      Object.values(players).forEach(p => { const d = lastDrop(p) || {}; rows.push([p.name, p.cls, p.wall.system, p.wall.phase || '', p.wall.mk, p.score, p.wall.sig ? 'yes' : '', p.wall.drops.length, d.at ? d.at.slice(0, 10) : '', d.week || '', d.next || '', d.stuck || '', ((p.wall.snap || {}).needs || []).join(' | '), ...L.parts.map(([k]) => (partState(p, k) || {}).txt || '')]); });
+      downloadCsv(rows, `${L.file.replace('.html', '')}-${session}-${date}.csv`); return;
+    }
+    if (lvType() === 'game') {
+      const L = LEVELS[level], rows = [['name', 'class', 'points', 'sections_done', 'finished', 'time_s', 'wrong_attempts']];
+      Object.values(players).forEach(p => rows.push([p.name, p.cls, p.score, p.vault, p.done ? 'yes' : '', p.time, p.wrong.join(' ')]));
+      downloadCsv(rows, `${L.file.replace('.html', '')}-${session}-${date}.csv`); return;
+    }
     if (level === 4) {
       const rows = [['name', 'class', 'status', 'idea', 'for', 'mechanical', 'electrotechnological', ...[1, 2, 3, 4, 5, 6].flatMap(g => ['check' + g + '_' + GATE_NAMES[g].split(' ')[0].toLowerCase(), 'check' + g + '_reason', 'check' + g + '_next']),
         'total_cost', 'self_funded', 'size_mm', 'lives', 'fallback', 'shortlist', 'pitch_card', 'rating_1to3']];

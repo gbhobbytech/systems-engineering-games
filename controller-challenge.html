@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Controller Challenge – Systems Engineering Research Mission</title>
+<script src="live.js"></script>
 <style>
   * { box-sizing: border-box; }
   :root {
@@ -877,7 +878,22 @@
   function fresh() { return { v: 1, started: Date.now(), pass: {}, tries: {}, revealed: {}, hints: {}, ans: {}, third: null, m4: { brief: null, dev: null, sup: null, soft: null, self: {}, selfDone: false, cons: [], trade: null, just: '' }, done: false, finishedAt: null }; }
   function load() { try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); return s && s.v === 1 ? s : null; } catch (e) { return null; } }
   let S = load() || fresh();
-  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} liveSync(); }
+  // Class board (live.js): compare with the last save and report new attempts, solved challenges and finished missions.
+  // Nothing is sent unless the student joins a class board with a session code.
+  let liveSeen = null;
+  function liveSnapshot() { return { pass: Object.assign({}, S.pass), tries: Object.assign({}, S.tries), m: liveSeen ? liveSeen.m : {}, done: S.done }; }
+  function liveSync() {
+    if (!window.SELive) return;
+    try { KEYS; } catch (e) { return; } // KEYS is defined further down; ignore saves before it exists
+    if (!liveSeen) { liveSeen = liveSnapshot(); [1, 2, 3, 4].forEach(n => { if (KEYS[n].every(k => S.pass[k])) liveSeen.m[n] = 1; }); return; }
+    const sec = k => Number((/^m(\d)/.exec(k) || [0, 0])[1]);
+    Object.keys(S.tries).forEach(k => { for (let i = liveSeen.tries[k] || 0; i < S.tries[k]; i++) SELive.answer(k, false, { sec: sec(k) }); });
+    Object.keys(S.pass).forEach(k => { if (S.pass[k] && !liveSeen.pass[k]) SELive.answer(k, true, { sec: sec(k), revealed: !!S.revealed[k] }); });
+    [1, 2, 3, 4].forEach(n => { if (!liveSeen.m[n] && KEYS[n].every(k => S.pass[k])) { liveSeen.m[n] = 1; SELive.stage('m' + n, { sec: n, label: 'Mission ' + n }); } });
+    if (S.done && !liveSeen.done) SELive.finish();
+    liveSeen = liveSnapshot();
+  }
   let settings = { muted: false };
   try { settings = Object.assign(settings, JSON.parse(localStorage.getItem(SET_KEY) || '{}')); } catch (e) {}
   const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) {} };
@@ -1446,6 +1462,7 @@
   THIRD.forEach(t => M2.forEach(c => c.chals(['picaxe', 'pi5', t]).forEach(x => { if (x.type === 'sort') x.items.forEach(it => console.assert(it.ok.every(o => x.bins.some(b => b.id === o)), `M2 ${c.id} bad bin for ${t}: ${it.t}`)); })));
   ['A', 'B', 'C'].forEach(b => ORDER.forEach(d => { console.assert(FIT[b][d], 'FIT missing ' + b + d); Object.keys(SUPPLIES).forEach(s => console.assert(powerRating(b, d, s), 'PWR missing ' + d + s)); Object.keys(CRIT).forEach(c => console.assert(engRating(b, d, c), 'rating missing ' + b + d + c)); }));
   // test hook: look up a challenge spec by its tag (used by the automated play-through test)
+  if (window.SELive) { SELive.init({ level: 6, name: 'The Controller Challenge' }); liveSync(); }
   window.__CC = { S: () => S, KEYS, pct, spec: (tag) => [LABSORT].concat(Object.values(M1), ...M2.map(c => c.chals(trio())), ...M3.map(s => s.chals)).find(c => c.tag === tag) || null };
 })();
 </script>

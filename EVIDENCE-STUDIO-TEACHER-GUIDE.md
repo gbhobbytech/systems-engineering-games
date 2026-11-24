@@ -96,3 +96,7 @@ The same structure carries over to Units 3 & 4:
 - persistence, hub integration and no horizontal overflow
 
 It has passed at 1366×650, 1280×600 and 900×700.
+
+## Class live board
+
+This activity can appear on the class live dashboard. See `LIVE-BOARD-TEACHER-GUIDE.md` for how to run a session and the one-time database check.
