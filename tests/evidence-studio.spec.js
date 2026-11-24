@@ -110,8 +110,8 @@ const check = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { f
   await page.goto(BASE + 'index.html');
   check(await page.isVisible('a[href="evidence-studio.html"]'), 'hub links to the studio');
   check(/weekly drop done/.test(await page.textContent('#esdone')), 'hub shows studio progress');
-  check(!(await page.textContent('#sat')).includes('Evidence Studio'), 'studio is in the Year 11 section, not the SAT journey');
-  await page.locator('.lstudio').scrollIntoViewIfNeeded(); await shot('es-07-hub');
+  check(await page.isVisible('#stepup a[href="evidence-studio.html"]') && !(await page.$('#sat a[href="evidence-studio.html"]')), 'Year 11 studio is in the Year 11 section, not the SAT journey');
+  await page.locator('.lstudio:not(.lstudio12)').scrollIntoViewIfNeeded(); await shot('es-07-hub');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
   check(!overflow, 'hub has no horizontal overflow');
   await page.goto(BASE + 'evidence-studio.html'); await page.click('#resumeBtn');
