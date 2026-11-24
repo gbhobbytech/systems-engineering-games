@@ -64,7 +64,8 @@
     body.fit #matchView, body.fit #anatomyView { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     body.fit #side { min-height: 0; overflow-y: auto; }
     body.fit #schem { max-height: 34vh; }
-    body.fit .m-btns { position: sticky; bottom: -10px; background: rgba(0,0,0,0.94); padding: 6px 0 2px; }
+    body.fit #mentor { padding-bottom: 0; }
+    body.fit .m-btns { position: sticky; bottom: 0; background: #050507; padding: 6px 0 10px; box-shadow: 0 -8px 10px -6px rgba(0,0,0,0.9); }
   }
   @media (min-width: 1000px) and (min-height: 500px) and (max-height: 760px) {
     body.fit #schem { max-height: 27vh; }
@@ -533,10 +534,10 @@ const CircuitEngine = (function () {
   }
 
   // Ordered list of parts that conventional current passes through, + to −, with the button pressed.
-  function tracePath(layout) {
+  function tracePath(layout, extraLinks) {
     const sup = getPart(layout, 'SUP');
     if (!sup || !sup.pos || !sup.neg) return null;
-    const find = nets(layout, false);
+    const find = nets(layout, false, extraLinks);
     const P = find(strip(sup.pos)), N = find(strip(sup.neg));
     if (P === N) return null;
     const edges = [];
@@ -560,8 +561,19 @@ const CircuitEngine = (function () {
     return { order, nets: netList, find };
   }
 
-  return { ROWS, LETTERS, SPEC, SPAN, PIN_NAMES, parseHole, strip, stripHoles, stripLabel, pitch, span, buttonPins, partHoles, getPart,
-    clone, occupancy, hash, validate, nets, evaluate, works, tracePath, flipLed };
+  // The schematic is the reference: the circuit must work AND current must pass, from the red + lead,
+  // through the push-button, then the resistor, then the LED from anode to cathode, back to the black − lead.
+  // (Other series orders also light the LED, but they don't match the documentation.)
+  const SCHEMATIC_ORDER = ['S1', 'R1', 'D1'];
+  function matchesSchematic(layout, extraLinks) {
+    const on = evaluate(layout, true, { extraLinks }), off = evaluate(layout, false, { extraLinks });
+    if (on.code !== 'lit' || !(off.code === 'open' || off.code === 'polarity')) return false;
+    const t = tracePath(layout, extraLinks);
+    return !!t && t.order.join(',') === SCHEMATIC_ORDER.join(',');
+  }
+
+  return { ROWS, LETTERS, SPEC, SPAN, PIN_NAMES, SCHEMATIC_ORDER, parseHole, strip, stripHoles, stripLabel, pitch, span, buttonPins, partHoles, getPart,
+    clone, occupancy, hash, validate, nets, evaluate, works, matchesSchematic, tracePath, flipLed };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEngine;
 /* ===================== CIRCUIT ENGINE END ===================== */
@@ -628,6 +640,14 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
   };
   function faultLayout(key) { const l = referenceLayout(); FAULTS[key].apply(l); return l; }
   const DETECTIVE_FAULTS = ['led-reversed', 'supply-reversed', 'missing-connection', 'wrong-row', 'supply-short', 'resistor-bypass'];
+  // Diagnosis is by fault TYPE (what testing can tell apart); the exact part is then located against the schematic.
+  const FAULT_CAT = { 'led-reversed': 'polarity', 'supply-reversed': 'polarity', 'missing-connection': 'open', 'wrong-row': 'open', 'supply-short': 'short', 'resistor-bypass': 'bypass' };
+  const CATS = [
+    { key: 'polarity', t: 'Polarity fault: a polarised part is the wrong way round' },
+    { key: 'open', t: 'Open circuit: an unintended break in the path' },
+    { key: 'short', t: 'Short circuit: + connected straight to −' },
+    { key: 'bypass', t: 'Bypassed current-limiting resistor' }
+  ];
 
   // ---------------- saved state ----------------
   function blankState() {
@@ -926,7 +946,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
     const chip = $('diagChip');
     // In troubleshooting missions only what you could actually see is shown until you've diagnosed the fault.
     const observable = ['off', 'short', 'led-over', 'blown', 'no-supply'].includes(sim.code) || sim.code === 'operating';
-    if (diagVisible || observable) { chip.textContent = st[0] + ' ' + st[1]; chip.className = st[2]; }
+    if (diagVisible || observable) {
+      chip.textContent = st[0] + ' ' + st[1]; chip.className = st[2];
+      if (sim.code === 'operating' && diagVisible && !E.matchesSchematic(layout)) { chip.textContent = '⚠ Circuit operating, but NOT in the schematic\'s order'; chip.className = 's-warn'; }
+    }
     else { chip.textContent = '🔍 Diagnosis hidden – investigate!'; chip.className = 's-hidden'; }
     const led = ledState();
     $('obsLine').textContent = sim.power ? `Power ON · button ${pressed() ? 'PRESSED' : 'released'} · LED ${led === 'lit' ? 'ON' : led === 'blown' ? 'BLOWN' : 'OFF'} · supply ${sim.tripped ? 'SHUT DOWN' : 'OK'}` : 'Power OFF';
@@ -1217,11 +1240,19 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
   const KEYWORDS = /path|loop|circuit|break|broken|gap|open|complete|closed|flow|current|connect|series|round|direction|anode|cathode|reverse|polar|resist|short|bypass|limit/i;
   const pickPartStep = (o) => Object.assign({ kind: 'board' }, o);
   // Accept the part whose removal makes the circuit work (for shorting jumpers) — evaluated electrically.
-  function removalFixes(id) { const l = E.clone(layout); l.parts = l.parts.filter(p => p.id !== id); return E.works(l); }
-  function gapFixes(h1, h2) {
-    if (E.strip(h1) === E.strip(h2)) return false;
-    const on = E.evaluate(layout, true, { extraLinks: [[h1, h2]] }), off = E.evaluate(layout, false, { extraLinks: [[h1, h2]] });
-    return on.code === 'lit' && (off.code === 'open' || off.code === 'polarity');
+  // All fixes are judged against the schematic, not just "does the LED light".
+  function removalFixes(id) { const l = E.clone(layout); l.parts = l.parts.filter(p => p.id !== id); return E.matchesSchematic(l); }
+  function gapFixes(h1, h2) { return E.strip(h1) !== E.strip(h2) && E.matchesSchematic(layout, [[h1, h2]]); }
+  const PART_WORD = { S1: 'push-button', R1: 'resistor', D1: 'LED' };
+  function orderText(l) { const t = E.tracePath(l); return t ? '+ → ' + t.order.map(id => PART_WORD[id]).join(' → ') + ' → −' : 'a different path'; }
+  const SCHEM_TEXT = '+ → push-button → resistor → LED (+ leg first) → −';
+  let mismatchHash = null;
+  // Check for repair/build steps: tested working AND matching the schematic.
+  function repaired() {
+    if (!workedHere()) return false;
+    if (E.matchesSchematic(layout)) return true;
+    const h = E.hash(layout); if (mismatchHash === h) return false; mismatchHash = h;
+    return { fb: `It lights, but your board <b>doesn't match the schematic</b>. Current goes <b>${orderText(layout)}</b>, but the schematic shows <b>${SCHEM_TEXT}</b>. The schematic is the reference: a fix that works but disagrees with it becomes a hidden fault for the next engineer. Change the board to match it.` };
   }
 
   const MISSIONS = [
@@ -1287,13 +1318,15 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
           done: 'Correct: G9 and J9 are both in the F–J group of row 9.' }),
         { kind: 'board', view: 'board', edit: true, diag: true,
           setup: () => loadBoard(S.draft && S.draft.parts ? S.draft : emptyLayout(), { msg: 'Pick a part from the tray, then click holes to plug it in. Click any hole to check its connections.' }),
-          say: () => `Time to build! Copy the schematic onto the breadboard using the tray below the board.<br><br>• Each part's legs go in <b>different</b> groups.<br>• Parts that connect must <b>share a group</b> (or be joined by a jumper).<br>• The push-button straddles the centre channel.<br><br>Then turn the <b>power ON</b>, <b>press</b> the button, and <b>release</b> it. The LED should light only while you press.`,
+          say: () => `Time to build! Copy the schematic onto the breadboard using the tray below the board.<br><br>• Each part's legs go in <b>different</b> groups.<br>• Parts that connect must <b>share a group</b> (or be joined by a jumper).<br>• The push-button straddles the centre channel.<br>• The <b>schematic is the reference</b>: match its order, ${SCHEM_TEXT}. Which holes you use is up to you.<br><br>Then turn the <b>power ON</b>, <b>press</b> the button, and <b>release</b> it. The LED should light only while you press.`,
           hints: ['Follow the schematic loop: + lead → push-button → resistor → LED anode (+) … LED cathode (−) → − lead.',
             'Stuck on the button? Its legs sit in E and F of one row, and E and F two rows along. Pressing joins those two rows. So one row goes towards +, the other row to the resistor.',
             { t: 'Here\'s one possible layout, shown as a see-through guide. Yours can be different, as long as it\'s electrically the same.', ghost: true }],
           check: ev => {
             const missing = ['pos', 'neg', 'button', 'resistor', 'led'].filter(k => trayAvailable(k));
-            if (workedHere()) { S.layout = E.clone(layout); save(); return true; }
+            const r = repaired();
+            if (r === true) { S.layout = E.clone(layout); save(); return true; }
+            if (r) return r;
             if (ev.type === 'sim' && obs.operating && !obs.releasedAfterOp && sim.code === 'operating') return { info: '💡 It lights! Now release the button to check the switch really controls it.' };
             if (ev.type === 'sim' && sim.power && pressed() && missing.length && sim.code !== 'operating') return { info: 'Still to place: ' + missing.map(k => TRAY.find(t => t.key === k).label).join(', ') + '.' };
             return false;
@@ -1304,7 +1337,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
     { id: 'm3', n: 3, title: 'The Single Path', concept: 'Identified a series circuit and explained why opening the switch stops the current',
       steps: [
         { kind: 'board', view: 'board', edit: false, diag: true,
-          setup: () => { const has = S.layout && E.works(S.layout); loadBoard(has ? S.layout : referenceLayout(), { msg: has ? 'This is your circuit from Mission 2.' : 'Ohmbot loaded the lab\'s circuit (your saved one wasn\'t found).' }); showFlowNumbers = false; $('flowChk').checked = true; },
+          setup: () => { const has = S.layout && E.matchesSchematic(S.layout); loadBoard(has ? S.layout : referenceLayout(), { msg: has ? 'This is your circuit from Mission 2.' : 'Ohmbot loaded the lab\'s circuit (your saved one wasn\'t found).' }); showFlowNumbers = false; $('flowChk').checked = true; },
           say: 'Let\'s see how your circuit works, not just that it works.<br><br>Turn the <b>power ON</b>, then press the button and <b>keep it pressed</b> (tick <b>keep pressed</b> to make this easier). Watch for the green current path.',
           hints: ['Power button first, then hold the orange button or tick "keep pressed".'],
           check: () => sim.code === 'operating',
@@ -1325,7 +1358,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
             if (trace.path.order.indexOf(ev.id) > trace.at) return { fb: 'That part is on the path, but current reaches something else first. Follow the wire from the last part.' };
             return { fb: 'Already counted that one. What comes next?' };
           },
-          done: () => `Then back to the <b>− lead</b>. One loop: ${trace.path.order.map(id => ({ S1: 'push-button', R1: 'resistor', D1: 'LED' })[id]).join(' → ')}. The numbers on the board show the order. (In a series loop the order doesn't change how it works.)` },
+          done: () => `Then back to the <b>− lead</b>. One loop: ${trace.path.order.map(id => ({ S1: 'push-button', R1: 'resistor', D1: 'LED' })[id]).join(' → ')}. The numbers on the board show the order. (Electrically, the order of parts in a series loop doesn't change how it works. We still build in the schematic's order, so anyone can follow the circuit.)` },
         { kind: 'board', view: 'board', edit: false, diag: true,
           say: 'Now <b>release the button</b> (untick keep pressed). Watch the path.',
           hints: ['Let go of the orange button, or untick "keep pressed".'],
@@ -1355,7 +1388,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
           done: 'Saved. Great explanation, engineer!' })
       ] },
     // ------------------------------------------------------------- 4
-    { id: 'm4', n: 4, title: 'Wrong Way Around', concept: 'Identified and corrected reverse-polarity faults (LED and supply)',
+    { id: 'm4', n: 4, title: 'Wrong Way Around', concept: 'Identified reverse-polarity faults (LED and supply) and repaired them to match the schematic',
       steps: [
         { kind: 'board', view: 'board', edit: false, diag: false, setup: () => { loadBoard(faultLayout('led-reversed'), { msg: 'Ohmbot rebuilt the lab circuit. Inspect anything you like: click holes and parts.' }); m4start = E.clone(layout); },
           say: 'Oops. Ohmbot rebuilt the lab circuit over the weekend and now it doesn\'t work.<br><br><b>Investigate:</b> turn the power on and press the button. What do you observe?',
@@ -1363,13 +1396,13 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
           check: () => obs.pressedOff,
           done: 'Power on, button pressed… LED stays dark. Something\'s wrong. The diagnosis display is hidden: that\'s your job!' },
         pickPartStep({ view: 'board', edit: false, diag: false, pick: true,
-          say: 'Inspect the circuit and compare it with the schematic. Select the part you think is causing the problem, then press <b>🎯 This part is the problem</b> under the board.<br><br>Tip: selecting a part shows where each of its legs is.',
-          hints: ['Check each polarised part: the parts that care which way round they go.', 'Select the LED. Is its + (anode) leg on the side that leads back to the supply\'s + lead?'],
+          say: 'The <b>schematic is your reference</b>. Compare each part\'s connections on the board with it. Select the part that\'s connected differently from the schematic, then press <b>🎯 This part is the problem</b>.<br><br>Tip: selecting a part shows where each of its legs is.',
+          hints: ['Follow the schematic: + → push-button → resistor → LED + leg … LED − leg → −. Check where each part\'s legs are on the board.', 'Select the LED. In the schematic its + leg (anode) connects to the resistor. On the board, which LED leg shares a group with the resistor?'],
           check: ev => {
             if (ev.type !== 'accuse') return false;
             if (ev.id === 'D1') return true;
-            return { fb: ({ R1: 'Resistors aren\'t polarised: they work either way round. Look at the other parts.', S1: 'The button pins look fine: it straddles the channel properly.', SUP: 'Red + and black − look right compared with the schematic. Try another part.' })[ev.id] || 'That jumper links two groups correctly. Look at the parts that have a + and − side.' };
-          }, done: 'Got it: the LED\'s anode (+) is in the row that leads to −, and its cathode is in the row coming from +. It\'s in <b>backwards</b>.' }),
+            return { fb: ({ R1: 'R1 joins the push-button to the LED, just as the schematic shows, and resistors aren\'t polarised. Look at the other parts.', S1: 'The push-button sits between + and the resistor, just as the schematic shows.', SUP: 'The red + lead connects (through J1) to the push-button, just as the schematic shows. Try another part.' })[ev.id] || 'That jumper makes a connection the schematic shows. Look at the parts that have a + and − side.' };
+          }, done: 'Got it: the schematic shows the LED\'s <b>+ leg (anode)</b> connected to the resistor, but on the board it\'s the <b>− leg (cathode)</b>. The LED is in <b>backwards</b>.' }),
         choiceStep({ view: 'board',
           say: '<b>Why does a backwards LED stop the whole circuit?</b>',
           opts: [
@@ -1379,37 +1412,40 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
           ], hints: ['Remember Mission 1: which way does the triangle in the symbol point?'],
           done: 'Exactly. Polarity matters for <b>diodes</b> like LEDs.' }),
         { kind: 'board', view: 'board', edit: true, diag: true,
-          say: 'Repair it! Select the LED and use <b>⇄ Flip LED</b> (or move its legs). Then test: power on, press, release.',
+          say: 'Repair it so the board matches the schematic: select the LED and use <b>⇄ Flip LED</b> (or move its legs). Then test: power on, press, release.',
           hints: ['Click the LED, then click "⇄ Flip LED" in the panel under the board.'],
-          check: () => workedHere(),
+          check: () => repaired(),
           done: 'Fixed and tested. Polarity fault #1 solved!' },
-        { kind: 'board', view: 'board', edit: false, diag: false, setup: () => { loadBoard(faultLayout('supply-reversed'), { msg: 'Round two. Ohmbot "tidied" the power leads.' }); m4start = E.clone(layout); },
-          say: 'Round two! Ohmbot "tidied up" the power leads. <b>Investigate</b> again: power on and press.',
+        { kind: 'board', view: 'board', edit: false, diag: false, setup: () => { loadBoard(faultLayout('supply-reversed'), { msg: 'Round two. Inspect anything you like.' }); m4start = E.clone(layout); },
+          say: 'Round two! Ohmbot rebuilt the circuit again. <b>Investigate</b>: power on and press.',
           hints: ['Power ON, then press and hold.'],
           check: () => obs.pressedOff,
-          done: 'Dark again. Same symptom as before… but is it the same cause?' },
+          done: 'Dark again: the same symptom as before. Don\'t assume it\'s the same cause!' },
         pickPartStep({ view: 'board', edit: false, diag: false, pick: true,
-          say: 'Check the LED first this time. Then check everything else against the schematic. Select the faulty part, then press <b>🎯 This part is the problem</b>.',
-          hints: ['The LED is the same way round as in the working circuit. What else has a + and a −?', 'Follow the red + lead. Where does it go, compared with the working circuit?'],
+          say: 'Same symptom, but check every part against the <b>schematic</b> again. Select the part that\'s connected differently from the schematic, then press <b>🎯 This part is the problem</b>.',
+          hints: ['Select the LED: which of its legs shares a group with the resistor? Does that match the schematic?', 'Follow the red + lead. In the schematic, + goes to the push-button. Where does it go on the board?'],
           check: ev => {
             if (ev.type !== 'accuse') return false;
             if (ev.id === 'SUP') return true;
-            return { fb: ev.id === 'D1' ? 'The LED\'s anode is in row 11 and cathode in row 13: the same as the working circuit. Look for something else that\'s reversed.' : 'That part is fine. What else in the circuit has a + and a −?' };
-          }, done: 'Yes! The <b>red + lead</b> and <b>black − lead</b> are swapped. Current is now trying to push the wrong way through the LED.' }),
+            return { fb: ev.id === 'D1' ? 'Check the schematic: the LED\'s + leg (H11) connects to the resistor, exactly as drawn. The LED matches the schematic. Which part doesn\'t?' : 'That part matches the schematic. What else has a + and a − side?' };
+          }, done: 'Yes! In the schematic, + goes to the push-button. On the board, the <b>red + lead</b> goes to the LED end of the loop, and the <b>black − lead</b> goes to the push-button. The supply leads are swapped.' }),
+        choiceStep({ view: 'board',
+          say: 'Here\'s a trap engineers fall into. <b>Two different single changes</b> would make this LED light: flip the LED, or swap the supply leads.<br><br><b>Which is the correct repair?</b>',
+          opts: [
+            { t: 'Flip the LED: it\'s quicker, and the LED lights.', fb: 'It would light, but then the board disagrees with the schematic in TWO places: the supply and the LED. The next person who follows the schematic gets misled, and in a bigger system other parts could be damaged by reversed power.' },
+            { t: 'Swap the supply leads. The schematic is the reference: it shows + going to the push-button, and the red lead is always +.', ok: true },
+            { t: 'Either: if the LED lights, it\'s fixed.', fb: 'Lighting up isn\'t the whole test. A repair must also match the schematic, or it becomes a hidden fault that grows into bigger problems later, especially in complex systems.' }
+          ], hints: ['Which change makes the board match the schematic again?'],
+          done: 'Exactly. <b>The schematic is the reference.</b> A fix that "works" but disagrees with the documentation can snowball into bigger problems later, especially in complex systems with many connected parts.' }),
         { kind: 'board', view: 'board', edit: true, diag: true,
-          say: 'Repair it: select the supply and use <b>⇄ Swap + and − leads</b>. Then test it.',
+          say: 'Repair it to match the schematic: select the supply and use <b>⇄ Swap + and − leads</b>. Then test it.',
           hints: ['Click either lead (or the supply box), then "⇄ Swap + and − leads".'],
-          check: () => {
-            if (!workedHere()) return false;
-            const d0 = E.getPart(m4start, 'D1'), d1 = E.getPart(layout, 'D1');
-            if (d1 && d1.anode !== d0.anode) m4note = 'Interesting: you flipped the LED instead. In this simple series loop that works too! But on real projects other parts can be damaged by reversed power, so always fix the leads.';
-            return true;
-          },
-          done: () => (m4note ? m4note + ' ' : '') + 'Polarity fault #2 solved.' },
+          check: () => repaired(),
+          done: 'Polarity fault #2 solved, and the board matches the schematic.' },
         textStep({ key: 'm4', min: 20, view: 'board',
-          say: 'In your own words: <b>how could you tell the LED or supply was the wrong way round?</b>',
-          placeholder: 'I could tell because…',
-          nudge: t => KEYWORDS.test(t) || /long|flat|red|black|\+|−|-/.test(t) ? null : 'Try mentioning what you checked: the LED legs (long leg, flat side) or the lead colours (+ and −).',
+          say: 'In your own words: <b>how could you tell which part was the wrong way round, and why must the repair match the schematic?</b>',
+          placeholder: 'I could tell because… The repair must match the schematic because…',
+          nudge: t => /schematic|diagram|drawing/i.test(t) ? null : 'Good. Can you also say why the repair has to match the schematic?',
           done: 'Saved. Polarity: sorted!' })
       ] },
     // ------------------------------------------------------------- 5
@@ -1431,12 +1467,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
         { kind: 'board', view: 'board', edit: false, diag: false, gap: true,
           say: 'Find the break. Click holes to check which groups are connected. When you\'ve found it, press <b>🔎 Mark the gap</b> and click a hole on each side of the break.',
           hints: ['Start at the red + lead. Click its hole: what else is in that group? Does anything carry the current onwards?', 'The + lead\'s group is a dead end. Which group should it be joined to, so current can reach the push-button?'],
-          check: ev => ev.type === 'gap' && (gapFixes(ev.holes[0], ev.holes[1]) || { fb: `Joining ${ev.holes[0]} and ${ev.holes[1]} wouldn't fix the circuit. Follow the path from + and find where it stops.` }),
+          check: ev => ev.type === 'gap' && (gapFixes(ev.holes[0], ev.holes[1]) || { fb: `Joining ${ev.holes[0]} and ${ev.holes[1]} wouldn't repair the circuit as the schematic shows. Follow the path from + and find where it stops.` }),
           done: 'Found it! The + lead\'s group isn\'t connected to the push-button\'s group. A jumper is missing.' },
         { kind: 'board', view: 'board', edit: true, diag: true,
           say: 'Repair it: add a <b>jumper wire</b> across the gap. Then test: power on, press, release.',
           hints: ['Tray → Jumper wire → click a free hole in the + lead\'s group, then a free hole in the push-button\'s group (row 5).'],
-          check: () => workedHere(), done: 'Connection restored!' },
+          check: () => repaired(), done: 'Connection restored!' },
         { kind: 'board', view: 'board', edit: false, diag: false, setup: () => loadBoard(faultLayout('led-wrong-row'), { msg: 'A trickier one…' }),
           say: 'A trickier one. Everything <i>looks</i> plugged in. <b>Investigate</b>: power on and press.',
           check: () => obs.pressedOff, done: 'Dark. Time to check every connection carefully.' },
@@ -1448,7 +1484,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
         { kind: 'board', view: 'board', edit: true, diag: true,
           say: 'Repair it: <b>move the LED\'s leg</b> (select the LED → ✥ Move, then place it again) so the cathode shares a group with the jumper. Test it.',
           hints: ['Move the LED: anode back in H11, cathode in H13 (same group as the blue jumper).'],
-          check: () => workedHere(), done: 'Two open circuits repaired!' },
+          check: () => repaired(), done: 'Two open circuits repaired!' },
         textStep({ key: 'm5', min: 20, view: 'board',
           say: 'Explain: <b>what does an unintended open circuit do, and how is it different from a released push-button?</b>',
           placeholder: 'An open circuit…',
@@ -1477,7 +1513,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
         { kind: 'board', view: 'board', edit: true, diag: true,
           say: 'Repair it safely:<br>1. Turn the <b>power OFF</b> (this resets the supply).<br>2. <b>Remove</b> the dangerous jumper.<br>3. Power on and test: press, release.',
           hints: ['Select the jumper, then ✕ Remove. Power off first is the safe habit.'],
-          check: () => workedHere(), done: 'Short removed, supply happy, LED working.' },
+          check: () => repaired(), done: 'Short removed, supply happy, LED working.' },
         { kind: 'board', view: 'board', edit: false, diag: false, setup: () => loadBoard(faultLayout('resistor-bypass'), { msg: 'Another "shortcut"…' }),
           say: 'Another sneaky shortcut. <b>Power on</b>, then <b>press the button</b>.',
           check: () => obs.blown, done: 'POP! The LED burned out (in the simulation). But the supply did <b>not</b> shut down this time…' },
@@ -1497,7 +1533,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
         { kind: 'board', view: 'board', edit: true, diag: true,
           say: 'Repair: <b>power OFF</b> (Ohmbot fits a fresh LED), remove the bypass wire, then power on and test.',
           hints: ['Power off → select the jumper → ✕ Remove → power on → press, release.'],
-          check: () => workedHere(), done: 'Resistor back on duty!' },
+          check: () => repaired(), done: 'Resistor back on duty!' },
         choiceStep({ view: 'board', predict: true, setup: () => loadBoard(faultLayout('led-short'), { msg: 'Ohmbot put a jumper straight across the LED\'s legs. Predict first, then test.' }),
           say: 'Prediction time. Ohmbot has added a jumper <b>straight across the LED\'s two legs</b>. <b>What will happen when you press the button?</b>',
           opts: [
@@ -1524,33 +1560,56 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
             if (!d.fault || d.solved) { const pool = DETECTIVE_FAULTS.filter(f => f !== d.last); d.fault = pool[Math.floor(Math.random() * pool.length)]; d.last = d.fault; d.wrongTries = 0; d.diagnosed = false; d.solved = false; d.explanation = ''; save(); }
             loadBoard(faultLayout(d.fault), { msg: '🔍 Unknown fault. Use every investigation tool you have.' });
           },
-          say: '<b>FINAL CASE.</b> Someone has introduced <b>one fault</b> into the lab circuit. Ohmbot won\'t tell you which one.<br><br>Investigate: power it up, press the button, click holes and parts, and compare with the schematic. The wiring is locked until you\'ve made your diagnosis.',
+          say: '<b>FINAL CASE.</b> Someone has introduced <b>one fault</b> into the lab circuit. Ohmbot won\'t tell you which one.<br><br>Investigate: power it up, press the button, click holes and parts. The <b>schematic is your reference</b>. The wiring is locked until you\'ve made your diagnosis.',
           hints: ['Start with power on, then press. Note exactly what happens to the LED and the supply.'],
           check: () => (obs.pressedAny || obs.trip) && obs.evidence >= 2, auto: false,
           done: 'Evidence gathered. Keep investigating if you need to, then make your diagnosis.' },
         choiceStep({ view: 'board', edit: false, diag: false, detective: true,
-          say: '<b>Make your diagnosis.</b> Which fault has been introduced?',
-          opts: DETECTIVE_FAULTS.map(k => ({ t: FAULTS[k].label, key: k })),
-          hints: ['Did the supply shut down? Did the LED burn out? Or did it just stay dark?', 'If it stayed dark: check the LED legs (+ long leg), the supply leads (red +), and every group of holes along the path.'],
-          done: 'Correct diagnosis, detective!' }),
+          say: '<b>Make your diagnosis.</b> What <b>type</b> of fault is it?',
+          opts: CATS.map(c => ({ t: c.t, key: c.key })),
+          hints: ['Did the supply shut down? Did the LED burn out? Or did it just stay dark?', 'If it just stayed dark: is a polarised part the wrong way round compared with the schematic, or is there a dead end in the path?'],
+          done: 'Correct fault type, detective! Now pin down exactly where it is.' }),
+        pickPartStep({ view: 'board', edit: false, diag: false, pick: true, skip: () => FAULT_CAT[S.detective.fault] === 'open',
+          say: 'Pin it down. Compare the board with the <b>schematic</b>, select the exact part or wire that\'s wrong, then press <b>🎯 This part is the problem</b>.',
+          hints: ['Follow the schematic: + → push-button → resistor → LED + leg … LED − leg → −. Which part on the board is connected differently?'],
+          check: ev => {
+            if (ev.type !== 'accuse') return false;
+            const cat = FAULT_CAT[S.detective.fault]; let l = E.clone(layout);
+            if (cat === 'polarity') {
+              if (ev.id === 'D1') l = E.flipLed(l);
+              else if (ev.id === 'SUP') { const sp = E.getPart(l, 'SUP'); [sp.pos, sp.neg] = [sp.neg, sp.pos]; }
+              else return { fb: 'That part isn\'t polarised. Which part with a + and a − side is connected differently from the schematic?' };
+            } else l.parts = l.parts.filter(p => p.id !== ev.id);
+            if (E.matchesSchematic(l)) { S.detective.located = ev.id; save(); return true; }
+            if (cat === 'polarity') return { fb: ev.id === 'D1' ? 'The LED\'s + leg connects to the resistor, just as the schematic shows. Check the other polarised part.' : 'The red + lead connects to the push-button side, just as the schematic shows. Check the other polarised part.' };
+            return { fb: 'Removing that wouldn\'t make the board match the schematic. Which wire makes a connection the schematic doesn\'t show?' };
+          }, done: () => `Located: <b>${selPart === 'SUP' ? 'the supply leads' : selPart}</b> ${selPart === 'SUP' ? 'are' : 'is'} connected differently from the schematic.` }),
+        { kind: 'board', view: 'board', edit: false, diag: false, gap: true, skip: () => FAULT_CAT[S.detective.fault] !== 'open',
+          say: 'Pin it down: find where the path breaks. Press <b>🔎 Mark the gap</b> and click a hole on each side of the break.',
+          hints: ['Start at the red + lead and follow the schematic\'s path group by group. Where is the dead end?'],
+          check: ev => { if (ev.type !== 'gap') return false; if (gapFixes(ev.holes[0], ev.holes[1])) { S.detective.located = ev.holes.join('–'); save(); return true; } return { fb: 'Joining those wouldn\'t complete the path the schematic shows. Find the dead-end group.' }; },
+          done: 'Located: that\'s where the path breaks.' },
         textStep({ key: 'det', min: 30, view: 'board',
           say: '<b>Explain your diagnosis.</b> What did you observe, and why does this fault cause it? (This goes on your report.)',
           placeholder: 'I observed… This is because…',
           nudge: t => KEYWORDS.test(t) ? null : 'Try linking what you saw to the current and the path.',
           done: 'Explanation recorded.' }),
         { kind: 'board', view: 'board', edit: true, diag: true,
-          say: 'Now <b>repair</b> the circuit and <b>demonstrate</b> it: power on, press (LED on), release (LED off).',
+          say: 'Now <b>repair</b> the circuit so it <b>matches the schematic</b>, and <b>demonstrate</b> it: power on, press (LED on), release (LED off).',
           hints: ['Remember: power off after a shutdown or a blown LED.', 'Compare every leg position with Ohmbot\'s working layout from earlier missions: + A2, J1 B2–B5, button E5/F5–E7/F7, R1 G7–G11, LED + H11 / − H13, J2 I13–D13, − A13.'],
-          check: () => { if (workedHere()) { S.detective.solved = true; save(); return true; } return false; },
+          check: () => { const r = repaired(); if (r === true) { S.detective.solved = true; save(); } return r; },
           done: 'CASE CLOSED! The lab lights are back on.' }
       ] }
   ];
   const MISSION_BY_ID = Object.fromEntries(MISSIONS.map(m => [m.id, m]));
-  let M = null, stepIdx = 0, step = null, stepDone = false, wrongThisStep = 0, hintIdx = 0, nudged = false, trace = null, m4start = null, m4note = '', needEvidence = false;
+  let M = null, stepIdx = 0, step = null, stepDone = false, wrongThisStep = 0, hintIdx = 0, nudged = false, trace = null, m4start = null, needEvidence = false;
 
   function name() { return esc(S.player.name || 'engineer'); }
   function sayHtml(x) { const t = typeof x === 'function' ? x() : x; return String(t || '').replace('{name}', name()); }
-  function feedback(kind, html) { $('feedback').innerHTML = html ? `<span class="${kind}">${kind === 'ok' ? '✓ ' : kind === 'cb' ? '🔁 ' : kind === 'no' ? '✗ ' : ''}</span>${html}` : ''; }
+  function feedback(kind, html) {
+    $('feedback').innerHTML = html ? `<span class="${kind}">${kind === 'ok' ? '✓ ' : kind === 'cb' ? '🔁 ' : kind === 'no' ? '✗ ' : ''}</span>${html}` : '';
+    if (html) { const f = $('feedback'), m = $('mentor'); if (m.scrollHeight > m.clientHeight) { const t = f.offsetTop - m.offsetTop, room = m.clientHeight - 60; if (t + f.offsetHeight > m.scrollTop + room) m.scrollTop = Math.min(t, t + f.offsetHeight - room); } }
+  }
 
   function unlocked(id) { const i = MISSIONS.findIndex(m => m.id === id); return i === 0 || S.completed.includes(MISSIONS[i - 1].id) || S.completed.includes(id); }
   function drawTracker() {
@@ -1567,6 +1626,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
     enterStep(0); drawTracker();
   }
   function enterStep(i) {
+    while (M.steps[i].skip && M.steps[i].skip() && i < M.steps.length - 1) i++;
+    mismatchHash = null;
     stepIdx = i; step = M.steps[i]; stepDone = false; wrongThisStep = 0; hintIdx = 0; nudged = false; needEvidence = false;
     $('hintBox').innerHTML = ''; feedback('', ''); $('nextBtn').classList.add('hidden');
     ghostOn = false; gapPick = null;
@@ -1610,15 +1671,13 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
   function detectiveAnswer(o, btn) {
     const d = S.detective;
     if (needEvidence) { feedback('no', 'Do at least one more test first (inspect a hole or part, or press the button), then decide.'); return; }
-    if (o.key === d.fault) { btn.classList.add('right'); [...$('interact').querySelectorAll('.opt')].forEach(b => b.disabled = b !== btn); d.diagnosed = true; save(); complete(); return; }
+    if (o.key === FAULT_CAT[d.fault]) { btn.classList.add('right'); [...$('interact').querySelectorAll('.opt')].forEach(b => b.disabled = b !== btn); d.diagnosed = true; save(); complete(); return; }
     d.wrongTries++; save(); btn.disabled = true; needEvidence = true; obs.evidence = 0;
     const tell = {
-      'supply-short': obs.trip ? 'The supply did shut down… but is that the only fault that could do it? Check your other options.' : 'A direct short shuts the supply down as soon as the power is on. Did that happen?',
-      'resistor-bypass': obs.blown ? 'The LED did burn out… check which wire could cause it.' : 'A bypassed resistor makes the LED burn out when the button is pressed. Did yours?',
-      'led-reversed': 'A reversed LED has its long leg (+) on the − side of the loop. Select the LED and check its legs against the schematic.',
-      'supply-reversed': 'A reversed supply has the red + lead where the black − lead should be. Follow both leads.',
-      'missing-connection': 'A missing connection leaves a dead-end group in the path. Click each group along the path to check.',
-      'wrong-row': 'A leg in the wrong row sits one row away from where it should connect. Check every leg\'s group.'
+      short: 'A short from + to − shuts the supply down as soon as the power is on. Did yours?',
+      bypass: 'A bypassed resistor makes the LED burn out when the button is pressed. Did yours?',
+      polarity: 'A polarity fault means a polarised part (the LED or the supply) is connected the wrong way round compared with the schematic. Check the LED\'s legs and the lead colours against it.',
+      open: 'An open circuit leaves a dead end: a group of holes along the path where current can\'t carry on. Click each group along the path.'
     }[o.key];
     miss('That doesn\'t match all the evidence yet. ' + tell + ' Do another test, then try again.');
   }
@@ -1728,8 +1787,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CircuitEng
       ${txt(40, 240, 'My working circuit, in series: + → ' + ((E.tracePath(L) || { order: ['S1', 'R1', 'D1'] }).order.map(id => ({ S1: 'push-button', R1: 'resistor', D1: 'LED' })[id]).join(' → ')) + ' → −. LED lit with the button pressed.', { size: 13, bold: true })}
       ${board}
       <line x1="40" y1="714" x2="${W - 40}" y2="714" stroke="#999"/>
-      ${txt(40, 740, 'Fault I diagnosed in the final case: ' + (d.fault ? FAULTS[d.fault].label : '—'), { size: 14, bold: true })}
-      ${txt(40, 760, `Diagnosis attempts: ${d.wrongTries + 1} · Hints used in the final case: ${d.hints} · Repaired and demonstrated: ${d.solved ? 'yes' : 'no'}`, { size: 12, fill: '#444' })}
+      ${txt(40, 740, 'Fault I diagnosed in the final case: ' + (d.fault ? FAULTS[d.fault].label + ' (' + CATS.find(c => c.key === FAULT_CAT[d.fault]).t.split(':')[0].toLowerCase() + ')' : '—'), { size: 14, bold: true })}
+      ${txt(40, 760, `Diagnosis attempts: ${d.wrongTries + 1} · Hints used in the final case: ${d.hints} · Repaired to match the schematic and demonstrated: ${d.solved ? 'yes' : 'no'}`, { size: 12, fill: '#444' })}
       ${txt(40, 788, 'My explanation of the fault:', { size: 13, bold: true })}${para(40, 808, d.explanation || S.answers.det || '', 100, 5)}
       ${txt(40, 918, 'Why opening the switch turns the LED off (Mission 3):', { size: 13, bold: true })}${para(40, 938, S.answers.m3 || '', 100, 3)}
       ${txt(40, 1008, 'My reflection:', { size: 13, bold: true })}${para(40, 1028, S.reflection || '', 100, 3)}
