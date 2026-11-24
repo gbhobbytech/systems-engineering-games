@@ -111,6 +111,9 @@
   .lstudio { border-color: var(--green); box-shadow: 0 0 26px rgba(74,222,128,0.2); max-width: 900px; margin: 30px auto 0; }
   .lstudio h2 { color: #86efac; }
   .lstudio .btn { background: linear-gradient(90deg, var(--green), var(--cyan)); color: #000; }
+  .track { display: inline-block; font: bold 11px monospace; letter-spacing: 1px; padding: 2px 8px; border-radius: 10px; margin: 4px 0 2px; background: rgba(0,0,0,0.5); }
+  .t-lb { border: 1px solid #facc15; color: #facc15; } .t-wall { border: 1px solid #22d3ee; color: #22d3ee; }
+  .trackkey { text-align: center; color: #9ca3af; font-size: 13px; line-height: 1.8; margin: 14px auto 0; max-width: 760px; }
   .lstudio12 { border-color: var(--gold, #facc15); box-shadow: 0 0 26px rgba(250,204,21,0.2); }
   .lstudio12 h2 { color: #fde68a; }
   .lstudio12 .btn { background: linear-gradient(90deg, #facc15, #fb923c); color: #000; }
@@ -179,6 +182,7 @@
       <span class="go">GO ↓</span>
     </a>
   </nav>
+  <p class="trackkey"><span class="track t-lb">🏆 Class leaderboard</span> ranked by points &nbsp;·&nbsp; <span class="track t-wall">📋 Progress wall</span> tracked, not ranked<br>Both switch on only when your teacher gives you a session code. Without one, your progress stays on this device.</p>
 
   <!-- ================= YEAR 12 SAT JOURNEY (lock ids 1, 2, 4, 3; SAT Evidence Studio 9) ================= -->
   <section id="sat" aria-labelledby="satH">
@@ -189,6 +193,7 @@
       <li><div class="lvl l1" data-lock="1">
         <span class="stop" aria-hidden="true">1</span>
         <div class="n">LEVEL 1</div>
+        <div class="track t-lb" title="Ranked on the class live board when your teacher gives you a session code">🏆 Class leaderboard</div>
         <h2>Orientation</h2>
         <p>Explore the campus and learn how the subject works and how you're assessed. <b>Already played it in class?</b> You don't need to replay it, but you can if you want a better rank.</p>
         <div class="done" id="l1done"></div>
@@ -198,6 +203,7 @@
       <li><div class="lvl l2" data-lock="2">
         <span class="stop" aria-hidden="true">2</span>
         <div class="n">LEVEL 2</div>
+        <div class="track t-lb" title="Ranked on the class live board when your teacher gives you a session code">🏆 Class leaderboard</div>
         <h2>Rubric Heist</h2>
         <p>Crack 8 vaults, one for each SAT criterion, using your printed rubric. Live leaderboard: get your session code from the board at the front.</p>
         <div class="done" id="l2done"></div>
@@ -207,6 +213,7 @@
       <li><div class="lvl lc" data-lock="4">
         <span class="stop" aria-hidden="true">✓</span>
         <div class="n">CHECKPOINT · BEFORE LEVEL 3</div>
+        <div class="track t-wall" title="Shown on the class progress wall (tracked, not ranked) when your teacher gives you a session code">📋 Progress wall · not ranked</div>
         <h2>Will It Fly?</h2>
         <p>Lock in your project. Run your idea through six checks: integrated system, power, size and storage, making it, budget and time. No idea yet? The idea explorer helps you find one.</p>
         <div class="done" id="lcdone"></div>
@@ -216,6 +223,7 @@
       <li><div class="lvl l3" data-lock="3">
         <span class="stop" aria-hidden="true">3</span>
         <div class="n">LEVEL 3</div>
+        <div class="track t-wall" title="Shown on the class progress wall (tracked, not ranked) when your teacher gives you a session code">📋 Progress wall · not ranked</div>
         <h2>The 9–10 Evidence Lab</h2>
         <p>Compare evidence against the High and Very High descriptors for all eight criteria, then plan your own SAT evidence: what goes where in your chosen format, and what you'll do next.</p>
         <div class="done" id="l3done"></div>
@@ -227,6 +235,7 @@
     <div class="lvl lstudio lstudio12" data-lock="9">
       <div class="badge">NEW</div>
       <div class="n">YEAR 12 · USE ALL YEAR</div>
+        <div class="track t-wall" title="Shown on the class progress wall (tracked, not ranked) when your teacher gives you a session code">📋 Progress wall · not ranked</div>
       <h2>Evidence Studio: SAT</h2>
       <div class="tags"><span>Units 3 &amp; 4</span><span>Criteria 1–8</span><span>Your style</span></div>
       <p>Make every criterion easy to find and impossible to doubt. Fix eight weak entries (one per criterion), design your criterion badges and test card, then build your criteria index cover page and a weekly self-audit for Teams.</p>
@@ -247,6 +256,7 @@
       <li><div class="lvl lsu" data-lock="5">
         <span class="stop" aria-hidden="true">1</span>
         <div class="n">STEP UP · PART 1</div>
+        <div class="track t-lb" title="Ranked on the class live board when your teacher gives you a session code">🏆 Class leaderboard</div>
         <h2>My Year in Systems</h2>
         <div class="tags"><span>Year 11</span><span>No experience needed</span><span>Electronics + mechanical</span></div>
         <p>Introduction to VCE Systems Engineering Units 1 &amp; 2. Explore the Unit 1 electronics zone and the Unit 2 mechanical zone, pick up the habits that work in both, then make your My Year in Systems passport.</p>
@@ -258,6 +268,7 @@
         <div class="badge">NEW</div>
         <span class="stop" aria-hidden="true">2</span>
         <div class="n">STEP UP · PART 2</div>
+        <div class="track t-lb" title="Ranked on the class live board when your teacher gives you a session code">🏆 Class leaderboard</div>
         <h2>Ohmbot's Circuit Rescue</h2>
         <div class="tags"><span>Year 11</span><span>After the LED practical</span><span>Breadboard + faults</span></div>
         <p>Understanding circuits, breadboard connections and electrical faults. Read the schematic, wire a virtual mini breadboard, then track down reversed parts, broken connections and short circuits. Finish with your Circuit Investigator Report.</p>
@@ -270,6 +281,7 @@
     <div class="lvl lstudio" data-lock="8">
       <div class="badge">NEW</div>
       <div class="n">YEAR 11 · RECORD OF EVIDENCE</div>
+        <div class="track t-wall" title="Shown on the class progress wall (tracked, not ranked) when your teacher gives you a session code">📋 Progress wall · not ranked</div>
       <h2>Evidence Studio: Build &amp; Test</h2>
       <div class="tags"><span>Units 1 &amp; 2</span><span>Use all project</span><span>Your style</span></div>
       <p>Prove what you built and how you know it works, in your own style. Play the Evidence Makeover, design your own decision stamp, fault ticket and test card, then keep a weekly self-audit you can post on Teams.</p>
@@ -291,6 +303,7 @@
       <div class="lvl lcc" data-lock="6">
         <div class="badge">NEW</div>
         <div class="n">RESEARCH MISSION</div>
+        <div class="track t-lb" title="Ranked on the class live board when your teacher gives you a session code">🏆 Class leaderboard</div>
         <h2>The Controller Challenge</h2>
         <div class="tags"><span>Year 11 · Year 12 revision</span><span>45–60 min</span><span>📝 Worksheet</span><span>Electronics</span></div>
         <p>Investigate seven microcontroller boards, chips and computers, from the Arduino UNO and micro:bit to PICAXE and Raspberry Pi 5. Make real compatibility calls, then choose the right controller for a client.</p>

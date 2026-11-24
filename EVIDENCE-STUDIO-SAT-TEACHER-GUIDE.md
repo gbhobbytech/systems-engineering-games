@@ -99,3 +99,7 @@ Please check this mapping against how you assess. The text lives in the `CRITERI
 - persistence, hub integration and no horizontal overflow
 
 44/44 passing at 1366×650.
+
+## Class live board
+
+This activity can appear on the class live dashboard. See `LIVE-BOARD-TEACHER-GUIDE.md` for how to run a session and the one-time database check.

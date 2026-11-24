@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Level 1 – Systems Engineering Orientation</title>
+<script src="live.js"></script>
 <style>
   .neon-pink {
     color: #ff4ecf;
@@ -2548,6 +2549,7 @@ Answer my bonus question for a star!`
 
     // Final challenge flow
     if (bossActive) {
+      if (window.SELive) SELive.answer('BOSS:' + bossIndex, correct, { sec: 8 });
       if (correct) bossCorrectCount++;
       bossIndex++;
       dialogTextEl.textContent = feedbackText(opt, correct);
@@ -2561,6 +2563,8 @@ Answer my bonus question for a star!`
     // Building quiz
     const id = currentBuilding ? currentBuilding.id : null;
     let extra = '';
+    const liveSec = id ? (mainBuildingOrder.includes(id) ? mainBuildingOrder.indexOf(id) + 1 : bonusBuildingOrder.indexOf(id) + 5) : 0;
+    if (id && window.SELive) SELive.answer('B:' + id, correct, { sec: liveSec });
     if (id && mainBuildingOrder.includes(id)) {
       if (!attemptedMain.has(id)) {
         attemptedMain.add(id);
@@ -2568,12 +2572,14 @@ Answer my bonus question for a star!`
       }
       if (correct) {
         completedBuildings.add(id);
+        if (window.SELive) SELive.stage(id, { sec: liveSec, label: buildingById(id).name });
         extra = earnCard(id);
         if (allMainBuildingsVisited() && extra) extra += '\n\nAll four done – the Exit Gate is now unlocked!';
       }
     } else if (id && bonusBuildingOrder.includes(id) && correct) {
       const isNewStar = !bonusStars.has(id);
       bonusStars.add(id);
+      if (window.SELive) SELive.stage(id, { sec: liveSec, label: buildingById(id).name });
       extra = earnCard(id);
       if (isNewStar) extra = '\n\n★ Bonus star earned!' + extra;
     }
@@ -2593,6 +2599,7 @@ Answer my bonus question for a star!`
     bossActive = false;
 
     if (passed) {
+      if (window.SELive) { SELive.stage('final', { sec: 8, label: 'Final challenge' }); SELive.finish(); }
       gameComplete = true;
       finalScore = Math.max(finalScore, score);
       finalTotal = total;
@@ -2977,6 +2984,7 @@ Answer my bonus question for a star!`
     player.confBefore = obConf;
     player.interest = document.getElementById('obInterest').value.trim();
     try { localStorage.setItem('sePlayer', JSON.stringify({ name, cls })); } catch (e) {}
+    if (window.SELive) SELive.identify(name, cls);
     onboardEl.classList.add('hidden');
     viewMode = 'map';
     updateHud();
@@ -3214,6 +3222,7 @@ Answer my bonus question for a star!`
   bossWildcardQuestions.forEach(q => console.assert(q.wrong.length === 2 && q.joke.length === 2, 'Wildcard shape ' + q.id));
 
   // --- First-time setup ---
+  if (window.SELive) SELive.init({ level: 1, name: 'Orientation' });
   randomiseBuildings();
   updateHud();
   draw();

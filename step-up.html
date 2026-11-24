@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Step Up – Systems Engineering Units 1 &amp; 2</title>
+<script src="live.js"></script>
 <style>
   .neon-pink {
     color: #ff4ecf;
@@ -2058,6 +2059,8 @@ Then you'll make your My Year in Systems passport.`
     if (!o || mission.tried.has(o)) return;
     dialogMode = 'mfb'; dialogTextEl.innerHTML = '';
     addText(s.q).style.color = '#999';
+    const liveQ = 'M:' + mission.id + ':' + mission.i, liveSec = coreOrder.indexOf(mission.id) + 1;
+    if (window.SELive) SELive.answer(liveQ, !!o.ok, { sec: liveSec });
     if (o.ok) {
       mission.lastOk = true;
       addText('✔ Yes!', 'mfb-ok');
@@ -2121,6 +2124,7 @@ Then you'll make your My Year in Systems passport.`
     let text = '', first = false;
     if (b.optional) { if (!extras.has(id)) { extras.add(id); first = true; } }
     else if (!completed.has(id)) { completed.add(id); first = true; }
+    if (!b.optional && window.SELive) SELive.stage(id, { sec: coreOrder.indexOf(id) + 1, label: b.name });
     if (cardData[id] && !earnedCards.has(id)) {
       earnedCards.add(id); setTimeout(sfx.card, 200);
       text += `★ Card earned: ${cardData[id].name}\n"${cardData[id].text}"`;
@@ -2192,6 +2196,7 @@ Then you'll make your My Year in Systems passport.`
     const q = finalRun.queue.shift(), pickK = ['u1', 'u2', 'both'][idx];
     dialogMode = 'ffb'; dialogTextEl.innerHTML = '';
     addText(q.t).style.color = '#999';
+    if (window.SELive) SELive.answer('F:' + q.t.slice(0, 50), pickK === q.a, { sec: 9 });
     if (pickK === q.a) {
       finalRun.sorted++;
       addText('✔ ' + FINAL_LABELS[q.a], 'mfb-ok'); addText(q.why);
@@ -2206,6 +2211,7 @@ Then you'll make your My Year in Systems passport.`
   }
   function finishFinal() {
     finalRun = null; S.done = true; S.finishedAt = S.finishedAt || Date.now();
+    if (window.SELive) { SELive.stage('final', { sec: 9, label: 'Final sort' }); SELive.finish(); }
     closeDialog(); updateHud(); save();
     leaveRoomTo('end');
   }
@@ -2483,6 +2489,7 @@ Then you'll make your My Year in Systems passport.`
   splashEl.addEventListener('click', leaveSplash);
   $('resumeBtn').addEventListener('click', () => {
     applyState(savedRun); onboardEl.classList.add('hidden'); viewMode = 'map'; updateHud(); draw();
+    if (window.SELive) SELive.identify(S.player.name, S.player.cls);
     instructionsEl.textContent = `Welcome back, ${S.player.name}! Carry on where you left off.`;
     if (S.done) showEndScreen();
   });
@@ -2512,6 +2519,7 @@ Then you'll make your My Year in Systems passport.`
     if (missing.length) { $('obMsg').textContent = 'Still needed: ' + missing.join(', ') + '.'; sfx.retry(); return; }
     S = blankState(); S.started = true;
     S.player = { name, cls, tried: obTried, confBefore: obConf, confAfter: 0 };
+    if (window.SELive) SELive.identify(name, cls);
     visitedTiles = new Set(); completed = new Set(); extras = new Set(); earnedCards = new Set(); checkpointsShown = new Set();
     randomiseBuildings();
     try { localStorage.setItem(PLAYER_KEY, JSON.stringify({ name, cls })); } catch (e) {}
@@ -2680,6 +2688,7 @@ Then you'll make your My Year in Systems passport.`
   ['u1', 'u2', 'both'].forEach(k => console.assert(finalPool.filter(q => q.a === k).length >= 2, 'Final pool too small for ' + k));
 
   // ---------------- First-time setup ----------------
+  if (window.SELive) SELive.init({ level: 5, name: 'Step Up' });
   randomiseBuildings();
   updateHud();
   draw();

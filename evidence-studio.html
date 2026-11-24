@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Evidence Studio – Year 11 Build &amp; Test – Systems Engineering</title>
+<script src="live.js"></script>
 <style>
   * { box-sizing: border-box; }
   :root { --cyan: #22d3ee; --pink: #ff4ecf; --green: #4ade80; --gold: #facc15; --orange: #fb923c; --red: #f87171; --violet: #a78bfa; --panel: rgba(0,0,0,0.86); --ui: 1; }
@@ -328,7 +329,7 @@
   // =====================================================================
   function blank() { return { v: 1, started: false, done: false, player: { name: '', cls: '' }, system: '', format: 'slides', seen: {}, mk: { round: 0, done: false, firstTry: 0, comebacks: 0, finished: [] }, sig: { style: 'blueprint', accent: '#22d3ee', icon: '⚡', titles: {}, tag: '', made: false }, audit: {}, drops: [] }; }
   let S = blank();
-  function save() { S.done = !!(S.mk.done && S.sig.made && S.drops.length); try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+  function save() { S.done = !!(S.mk.done && S.sig.made && S.drops.length); if (S.done && window.SELive) SELive.finish(); try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
   function load() { try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && s.v === 1 && s.started) { const b = blank(); return Object.assign(b, s, { mk: Object.assign(b.mk, s.mk), sig: Object.assign(b.sig, s.sig) }); } } catch (e) {} return null; }
   const unit = () => (FORMATS[S.format] || FORMATS.slides).unit;
   function toast(t) { const el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.add('hidden'), 2600); }
@@ -371,6 +372,7 @@
   }
 
   // ---------------- MAKEOVER ----------------
+  function liveMk(ok) { if (window.SELive) SELive.answer('MK' + (S.mk.round + 1) + ':' + (mkStage === 'probs' ? 'P' : 'U'), ok, { sec: S.mk.round + 1 }); }
   let mkStage = 'probs', mkPicked = new Set(), mkWrong = 0;
   function renderMakeover(opts) {
     if (S.mk.done && !opts.replay && S.mk.round >= ROUNDS.length) return renderMakeoverEnd();
@@ -407,8 +409,8 @@
         const right = r.probs.map((p, i) => p.ok ? i : -1).filter(i => i >= 0);
         const wrongPick = [...mkPicked].find(i => !r.probs[i].ok);
         const missed = right.filter(i => !mkPicked.has(i));
-        if (wrongPick !== undefined) { mkWrong++; sfx.retry(); $('mkFeedback').innerHTML = `<span class="no">✗ Not quite.</span> ${esc(r.probs[wrongPick].fb)}`; return; }
-        if (missed.length) { mkWrong++; sfx.retry(); $('mkFeedback').innerHTML = `<span class="no">✗ Good so far, but you've missed ${missed.length} problem${missed.length > 1 ? 's' : ''}.</span> Check it against the Evidence Test: SHOW · SAY · WHY · NEXT.`; return; }
+        if (wrongPick !== undefined) { mkWrong++; liveMk(false); sfx.retry(); $('mkFeedback').innerHTML = `<span class="no">✗ Not quite.</span> ${esc(r.probs[wrongPick].fb)}`; return; }
+        if (missed.length) { mkWrong++; liveMk(false); sfx.retry(); $('mkFeedback').innerHTML = `<span class="no">✗ Good so far, but you've missed ${missed.length} problem${missed.length > 1 ? 's' : ''}.</span> Check it against the Evidence Test: SHOW · SAY · WHY · NEXT.`; return; }
         finishStage(`All the real problems found.`);
         $('mkArea').querySelectorAll('[data-p]').forEach(b => { b.disabled = true; const i = Number(b.dataset.p); if (r.probs[i].ok) b.classList.add('right'); else b.classList.add('struck'); });
         $('mkCheck').remove();
@@ -418,13 +420,15 @@
       $('mkArea').innerHTML = r.ups.map((u, i) => `<button class="opt" data-u="${i}">${esc(u.t)}</button>`).join('');
       $('mkArea').querySelectorAll('[data-u]').forEach(b => b.addEventListener('click', () => {
         const u = r.ups[Number(b.dataset.u)];
-        if (!u.ok) { mkWrong++; sfx.retry(); b.disabled = true; b.classList.add('struck'); $('mkFeedback').innerHTML = `<span class="no">✗</span> ${esc(u.fb)}`; return; }
+        if (!u.ok) { mkWrong++; liveMk(false); sfx.retry(); b.disabled = true; b.classList.add('struck'); $('mkFeedback').innerHTML = `<span class="no">✗</span> ${esc(u.fb)}`; return; }
         b.classList.add('right'); $('mkArea').querySelectorAll('[data-u]').forEach(x => x.disabled = true);
         finishStage(esc(r.win), true);
       }));
     }
   }
   function finishStage(msg, last) {
+    liveMk(true);
+    if (last && window.SELive) SELive.stage('MK' + (S.mk.round + 1), { sec: S.mk.round + 1, label: 'Makeover round ' + (S.mk.round + 1) });
     const cb = mkWrong > 0;
     if (cb) { S.mk.comebacks++; sfx.cb(); } else sfx.good();
     if (last) { if (!S.mk.finished.includes(S.mk.round) && !cb && !S.mk.roundWrong) S.mk.firstTry++; S.mk.finished.push(S.mk.round); S.mk.roundWrong = false; }
@@ -518,6 +522,7 @@
   function downloadDevice(k, type) {
     const svg = deviceSVG(k), m = /viewBox="0 0 (\d+) (\d+)"/.exec(svg), name = `${fileSafe(S.player.name)}-${fileSafe(S.sig.titles[k] || DEVICES[k].def)}`;
     S.sig.made = true; save(); drawTabs();
+    if (window.SELive) SELive.report('SIG', { style: S.sig.style, accent: S.sig.accent }, true);
     if (type === 'svg') { downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), name + '.svg'); toast('✓ Downloaded. In PowerPoint: Insert → Pictures, then Convert to Shape.'); }
     else svgToPng(svg, +m[1], +m[2], name + '.png', () => toast('✓ PNG downloaded'));
   }
@@ -581,7 +586,9 @@
     $('dropBtn').addEventListener('click', makeDrop);
     $('indexBtn').addEventListener('click', copyIndex);
   }
-  function updateRow(id) { const td = $('main').querySelector(`[data-row="${id}"] [data-stat]`), s = auditStatus(id); td.className = 'stat s' + s; td.textContent = STAT_TXT[s]; drawBars(); }
+  function liveSnap() { return { stages: Object.fromEntries(stageCounts().map(c => [c.st.id, [c.strong, c.captured, c.total]])), needs: BEATS.filter(b => S.audit[b.id] && S.audit[b.id].need).slice(0, 5).map(b => b.t + ': ' + S.audit[b.id].need), mk: S.mk.round, sig: S.sig.made }; }
+  function liveAudit() { if (window.SELive) SELive.report('AUDIT', liveSnap()); }
+  function updateRow(id) { liveAudit(); const td = $('main').querySelector(`[data-row="${id}"] [data-stat]`), s = auditStatus(id); td.className = 'stat s' + s; td.textContent = STAT_TXT[s]; drawBars(); }
   function stageCounts() { return STAGES.map(st => { const bs = BEATS.filter(b => b.stage === st.id); return { st, total: bs.length, strong: bs.filter(b => auditStatus(b.id) === 2).length, captured: bs.filter(b => auditStatus(b.id) >= 1).length }; }); }
   function drawBars() { $('bars').innerHTML = stageCounts().map(c => `<div class="bar"><b style="color:${c.st.col}">${c.st.name}</b> · ${c.strong}/${c.total} strong<div class="tr"><i style="width:${Math.round((c.strong + 0.5 * (c.captured - c.strong)) / c.total * 100)}%"></i></div></div>`).join(''); }
   function drawDropHist() { $('dropHist').textContent = S.drops.length ? 'Drops made: ' + S.drops.map(d => d.date).join(' · ') : 'No drops yet.'; }
@@ -623,6 +630,7 @@
       ${stuck ? T(50, y + 302 + needsN * 24 + 24, 'Stuck on: ' + wrapText(stuck, 80)[0], { size: 16, bold: true, fill: '#b45309' }) : ''}
       ${T(50, H - 30, 'Evidence Test: SHOW · SAY · WHY · NEXT', { size: 14, fill: '#666' })}</svg>`;
     S.drops.push({ date, strong: strongTotal }); save(); drawTabs(); drawDropHist();
+    if (window.SELive) SELive.report('DROP', Object.assign({ week, next: nxt, stuck }, liveSnap()), true);
     svgToPng(svg, W, H, `weekly-drop-${fileSafe(S.player.name)}-${S.drops.length}.png`, () => { sfx.good(); toast('✓ Weekly drop downloaded. Post it on Teams!'); });
   }
 
@@ -632,7 +640,7 @@
   let fmtChoice = 'slides';
   function drawFmts() { $('fmts').innerHTML = Object.entries(FORMATS).map(([k, f]) => `<button class="fmt${fmtChoice === k ? ' on' : ''}" data-fmt="${k}" aria-pressed="${fmtChoice === k}">${f.icon} ${f.name}</button>`).join(''); }
   $('fmts').addEventListener('click', e => { const b = e.target.closest('[data-fmt]'); if (b) { fmtChoice = b.dataset.fmt; drawFmts(); sfx.click(); } });
-  function begin() { $('startOverlay').classList.add('hidden'); drawTabs(); go('home'); }
+  function begin() { $('startOverlay').classList.add('hidden'); if (window.SELive) SELive.identify(S.player.name, S.player.cls); drawTabs(); go('home'); }
   (function init() {
     const saved = load();
     if (saved) { S = saved; $('resumeCard').classList.remove('hidden'); $('signCard').classList.add('hidden'); $('resumeText').textContent = `${S.player.name} (${S.player.cls}) · ${S.system || 'my system'}`; setTimeout(() => $('resumeBtn').focus(), 50); }
@@ -668,6 +676,7 @@
   // sanity checks
   ROUNDS.forEach((r, i) => { console.assert(r.ups.filter(u => u.ok).length === 1, 'round ' + i + ' needs one correct upgrade'); console.assert(r.probs.some(p => !p.ok) && r.probs.some(p => p.ok), 'round ' + i + ' problems'); console.assert(BEATS.some(b => b.id === r.beat), 'round beat'); });
   BEATS.forEach(b => b.moves.forEach(m => console.assert(MOVES[m], 'move ' + m)));
+  if (window.SELive) SELive.init({ level: 8, name: 'the Evidence Studio', joinPayload: () => ({ system: S.system, format: S.format }), onJoin: () => SELive.report('AUDIT', liveSnap(), true) });
   window.__evidenceStudio = { state: () => JSON.parse(JSON.stringify(S)), BEATS, ROUNDS, go };
 })();
 </script>
