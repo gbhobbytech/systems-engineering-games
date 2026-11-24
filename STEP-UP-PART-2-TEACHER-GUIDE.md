@@ -96,7 +96,8 @@ If time is short, stop after Mission 6 and do the Detective case as next lesson'
 - **Students:** `index.html` → **Year 11 · Step Up** → **Part 2 · Ohmbot's Circuit Rescue**, or go directly to `step-up-circuit-rescue.html`.
 - Progress saves automatically in that browser. Reopening offers **Continue** or **Start again**.
 - **Reset:** the ↺ button (top right) → *Yes, restart Part 2*. This clears Part 2 only. Part 1 is unaffected.
-- **Text size:** A− / A+ (saved per device). Sound can be muted with 🔊.
+- **Screen size:** **⛶ Fit** (top right, on by default) fits the whole game in the window on laptop-sized screens: Ohmbot on the left, the breadboard in the centre, and the schematic plus the power/press controls on the right. The breadboard scales to the space left, so students never scroll between pressing the button and watching the LED. Each column scrolls on its own if needed. Turn Fit off for a bigger board with a scrolling page (useful on large monitors or with big text). Screens narrower than 1000 px, or shorter than 500 px, automatically use a stacked, scrolling layout.
+- **Text size:** A− / A+ (saved per device, works together with Fit). Sound can be muted with 🔊.
 - **Keyboard:** the breadboard can be used with arrow keys + Enter. Del removes a selected part, F flips the LED, Esc cancels, hold **B** to press the button. "Keep pressed" helps students who find holding the button hard.
 - **Report:** at the end, students write a reflection, then **Print / save as PDF** or **Download report (PNG)** to share with you (for example on Teams). It includes their name, class, date, completed missions, a drawing of the circuit they built, the Detective fault and their explanation, and their reflection.
 
