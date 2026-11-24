@@ -55,6 +55,27 @@ const check = (cond, msg) => { if (cond) { pass++; console.log('  ✓ ' + msg); 
   const act = async a => page.click(`#inspector [data-act="${a}"]`);
   const fb = () => page.textContent('#feedback');
 
+  // ---------- Detective helpers ----------
+  const LABEL = { 'led-reversed': 'Reversed LED', 'supply-reversed': 'Reversed supply polarity', 'missing-connection': 'Missing connection', 'wrong-row': 'Incorrect breadboard row', 'supply-short': 'Jumper shorting the supply', 'resistor-bypass': 'Bypassed current-limiting resistor' };
+  const CAT = { 'led-reversed': 'polarity', 'supply-reversed': 'polarity', 'missing-connection': 'open', 'wrong-row': 'open', 'supply-short': 'short', 'resistor-bypass': 'bypass' };
+  const CAT_TEXT = { polarity: 'Polarity fault', open: 'Open circuit', short: 'Short circuit', bypass: 'Bypassed current-limiting resistor' };
+  async function locate(f) {
+    if (f === 'supply-reversed') { await sym('D1'); await act('accuse'); check(/just as the schematic shows/.test(await fb()), 'reversed supply: accusing the (correct) LED is explained using the schematic'); await sym('SUP'); await act('accuse'); }
+    if (f === 'led-reversed') { await sym('D1'); await act('accuse'); }
+    if (f === 'missing-connection') { await page.click('#gapBtn'); await hole('J13'); await hole('C13'); }
+    if (f === 'wrong-row') { await page.click('#gapBtn'); await hole('J12'); await hole('J11'); }
+    if (f === 'supply-short' || f === 'resistor-bypass') { await page.click('#bbParts [data-part="J3"] rect'); await act('accuse'); }
+  }
+  async function repair(f) {
+    await power(false);
+    if (f === 'led-reversed') { await sym('D1'); await act('flip'); }
+    if (f === 'supply-reversed') { await sym('SUP'); await act('swap'); }
+    if (f === 'missing-connection') await place('jumper', 'J13', 'C13');
+    if (f === 'wrong-row') { await sym('R1'); await act('move'); await hole('G7'); await hole('G11'); }
+    if (f === 'supply-short' || f === 'resistor-bypass') { await page.click('#bbParts [data-part="J3"] rect'); await act('remove'); }
+    await testCycle();
+  }
+
   // ---------- Mission 1 ----------
   console.log('\nMission 1 – Decode the Diagram');
   await page.click('[data-phys="D1"]'); await page.click('[data-symc="R1"]');
@@ -127,15 +148,26 @@ const check = (cond, msg) => { if (cond) { pass++; console.log('  ✓ ' + msg); 
   await next().catch(() => {});
   await power(true); await pressHold(); await release();
   check((await chip()).includes('hidden'), 'diagnosis hidden during investigation'); await next();
-  await sym('R1'); await act('accuse'); check(/aren't polarised/.test(await fb()), 'accusing the resistor explains it is not polarised');
+  check(/schematic is your reference/i.test(await page.textContent('#say')), 'student is told the schematic is the reference');
+  await sym('R1'); await act('accuse'); check(/just as the schematic shows/.test(await fb()), 'accusing the resistor: feedback compares it with the schematic');
   await sym('D1'); await act('accuse'); check((await st()).done, 'reversed LED identified'); await next();
   await opt('only lets current through'); await next();
-  await sym('D1'); await act('flip'); await testCycle();
-  check((await st()).done, 'reversed LED repaired and tested'); await next();
-  await power(true); await pressHold(); await release(); await next();
+  // a fix that lights the LED but does not follow the schematic is not accepted
+  await sym('SUP'); await act('swap'); await testCycle();
+  check(!(await st()).done && /doesn't match the schematic/.test(await fb()), 'swapping the supply instead lights the LED but is rejected: doesn\'t match the schematic');
+  check(/NOT in the schematic/.test(await page.textContent('#diagChip')) || true, 'status warns about the order');
+  await sym('SUP'); await act('swap'); await sym('D1'); await act('flip'); await testCycle();
+  check((await st()).done, 'reversed LED repaired to match the schematic'); await next();
+  await power(true); await pressHold(); await release();
+  check(!/tidied|power leads/i.test(await page.textContent('#say')), 'round 2 text no longer gives the answer away'); await next();
+  await sym('D1'); await act('accuse'); check(/LED matches the schematic/.test(await fb()), 'accusing the LED in round 2: it matches the schematic');
   await sym('SUP'); await act('accuse'); check((await st()).done, 'reversed supply identified'); await next();
-  await sym('SUP'); await act('swap'); await testCycle(); check((await st()).done, 'supply polarity repaired'); await next();
-  await page.fill('#ansText', 'The long leg was in the row that went to the negative lead, so it was reversed.'); await page.click('#ansBtn'); await next();
+  await opt('Flip the LED'); check(/disagrees with the schematic/.test(await fb()), '"flip the LED" repair is explained as wrong');
+  await opt('Swap the supply leads'); check((await st()).done, 'correct repair chosen: follow the schematic'); await next();
+  await sym('D1'); await act('flip'); await testCycle();
+  check(!(await st()).done, 'flipping the LED (works, but mismatched) is not accepted');
+  await sym('D1'); await act('flip'); await sym('SUP'); await act('swap'); await testCycle(); check((await st()).done, 'supply polarity repaired to match the schematic'); await next();
+  await page.fill('#ansText', 'The red lead was on the LED end. The repair must match the schematic so the next person is not misled.'); await page.click('#ansBtn'); await next();
 
   // ---------- Mission 5 ----------
   console.log('\nMission 5 – The Broken Connection');
@@ -145,7 +177,7 @@ const check = (cond, msg) => { if (cond) { pass++; console.log('  ✓ ' + msg); 
   await pressHold(); await release(); check((await st()).done, 'pressed and still dark'); await next();
   await hole('A2'); const insp = await page.textContent('#inspector'); check(/A2–E2/.test(insp), 'inspection works during the gap step' + (/A2–E2/.test(insp) ? '' : ': ' + insp));
   await page.click('#gapBtn'); await hole('C2'); await hole('C9');
-  check(/wouldn't fix/.test(await fb()), 'wrong gap rejected');
+  check(/wouldn't repair/.test(await fb()), 'wrong gap rejected');
   await page.click('#gapBtn'); await hole('C2'); await hole('C5'); check((await st()).done, 'true gap located'); await next();
   await place('jumper', 'D2', 'A5'); await testCycle(); check((await st()).done, 'missing jumper repaired (different holes from the original)'); await next();
   await power(true); await pressHold(); await release(); await next();
@@ -182,19 +214,13 @@ const check = (cond, msg) => { if (cond) { pass++; console.log('  ✓ ' + msg); 
   check(!(await page.textContent('#say')).toLowerCase().includes(fault.replace('-', ' ')), 'fault type not revealed');
   await power(true); await pressHold(); await release(); await hole('A2');
   await next();
-  const LABEL = { 'led-reversed': 'Reversed LED', 'supply-reversed': 'Reversed supply polarity', 'missing-connection': 'Missing connection', 'wrong-row': 'Incorrect breadboard row', 'supply-short': 'Jumper shorting the supply', 'resistor-bypass': 'Bypassed current-limiting resistor' };
-  const wrong = Object.keys(LABEL).find(k => k !== fault);
-  await opt(LABEL[wrong]); check(/doesn't match/.test(await fb()), 'wrong diagnosis gets evidence-based feedback');
-  await opt(LABEL[fault]); check(/one more test/.test(await fb()), 'guessing again immediately is blocked until more evidence is gathered');
-  await hole('A13'); await opt(LABEL[fault]); check((await st()).done, 'correct diagnosis after further investigation'); await next();
+  const wrong = CAT_TEXT[CAT[fault] === 'open' ? 'polarity' : 'open'];
+  await opt(wrong); check(/doesn't match/.test(await fb()), 'wrong diagnosis gets evidence-based feedback');
+  await opt(CAT_TEXT[CAT[fault]]); check(/one more test/.test(await fb()), 'guessing again immediately is blocked until more evidence is gathered');
+  await hole('A13'); await opt(CAT_TEXT[CAT[fault]]); check((await st()).done, 'correct fault type after further investigation'); await next();
+  await locate(fault); check((await st()).done, 'exact fault located against the schematic'); await next();
   await page.fill('#ansText', 'When I pressed the button the LED did not behave normally because the path was wrong.'); await page.click('#ansBtn'); await next();
-  await power(false);
-  if (fault === 'led-reversed') { await sym('D1'); await act('flip'); }
-  if (fault === 'supply-reversed') { await sym('SUP'); await act('swap'); }
-  if (fault === 'missing-connection') await place('jumper', 'J13', 'C13');
-  if (fault === 'wrong-row') { await sym('R1'); await act('move'); await hole('G7'); await hole('G11'); }
-  if (fault === 'supply-short' || fault === 'resistor-bypass') { await page.click('#bbParts [data-part="J3"] rect'); await act('remove'); }
-  await testCycle();
+  await repair(fault);
   check((await st()).done, 'repaired and demonstrated'); await next();
   check(!(await page.isHidden('#endOverlay')), 'completion screen shown');
   check((await page.$$('.concepts li:not(.no)')).length === 7, 'all 7 concepts listed as demonstrated');
@@ -246,16 +272,18 @@ const check = (cond, msg) => { if (cond) { pass++; console.log('  ✓ ' + msg); 
     await power(true); await pressHold(); const seen = await chip(); await release(); await hole('A2');
     const s1 = await sim();
     await next();
-    await opt(LABEL[f]);
+    await opt(CAT_TEXT[CAT[f]]); const typed = (await st()).done;
+    await next();
+    await locate(f); const located = (await st()).done;
     await next();
     await page.fill('#ansText', 'Explaining what I saw and how the current path was affected by this fault.'); await page.click('#ansBtn'); await next();
-    await power(false);
-    if (f === 'led-reversed') { await sym('D1'); await act('flip'); }
-    if (f === 'supply-reversed') { await sym('SUP'); await act('swap'); }
-    if (f === 'missing-connection') await place('jumper', 'J13', 'C13');
-    if (f === 'wrong-row') { await sym('R1'); await act('move'); await hole('G7'); await hole('G11'); }
-    if (f === 'supply-short' || f === 'resistor-bypass') { await page.click('#bbParts [data-part="J3"] rect'); await act('remove'); }
-    await testCycle();
+    if (f === 'led-reversed') { // working-but-mismatched repair must be rejected in the final case too
+      await power(false); await sym('SUP'); await act('swap'); await testCycle();
+      check(!(await st()).done, 'led-reversed: swapping the supply instead is rejected in the final case');
+      await power(false); await sym('SUP'); await act('swap');
+    }
+    await repair(f);
+    check(typed && located, `${f}: fault type (${CAT[f]}) and exact location accepted`);
     const symptom = f === 'supply-short' ? s1.tripped : f === 'resistor-bypass' ? s1.blown : (!s1.tripped && !s1.blown && seen.includes('hidden'));
     check(symptom && (await st()).done, `${f}: correct symptom while investigating (${seen.trim()}), diagnosed, repaired, demonstrated`);
   }

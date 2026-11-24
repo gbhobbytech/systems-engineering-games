@@ -60,6 +60,21 @@ const ALT = {
 Object.entries(ALT).forEach(([name, l]) => t(name, () => { assertValid(l); ok(E.works(l), `pressed=${code(l, true)} released=${code(l, false)}`); }));
 t('alternative order traced correctly', () => eq(E.tracePath(ALT['different order: + → resistor → LED → button → −']).order.join(','), 'R1,D1,S1'));
 
+console.log('\nThe schematic is the reference');
+const SCHEMATIC_ORDER_LAYOUTS = ['shifted to other rows / halves', 'no jumpers at all (parts share strips)', 'LED straddling the channel E→F', 'resistor straddling the channel', 'long chain of jumpers'];
+t('reference layout matches the schematic', () => ok(E.matchesSchematic(REF())));
+SCHEMATIC_ORDER_LAYOUTS.forEach(n => t(`"${n}" matches the schematic (different holes, same order)`, () => ok(E.matchesSchematic(ALT[n]))));
+t('working circuit in a different order does NOT match the schematic', () => { const l = ALT['different order: + → resistor → LED → button → −']; ok(E.works(l)); ok(!E.matchesSchematic(l)); });
+t('button on the − side works but does NOT match', () => { const l = ALT['button on the − side of the LED, supply lead straight into a button row']; ok(E.works(l)); ok(!E.matchesSchematic(l)); });
+t('reversed supply "fixed" by flipping the LED lights but does NOT match', () => { const l = REF(); const s = E.getPart(l, 'SUP'); [s.pos, s.neg] = [s.neg, s.pos]; const l2 = E.flipLed(l); ok(E.works(l2)); ok(!E.matchesSchematic(l2)); });
+t('reversed supply fixed by swapping the leads matches', () => { const l = REF(); const s = E.getPart(l, 'SUP'); [s.pos, s.neg] = [s.neg, s.pos]; [s.pos, s.neg] = [s.neg, s.pos]; ok(E.matchesSchematic(l)); });
+t('reversed LED "fixed" by swapping the supply lights but does NOT match', () => { const l = E.flipLed(REF()); const s = E.getPart(l, 'SUP'); [s.pos, s.neg] = [s.neg, s.pos]; ok(E.works(l)); ok(!E.matchesSchematic(l)); });
+t('wrong-row leg repaired with a jumper still matches (same connections)', () => { const l = REF(); E.getPart(l, 'D1').cathode = 'H14'; l.parts.push(J(3, 'J14', 'J13')); ok(E.matchesSchematic(l)); });
+t('gap check uses the schematic: the true gap matches, a gap that bypasses parts does not', () => {
+  const l = REF(); l.parts = l.parts.filter(p => p.id !== 'J1');
+  ok(E.matchesSchematic(l, [['C2', 'C5']])); ok(!E.matchesSchematic(l, [['C2', 'G7']]));
+});
+
 console.log('\n4. Incorrect breadboard connections');
 t('LED leg in the next row: open circuit', () => { const l = REF(); E.getPart(l, 'D1').cathode = 'H14'; eq(code(l, true), 'open'); });
 t('resistor leg in the wrong row: open circuit', () => { const l = REF(); E.getPart(l, 'R1').b = 'G12'; eq(code(l, true), 'open'); });
